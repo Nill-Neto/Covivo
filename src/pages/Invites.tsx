@@ -4,11 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Send, Copy } from "lucide-react";
+import { Loader2, Send, Copy, RefreshCw } from "lucide-react";
 import { z } from "zod";
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
@@ -21,14 +20,19 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 };
 
 const FALLBACK_PREVIEW_BASE = "https://preview--republi-k.lovable.app";
-
 const isLovableEditUrl = (url?: string) => !!url && url.includes("/projects/");
+
+function getBaseUrl() {
+  const envUrl = import.meta.env.VITE_APP_URL?.replace(/\/$/, "");
+  return envUrl && !isLovableEditUrl(envUrl) ? envUrl : FALLBACK_PREVIEW_BASE;
+}
 
 export default function Invites() {
   const { user, membership } = useAuth();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   const { data: invites, isLoading } = useQuery({
     queryKey: ["invites", membership?.group_id],
@@ -66,6 +70,29 @@ export default function Invites() {
     },
   });
 
+  const regenerateInvite = useMutation({
+    mutationFn: async (inviteId: string) => {
+      const newToken = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from("invites")
+        .update({ token: newToken, expires_at: expiresAt })
+        .eq("id", inviteId)
+        .eq("status", "pending");
+      if (error) throw error;
+      return newToken;
+    },
+    onMutate: (inviteId) => setRegeneratingId(inviteId),
+    onSuccess: (newToken) => {
+      queryClient.invalidateQueries({ queryKey: ["invites"] });
+      copyLink(newToken, "Novo link gerado!");
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    },
+    onSettled: () => setRegeneratingId(null),
+  });
+
   const handleSend = () => {
     const result = emailSchema.safeParse(email);
     if (!result.success) {
@@ -76,15 +103,10 @@ export default function Invites() {
     sendInvite.mutate(result.data);
   };
 
-  const copyLink = (token: string) => {
-    const envUrl = import.meta.env.VITE_APP_URL?.replace(/\/$/, "");
-    const baseUrl =
-      envUrl && !isLovableEditUrl(envUrl)
-        ? envUrl
-        : FALLBACK_PREVIEW_BASE;
-    const link = `${baseUrl}/invite?token=${token}`;
+  const copyLink = (token: string, title = "Link copiado!") => {
+    const link = `${getBaseUrl()}/invite?token=${token}`;
     navigator.clipboard.writeText(link);
-    toast({ title: "Link copiado!", description: "Envie para o morador." });
+    toast({ title, description: "Envie para o morador." });
   };
 
   return (
@@ -129,6 +151,8 @@ export default function Invites() {
         ) : (
           invites.map((inv) => {
             const st = statusMap[inv.status] ?? statusMap.pending;
+            const isRegenLoading = regeneratingId === inv.id && regenerateInvite.isPending;
+
             return (
               <Card key={inv.id}>
                 <CardContent className="flex items-center justify-between p-4">
@@ -141,9 +165,29 @@ export default function Invites() {
                   <div className="flex items-center gap-2">
                     <Badge variant={st.variant}>{st.label}</Badge>
                     {inv.status === "pending" && (
-                      <Button variant="ghost" size="icon" onClick={() => copyLink(inv.token)}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyLink(inv.token)}
+                          title="Copiar link"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => regenerateInvite.mutate(inv.id)}
+                          disabled={isRegenLoading}
+                          title="Gerar novo link"
+                        >
+                          {isRegenLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </>
                     )}
                   </div>
                 </CardContent>
