@@ -329,7 +329,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Dialogs for Payments (reusing existing logic) */}
+      {/* Dialogs for Payments */}
       <Dialog open={payRateioOpen} onOpenChange={setPayRateioOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Pagar Rateio Coletivo</DialogTitle></DialogHeader>
@@ -338,6 +338,24 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground">Total a pagar à república</p>
               <p className="text-3xl font-bold font-serif text-primary mt-1">R$ {totalCollective.toFixed(2)}</p>
             </div>
+
+            {/* Detalhamento das despesas */}
+            {collectivePending.length > 0 && (
+              <div className="border rounded-md p-3 bg-card">
+                 <p className="text-xs font-semibold text-muted-foreground mb-2">Detalhamento das despesas:</p>
+                 <ScrollArea className="h-[150px] pr-2">
+                    <div className="space-y-2">
+                      {collectivePending.map((s: any) => (
+                        <div key={s.id} className="flex justify-between text-sm border-b pb-1 last:border-0 last:pb-0 border-muted">
+                          <span className="truncate pr-4 text-muted-foreground flex-1 text-left">{s.expenses?.title}</span>
+                          <span className="font-medium whitespace-nowrap">R$ {Number(s.amount).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                 </ScrollArea>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Comprovante *</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
