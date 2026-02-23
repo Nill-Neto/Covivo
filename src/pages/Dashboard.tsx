@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Receipt, TrendingUp, AlertTriangle, Download, Package, DollarSign, Upload, Loader2 } from "lucide-react";
+import { Users, Receipt, TrendingUp, AlertTriangle, Download, Package, DollarSign, Upload, Loader2, ListChecks } from "lucide-react";
 import { format, subMonths, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -13,7 +13,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -27,9 +27,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   // Payment State
-  const [paySplitOpen, setPaySplitOpen] = useState(false);
-  const [splitId, setSplitId] = useState("");
-  const [amount, setAmount] = useState("");
+  const [payTotalOpen, setPayTotalOpen] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -157,11 +155,9 @@ export default function Dashboard() {
     enabled: !!membership?.group_id,
   });
 
-  const handlePaySplit = async () => {
-    if (!splitId || !amount) {
-      toast({ title: "Erro", description: "Selecione uma despesa.", variant: "destructive" });
-      return;
-    }
+  const totalPendingAmount = (pendingSplits ?? []).reduce((acc, curr: any) => acc + Number(curr.amount), 0);
+
+  const handlePayTotal = async () => {
     if (!receiptFile) {
       toast({ title: "Erro", description: "Comprovante é obrigatório.", variant: "destructive" });
       return;
@@ -170,27 +166,33 @@ export default function Dashboard() {
     setSaving(true);
     try {
       const ext = receiptFile.name.split(".").pop();
-      const path = `${user!.id}/${Date.now()}_split.${ext}`;
+      const path = `${user!.id}/${Date.now()}_total_payment.${ext}`;
       const { error: upErr } = await supabase.storage.from("receipts").upload(path, receiptFile);
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
 
+      // Create a descriptive note of what's being paid
+      const expenseTitles = (pendingSplits ?? [])
+        .map((s: any) => s.expenses?.title)
+        .slice(0, 5)
+        .join(", ");
+      const notes = `Pagamento do saldo total. Ref: ${expenseTitles}${pendingSplits!.length > 5 ? '...' : ''}`;
+
       const { error } = await supabase.from("payments").insert({
         group_id: membership!.group_id,
-        expense_split_id: splitId,
+        expense_split_id: null, // Null indicates general payment for all pending splits
         paid_by: user!.id,
-        amount: parseFloat(amount),
+        amount: totalPendingAmount,
         receipt_url: urlData.publicUrl,
-        status: "pending"
+        status: "pending",
+        notes: notes
       });
       if (error) throw error;
 
-      toast({ title: "Pagamento enviado!", description: "Aguardando confirmação do admin." });
+      toast({ title: "Pagamento enviado!", description: "O admin confirmará a baixa das despesas." });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
-      setPaySplitOpen(false);
-      setSplitId("");
-      setAmount("");
+      setPayTotalOpen(false);
       setReceiptFile(null);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -204,7 +206,6 @@ export default function Dashboard() {
 
   const exportCSV = () => {
     if (!recentExpenses) return;
-    // fetch all for export
     supabase
       .from("expenses")
       .select("title, amount, category, expense_type, created_at, due_date")
@@ -236,8 +237,8 @@ export default function Dashboard() {
       color: balance >= 0 ? "text-success" : "text-destructive",
       suffix: balance < 0 ? " (devendo)" : balance > 0 ? " (em dia)" : "",
       action: balance < 0 || pendingCount > 0 ? (
-        <Button size="sm" variant="default" className="mt-2 h-7 gap-1 w-full" onClick={() => setPaySplitOpen(true)}>
-          <DollarSign className="h-3 w-3" /> Pagar
+        <Button size="sm" variant="default" className="mt-2 h-7 gap-1 w-full" onClick={() => setPayTotalOpen(true)}>
+          <DollarSign className="h-3 w-3" /> Pagar Total (R$ {totalPendingAmount.toFixed(2)})
         </Button>
       ) : null
     },
@@ -281,45 +282,45 @@ export default function Dashboard() {
         </Link>
       )}
 
-      {/* Pay Split Dialog */}
-      <Dialog open={paySplitOpen} onOpenChange={setPaySplitOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Pagar Minha Parte</DialogTitle></DialogHeader>
+      {/* Pay Total Dialog */}
+      <Dialog open={payTotalOpen} onOpenChange={setPayTotalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagamento do Rateio</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label>Despesa Pendente</Label>
-              <Select 
-                value={splitId} 
-                onValueChange={(v) => {
-                  setSplitId(v);
-                  const s = pendingSplits?.find((ps: any) => ps.id === v);
-                  if (s) setAmount(String(s.amount));
-                }}
-              >
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {pendingSplits?.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.expenses?.title} — R$ {Number(s.amount).toFixed(2)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">Valor total a pagar</p>
+              <p className="text-3xl font-bold font-serif text-primary mt-1">R$ {totalPendingAmount.toFixed(2)}</p>
             </div>
             
             <div className="space-y-2">
-              <Label>Valor (R$)</Label>
-              <Input value={amount} disabled /> 
+              <Label className="flex items-center gap-2"><ListChecks className="h-4 w-4" /> Itens inclusos neste pagamento</Label>
+              <ScrollArea className="h-32 rounded-md border p-2">
+                {pendingSplits?.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma pendência encontrada.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {pendingSplits?.map((s: any) => (
+                      <div key={s.id} className="flex justify-between text-sm border-b pb-1 last:border-0">
+                        <span className="font-medium truncate pr-2">{s.expenses?.title}</span>
+                        <span className="shrink-0">R$ {Number(s.amount).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
             </div>
 
             <div className="space-y-2">
               <Label>Comprovante *</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
+              <p className="text-xs text-muted-foreground">Anexe o comprovante do valor total acima.</p>
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPaySplitOpen(false)}>Cancelar</Button>
-              <Button onClick={handlePaySplit} disabled={saving || !splitId}>
+              <Button variant="outline" onClick={() => setPayTotalOpen(false)}>Cancelar</Button>
+              <Button onClick={handlePayTotal} disabled={saving || totalPendingAmount <= 0}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />} 
                 Enviar Pagamento
               </Button>
