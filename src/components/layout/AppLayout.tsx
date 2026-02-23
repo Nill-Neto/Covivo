@@ -59,8 +59,7 @@ export function AppLayout() {
   const { profile, membership, isAdmin, signOut } = useAuth();
   const location = useLocation();
 
-  const groupNavItems = isAdmin ? [...baseNavItems, ...adminItems] : baseNavItems;
-  const allNavItems = [...groupNavItems, ...personalItems];
+  const allNavItems = [...baseNavItems, ...(isAdmin ? adminItems : []), ...personalItems];
 
   const initials = (profile?.full_name || "U")
     .split(" ")
@@ -69,16 +68,42 @@ export function AppLayout() {
     .slice(0, 2)
     .toUpperCase();
 
+  const renderSection = (title: string, items: typeof baseNavItems) => {
+    if (!items.length) return null;
+    return (
+      <div className="space-y-2">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{title}</p>
+        <div className="space-y-1">
+          {items.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                location.pathname === item.to
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-sm">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-6">
+        <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center justify-between px-4">
+          <div className="flex items-center gap-4">
             <Link to="/" className="font-serif text-xl text-foreground">
               Republi-K
             </Link>
             {membership && (
-              <span className="hidden sm:inline text-xs text-muted-foreground border rounded-full px-2 py-0.5">
+              <span className="hidden md:inline text-xs text-muted-foreground border rounded-full px-2 py-0.5">
                 {membership.group_name}
               </span>
             )}
@@ -86,7 +111,6 @@ export function AppLayout() {
 
           <div className="flex items-center gap-2">
             <NotificationBell />
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2 px-2">
@@ -124,54 +148,21 @@ export function AppLayout() {
         </div>
       </header>
 
-      <nav className="border-b bg-card hidden md:block">
-        <div className="container flex gap-1 overflow-x-auto">
-          {groupNavItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2.5 text-sm transition-colors border-b-2 -mb-px whitespace-nowrap",
-                location.pathname === item.to
-                  ? "border-primary text-foreground font-medium"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
-        </div>
-
-        {personalItems.length > 0 && (
-          <div className="border-t">
-            <div className="container flex items-center gap-2 overflow-x-auto py-1.5">
-              <span className="text-[11px] uppercase tracking-wide text-muted-foreground/80">
-                Pessoal
-              </span>
-              {personalItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 text-sm transition-colors border-b-2 border-transparent whitespace-nowrap",
-                    location.pathname === item.to
-                      ? "text-foreground border-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+      <div className="mx-auto flex w-full max-w-[1400px] px-4">
+        <aside className="hidden md:flex w-64 flex-col border-r bg-card/70 py-6 pr-4">
+          <div className="space-y-6">
+            {renderSection("Geral", baseNavItems)}
+            {isAdmin && renderSection("Administração", adminItems)}
+            {renderSection("Pessoal", personalItems)}
           </div>
-        )}
-      </nav>
+        </aside>
 
-      <main className="container py-6 pb-20 md:pb-6">
-        <Outlet />
-      </main>
+        <div className="flex-1 min-w-0">
+          <main className="py-6 pb-20 md:py-8 md:pb-10">
+            <Outlet />
+          </main>
+        </div>
+      </div>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card md:hidden">
         <div className="flex overflow-x-auto">
@@ -181,9 +172,7 @@ export function AppLayout() {
               to={item.to}
               className={cn(
                 "flex flex-col items-center gap-0.5 py-2 px-3 text-[10px] transition-colors flex-1 min-w-[72px]",
-                location.pathname === item.to
-                  ? "text-primary font-medium"
-                  : "text-muted-foreground",
+                location.pathname === item.to ? "text-primary font-medium" : "text-muted-foreground",
               )}
             >
               <item.icon className="h-5 w-5" />
