@@ -34,25 +34,28 @@ import {
   BookOpen,
   Vote,
   Wallet,
-  ListChecks,
   ChevronDown,
   Menu,
-  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-// Navigation Groups
-const groups = [
+const navGroups = [
   {
-    title: "Geral",
+    title: "Moradia",
     items: [
-      { to: "/", icon: LayoutDashboard, label: "Visão Geral" },
+      { to: "/", icon: LayoutDashboard, label: "Painel Geral" },
       { to: "/expenses", icon: Receipt, label: "Despesas" },
       { to: "/payments", icon: CreditCard, label: "Pagamentos" },
       { to: "/inventory", icon: Package, label: "Estoque" },
       { to: "/shopping", icon: ShoppingCart, label: "Compras" },
-      { to: "/members", icon: Users, label: "Moradores" },
+    ],
+  },
+  {
+    title: "Minhas Finanças",
+    items: [
+      { to: "/personal/bills", icon: ScrollText, label: "Faturas" },
+      { to: "/personal/cards", icon: Wallet, label: "Meus Cartões" },
     ],
   },
   {
@@ -61,15 +64,7 @@ const groups = [
       { to: "/bulletin", icon: MessageSquare, label: "Mural" },
       { to: "/rules", icon: BookOpen, label: "Regras" },
       { to: "/polls", icon: Vote, label: "Votações" },
-    ],
-  },
-  {
-    title: "Pessoal",
-    items: [
-      { to: "/personal/dashboard", icon: BarChart3, label: "Meu Dashboard" },
-      { to: "/expenses", icon: ListChecks, label: "Minhas Despesas" },
-      { to: "/personal/bills", icon: ScrollText, label: "Faturas" },
-      { to: "/personal/cards", icon: Wallet, label: "Cartões" },
+      { to: "/members", icon: Users, label: "Moradores" },
     ],
   },
 ];
@@ -88,7 +83,7 @@ export function AppLayout() {
   const { profile, membership, isAdmin, signOut } = useAuth();
   const location = useLocation();
 
-  const navGroups = isAdmin ? [...groups, adminGroup] : groups;
+  const groups = isAdmin ? [...navGroups, adminGroup] : navGroups;
 
   const initials = (profile?.full_name || "U")
     .split(" ")
@@ -110,7 +105,7 @@ export function AppLayout() {
 
       <div className="flex-1 overflow-auto py-4 px-3">
         <nav className="space-y-6">
-          {navGroups.map((group) => (
+          {groups.map((group) => (
             <CollapsibleNavGroup key={group.title} title={group.title} items={group.items} location={location} />
           ))}
         </nav>
@@ -133,15 +128,12 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Desktop Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-card/50 md:flex">
         <SidebarContent />
       </aside>
 
-      {/* Main Content Area */}
       <div className="flex flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          {/* Mobile Menu Trigger */}
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -161,16 +153,13 @@ export function AppLayout() {
                   Moradia:
                 </span>
                 <span className="text-sm font-semibold">{membership.group_name}</span>
-                <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
-                  {membership.role === "admin" ? "Admin" : "Morador"}
-                </span>
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <UserMenu profile={profile} membership={membership} signOut={signOut} />
+            <UserMenu profile={profile} signOut={signOut} />
           </div>
         </header>
 
@@ -194,21 +183,13 @@ function CollapsibleNavGroup({
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-1">
+    <div className="space-y-1">
       <div className="flex items-center justify-between px-3 py-1">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
           {title}
         </h4>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted">
-            <ChevronDown
-              className={cn("h-3 w-3 transition-transform duration-200", !isOpen && "-rotate-90")}
-            />
-            <span className="sr-only">Toggle</span>
-          </Button>
-        </CollapsibleTrigger>
       </div>
-      <CollapsibleContent className="space-y-1">
+      <div className="space-y-1">
         {items.map((item) => {
           const isActive = location.pathname === item.to;
           return (
@@ -216,25 +197,25 @@ function CollapsibleNavGroup({
               key={item.to}
               to={item.to}
               className={cn(
-                "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all hover:text-primary",
+                "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all",
                 isActive
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               <item.icon
-                className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary")}
+                className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")}
               />
               {item.label}
             </Link>
           );
         })}
-      </CollapsibleContent>
-    </Collapsible>
+      </div>
+    </div>
   );
 }
 
-function UserMenu({ profile, membership, signOut }: any) {
+function UserMenu({ profile, signOut }: any) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -250,12 +231,6 @@ function UserMenu({ profile, membership, signOut }: any) {
           <Link to="/profile" className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
             Perfil
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/settings" className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            Configurações
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

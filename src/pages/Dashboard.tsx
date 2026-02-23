@@ -5,26 +5,25 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Receipt, TrendingUp, AlertTriangle, Download, Package, DollarSign, Upload, Loader2, ListChecks, User, CheckCircle2 } from "lucide-react";
-import { format, subMonths, startOfMonth } from "date-fns";
+import { Receipt, TrendingUp, Download, Package, DollarSign, Upload, Loader2, ListChecks, User, Calendar, CreditCard, ArrowRight, Plus } from "lucide-react";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  rent: "Aluguel", utilities: "Contas", groceries: "Mercado", cleaning: "Limpeza",
-  maintenance: "Manutenção", internet: "Internet", other: "Outros",
-};
-const COLORS = ["hsl(220,65%,18%)", "hsl(164,55%,36%)", "hsl(38,92%,50%)", "hsl(0,72%,51%)", "hsl(270,50%,50%)", "hsl(200,60%,40%)", "hsl(30,70%,50%)"];
+const COLORS = ["hsl(220,65%,18%)", "hsl(164,55%,36%)", "hsl(38,92%,50%)", "hsl(0,72%,51%)", "hsl(270,50%,50%)"];
 
 export default function Dashboard() {
   const { profile, membership, isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
 
   // Payment State
   const [payRateioOpen, setPayRateioOpen] = useState(false);
@@ -33,24 +32,11 @@ export default function Dashboard() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { data: memberCount } = useQuery({
-    queryKey: ["member-count", membership?.group_id],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("group_members")
-        .select("*", { count: "exact", head: true })
-        .eq("group_id", membership!.group_id)
-        .eq("active", true);
-      return count ?? 0;
-    },
-    enabled: !!membership?.group_id,
-  });
-
+  // --- Group Queries ---
   const { data: monthExpenses } = useQuery({
     queryKey: ["month-expenses", membership?.group_id],
     queryFn: async () => {
-      const now = new Date();
-      const startOfM = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const startOfM = startOfMonth(now).toISOString();
       const { data } = await supabase
         .from("expenses")
         .select("amount")
@@ -75,6 +61,38 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
+  // --- Personal Queries (Faturas e Gastos Individuais) ---
+  const { data: currentBill } = useQuery({
+    queryKey: ["personal-bill-summary", user?.id, currentMonth, currentYear],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("expense_installments" as any)
+        .select("amount")
+        .eq("user_id", user!.id)
+        .eq("bill_month", currentMonth)
+        .eq("bill_year", currentYear);
+      return (data ?? []).reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+    },
+    enabled: !!user,
+  });
+
+  const { data: individualSpendMonth } = useQuery({
+    queryKey: ["personal-individual-spend", user?.id],
+    queryFn: async () => {
+      const start = startOfMonth(now).toISOString();
+      const end = endOfMonth(now).toISOString();
+      const { data } = await supabase
+        .from("expenses")
+        .select("amount")
+        .eq("created_by", user!.id)
+        .eq("expense_type", "individual")
+        .gte("purchase_date", start)
+        .lte("purchase_date", end);
+      return (data ?? []).reduce((sum, e) => sum + Number(e.amount), 0);
+    },
+    enabled: !!user,
+  });
+
   const { data: recentExpenses } = useQuery({
     queryKey: ["recent-expenses", membership?.group_id],
     queryFn: async () => {
@@ -89,101 +107,33 @@ export default function Dashboard() {
     enabled: !!membership?.group_id,
   });
 
-  // Charts data
-  const { data: categoryData } = useQuery({
-    queryKey: ["expense-categories", membership?.group_id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("expenses")
-        .select("category, amount")
-        .eq("group_id", membership!.group_id);
-      const map: Record<string, number> = {};
-      (data ?? []).forEach((e) => {
-        map[e.category] = (map[e.category] || 0) + Number(e.amount);
-      });
-      return Object.entries(map).map(([name, value]) => ({
-        name: CATEGORY_LABELS[name] || name,
-        value: Math.round(value * 100) / 100,
-      }));
-    },
-    enabled: !!membership?.group_id,
-  });
-
-  const { data: monthlyData } = useQuery({
-    queryKey: ["monthly-expenses", membership?.group_id],
-    queryFn: async () => {
-      const now = new Date();
-      const sixMonthsAgo = subMonths(startOfMonth(now), 5).toISOString();
-      const { data } = await supabase
-        .from("expenses")
-        .select("amount, created_at")
-        .eq("group_id", membership!.group_id)
-        .gte("created_at", sixMonthsAgo);
-      const map: Record<string, number> = {};
-      for (let i = 5; i >= 0; i--) {
-        const d = subMonths(now, i);
-        map[format(d, "MMM/yy", { locale: ptBR })] = 0;
-      }
-      (data ?? []).forEach((e) => {
-        const key = format(new Date(e.created_at), "MMM/yy", { locale: ptBR });
-        if (key in map) map[key] += Number(e.amount);
-      });
-      return Object.entries(map).map(([month, total]) => ({ month, total: Math.round(total * 100) / 100 }));
-    },
-    enabled: !!membership?.group_id,
-  });
-
-  const { data: lowStockCount } = useQuery({
-    queryKey: ["low-stock-count", membership?.group_id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("inventory_items")
-        .select("id, quantity, min_quantity")
-        .eq("group_id", membership!.group_id);
-      return (data ?? []).filter((i) => Number(i.quantity) <= Number(i.min_quantity)).length;
-    },
-    enabled: !!membership?.group_id,
-  });
-
   // Split calculations
   const collectivePending = (pendingSplits ?? []).filter((s: any) => s.expenses?.expense_type === "collective");
   const individualPending = (pendingSplits ?? []).filter((s: any) => s.expenses?.expense_type === "individual");
   
   const totalCollective = collectivePending.reduce((sum, s: any) => sum + Number(s.amount), 0);
-  const totalIndividual = individualPending.reduce((sum, s: any) => sum + Number(s.amount), 0);
 
-  // Pay Batch (Collective)
+  // --- Handlers ---
   const handlePayRateio = async () => {
-    if (!receiptFile) {
-      toast({ title: "Erro", description: "Comprovante é obrigatório.", variant: "destructive" });
-      return;
-    }
-
+    if (!receiptFile) return;
     setSaving(true);
     try {
       const ext = receiptFile.name.split(".").pop();
       const path = `${user!.id}/${Date.now()}_rateio.${ext}`;
-      const { error: upErr } = await supabase.storage.from("receipts").upload(path, receiptFile);
-      if (upErr) throw upErr;
+      await supabase.storage.from("receipts").upload(path, receiptFile);
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
 
-      const expenseTitles = collectivePending.slice(0, 3).map((s: any) => s.expenses?.title).join(", ");
-      const notes = `Pagamento de Rateio. Ref: ${expenseTitles}${collectivePending.length > 3 ? '...' : ''}`;
-
-      const { error } = await supabase.from("payments").insert({
+      await supabase.from("payments").insert({
         group_id: membership!.group_id,
-        expense_split_id: null, // Null = Batch Collective
+        expense_split_id: null,
         paid_by: user!.id,
         amount: totalCollective,
         receipt_url: urlData.publicUrl,
-        status: "pending",
-        notes: notes
+        notes: "Pagamento de Rateio Coletivo"
       });
-      if (error) throw error;
 
-      toast({ title: "Pagamento de rateio enviado!", description: "Aguardando confirmação do admin." });
+      toast({ title: "Pagamento enviado!" });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
       setPayRateioOpen(false);
       setReceiptFile(null);
     } catch (err: any) {
@@ -193,35 +143,26 @@ export default function Dashboard() {
     }
   };
 
-  // Pay Individual (Single)
   const handlePayIndividual = async () => {
-    if (!receiptFile || !selectedIndividualSplit) {
-      toast({ title: "Erro", description: "Comprovante inválido.", variant: "destructive" });
-      return;
-    }
-
+    if (!receiptFile || !selectedIndividualSplit) return;
     setSaving(true);
     try {
       const ext = receiptFile.name.split(".").pop();
       const path = `${user!.id}/${Date.now()}_indiv.${ext}`;
-      const { error: upErr } = await supabase.storage.from("receipts").upload(path, receiptFile);
-      if (upErr) throw upErr;
+      await supabase.storage.from("receipts").upload(path, receiptFile);
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
 
-      const { error } = await supabase.from("payments").insert({
+      await supabase.from("payments").insert({
         group_id: membership!.group_id,
         expense_split_id: selectedIndividualSplit.id,
         paid_by: user!.id,
         amount: Number(selectedIndividualSplit.amount),
         receipt_url: urlData.publicUrl,
-        status: "pending",
         notes: `Pagamento individual: ${selectedIndividualSplit.expenses?.title}`
       });
-      if (error) throw error;
 
       toast({ title: "Pagamento individual enviado!" });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
       setPayIndividualOpen(false);
       setSelectedIndividualSplit(null);
       setReceiptFile(null);
@@ -232,275 +173,189 @@ export default function Dashboard() {
     }
   };
 
-  const exportCSV = () => {
-    if (!recentExpenses) return;
-    supabase
-      .from("expenses")
-      .select("title, amount, category, expense_type, created_at")
-      .eq("group_id", membership!.group_id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (!data || data.length === 0) return;
-        const header = "Título,Valor,Categoria,Tipo,Data\n";
-        const rows = data.map((e) =>
-          `"${e.title}",${e.amount},"${CATEGORY_LABELS[e.category] || e.category}","${e.expense_type === "collective" ? "Coletiva" : "Individual"}","${format(new Date(e.created_at), "dd/MM/yyyy")}"`
-        ).join("\n");
-        const blob = new Blob([header + rows], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `despesas-${format(new Date(), "yyyy-MM-dd")}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      });
-  };
-
-  const stats = [
-    { 
-      label: "Despesas do mês", 
-      value: `R$ ${(monthExpenses ?? 0).toFixed(2)}`, 
-      icon: Receipt, 
-      color: "text-muted-foreground" 
-    },
-    {
-      label: "Rateio Pendente",
-      value: `R$ ${totalCollective.toFixed(2)}`,
-      icon: TrendingUp,
-      color: totalCollective > 0 ? "text-destructive" : "text-success",
-      suffix: totalCollective > 0 ? " (em aberto)" : " (em dia)",
-      action: totalCollective > 0 ? (
-        <Button size="sm" className="mt-2 h-8 w-full gap-2" onClick={() => setPayRateioOpen(true)}>
-          <DollarSign className="h-4 w-4" /> Pagar Rateio
-        </Button>
-      ) : null
-    },
-    {
-      label: "Desp. Individuais",
-      value: `R$ ${totalIndividual.toFixed(2)}`,
-      icon: User,
-      color: totalIndividual > 0 ? "text-warning" : "text-muted-foreground",
-      suffix: totalIndividual > 0 ? " (pendente)" : "",
-      action: totalIndividual > 0 ? (
-        <Button size="sm" variant="outline" className="mt-2 h-8 w-full gap-2" onClick={() => setPayIndividualOpen(true)}>
-          <ListChecks className="h-4 w-4" /> Ver Detalhes
-        </Button>
-      ) : null
-    },
-    { 
-      label: "Moradores", 
-      value: String(memberCount ?? "—"), 
-      icon: Users, 
-      color: "text-primary" 
-    },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-serif">Olá, {profile?.full_name?.split(" ")[0]}</h1>
-          <p className="text-muted-foreground mt-1">{isAdmin ? "Painel do administrador" : "Painel do morador"} — {membership?.group_name}</p>
+          <p className="text-muted-foreground mt-1">{membership?.group_name}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={exportCSV}><Download className="mr-2 h-4 w-4" />Exportar CSV</Button>
+        <div className="flex gap-2">
+           <Button variant="outline" size="sm" asChild>
+             <Link to="/personal/bills"><Calendar className="h-4 w-4 mr-2" /> Minhas Faturas</Link>
+           </Button>
+        </div>
       </div>
 
+      {/* Main Financial Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <Card key={s.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardDescription className="text-sm">{s.label}</CardDescription>
-              <s.icon className={`h-4 w-4 ${s.color}`} />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold font-serif">{s.value}</p>
-              {"suffix" in s && s.suffix && <p className={`text-xs ${s.color}`}>{s.suffix}</p>}
-              {"action" in s && s.action}
-            </CardContent>
-          </Card>
-        ))}
+        {/* Collective Debt */}
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardDescription className="text-destructive font-medium">Rateio Pendente (Casa)</CardDescription>
+            <TrendingUp className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-serif">R$ {totalCollective.toFixed(2)}</p>
+            {totalCollective > 0 && (
+              <Button size="sm" className="mt-3 h-8 w-full gap-2 bg-destructive hover:bg-destructive/90" onClick={() => setPayRateioOpen(true)}>
+                <DollarSign className="h-4 w-4" /> Pagar Casa
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Individual Pending */}
+        <Card className="border-warning/20 bg-warning/5">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardDescription className="text-warning-foreground font-medium">Meus Gastos Pendentes</CardDescription>
+            <User className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-serif">R$ {individualPending.reduce((s:number, i:any)=>s+Number(i.amount),0).toFixed(2)}</p>
+            {individualPending.length > 0 && (
+              <Button variant="outline" size="sm" className="mt-3 h-8 w-full gap-2" onClick={() => setPayIndividualOpen(true)}>
+                <ListChecks className="h-4 w-4" /> Ver Detalhes
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Credit Card Bill */}
+        <Card className="bg-primary text-primary-foreground">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardDescription className="text-primary-foreground/70">Fatura do Mês</CardDescription>
+            <CreditCard className="h-4 w-4 text-primary-foreground/70" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-serif">R$ {(currentBill ?? 0).toFixed(2)}</p>
+            <p className="text-[10px] uppercase tracking-wider mt-2 opacity-60">Cartões Individuais</p>
+          </CardContent>
+        </Card>
+
+        {/* Group Spend */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardDescription>Gastos da República (Mês)</CardDescription>
+            <Receipt className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-serif">R$ {(monthExpenses ?? 0).toFixed(2)}</p>
+            <p className="text-[10px] uppercase tracking-wider mt-2 text-muted-foreground">Total Coletivo</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {(lowStockCount ?? 0) > 0 && (
-        <Link to="/inventory">
-          <Card className="border-warning/50 bg-warning/5 cursor-pointer hover:border-warning transition-colors">
-            <CardContent className="flex items-center gap-3 py-3">
-              <Package className="h-5 w-5 text-warning" />
-              <p className="text-sm"><strong>{lowStockCount}</strong> {lowStockCount === 1 ? "item" : "itens"} com estoque baixo</p>
-            </CardContent>
-          </Card>
-        </Link>
-      )}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Recent Expenses List */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="font-serif text-xl">Últimas Atividades</CardTitle>
+            <Link to="/expenses" className="text-sm text-primary hover:underline">Ver todas →</Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentExpenses?.map((e) => (
+                <div key={e.id} className="flex items-center justify-between border-b pb-2 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium">{e.title}</p>
+                    <p className="text-[10px] text-muted-foreground">{format(new Date(e.created_at), "dd/MM/yyyy")}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold">R$ {Number(e.amount).toFixed(2)}</p>
+                    <Badge variant={e.expense_type === "collective" ? "default" : "secondary"} className="text-[10px] h-4">
+                      {e.expense_type === "collective" ? "Coletiva" : "Individual"}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              {recentExpenses?.length === 0 && <p className="text-sm text-muted-foreground py-4">Sem registros.</p>}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Pay Rateio Dialog */}
+        {/* Quick Actions / Stock */}
+        <div className="space-y-6">
+           <Card className="bg-muted/30">
+              <CardHeader className="pb-2">
+                 <CardTitle className="text-sm font-medium">Ações Rápidas</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-2">
+                 <Button variant="outline" className="h-20 flex-col gap-2" asChild>
+                    <Link to="/expenses">
+                       <Plus className="h-5 w-5" />
+                       <span className="text-xs">Nova Despesa</span>
+                    </Link>
+                 </Button>
+                 <Button variant="outline" className="h-20 flex-col gap-2" asChild>
+                    <Link to="/inventory">
+                       <Package className="h-5 w-5" />
+                       <span className="text-xs">Estoque</span>
+                    </Link>
+                 </Button>
+              </CardContent>
+           </Card>
+        </div>
+      </div>
+
+      {/* Dialogs for Payments (reusing existing logic) */}
       <Dialog open={payRateioOpen} onOpenChange={setPayRateioOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Pagar Rateio Coletivo</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Pagar Rateio Coletivo</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="p-4 bg-muted/50 rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">Total do Rateio</p>
+              <p className="text-sm text-muted-foreground">Total a pagar à república</p>
               <p className="text-3xl font-bold font-serif text-primary mt-1">R$ {totalCollective.toFixed(2)}</p>
             </div>
-            
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><ListChecks className="h-4 w-4" /> Itens inclusos</Label>
-              <ScrollArea className="h-32 rounded-md border p-2">
-                <div className="space-y-2">
-                  {collectivePending.map((s: any) => (
-                    <div key={s.id} className="flex justify-between text-sm border-b pb-1 last:border-0">
-                      <span className="font-medium truncate pr-2">{s.expenses?.title}</span>
-                      <span className="shrink-0">R$ {Number(s.amount).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-
             <div className="space-y-2">
               <Label>Comprovante *</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
-              <p className="text-xs text-muted-foreground">Anexe o comprovante do valor total.</p>
             </div>
-
             <DialogFooter>
               <Button variant="outline" onClick={() => setPayRateioOpen(false)}>Cancelar</Button>
-              <Button onClick={handlePayRateio} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />} 
-                Enviar Pagamento
+              <Button onClick={handlePayRateio} disabled={saving || !receiptFile}>
+                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Enviar Pagamento
               </Button>
             </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Pay Individual List Dialog */}
       <Dialog open={payIndividualOpen} onOpenChange={(v) => { if (!v) { setPayIndividualOpen(false); setSelectedIndividualSplit(null); } else setPayIndividualOpen(true); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Despesas Individuais</DialogTitle>
-          </DialogHeader>
-          
+        <DialogContent>
+          <DialogHeader><DialogTitle>Despesas Individuais Pendentes</DialogTitle></DialogHeader>
           {!selectedIndividualSplit ? (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Selecione uma despesa para pagar:</p>
-              <ScrollArea className="max-h-[300px]">
-                <div className="space-y-3">
-                  {individualPending.map((s: any) => (
-                    <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
-                      <div className="min-w-0 pr-2">
-                        <p className="font-medium truncate">{s.expenses?.title}</p>
-                        <p className="text-xs text-muted-foreground">R$ {Number(s.amount).toFixed(2)}</p>
-                      </div>
-                      <Button size="sm" onClick={() => setSelectedIndividualSplit(s)}>
-                        Pagar
-                      </Button>
+            <ScrollArea className="max-h-[300px] pr-4">
+              <div className="space-y-3">
+                {individualPending.map((s: any) => (
+                  <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
+                    <div className="min-w-0 pr-2">
+                      <p className="text-sm font-medium truncate">{s.expenses?.title}</p>
+                      <p className="text-xs text-muted-foreground">R$ {Number(s.amount).toFixed(2)}</p>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setPayIndividualOpen(false)}>Fechar</Button>
-              </DialogFooter>
-            </div>
+                    <Button size="sm" onClick={() => setSelectedIndividualSplit(s)}>Pagar</Button>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           ) : (
             <div className="space-y-4">
-               <div className="flex items-center gap-2 mb-2">
-                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setSelectedIndividualSplit(null)}>←</Button>
-                 <span className="font-medium">{selectedIndividualSplit.expenses?.title}</span>
-               </div>
-               
                <div className="p-4 bg-muted/50 rounded-lg text-center">
-                  <p className="text-sm text-muted-foreground">Valor a pagar</p>
+                  <p className="text-sm text-muted-foreground">Valor: {selectedIndividualSplit.expenses?.title}</p>
                   <p className="text-2xl font-bold font-serif text-primary mt-1">R$ {Number(selectedIndividualSplit.amount).toFixed(2)}</p>
                </div>
-
                <div className="space-y-2">
                   <Label>Comprovante *</Label>
                   <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
                </div>
-
                <DialogFooter>
                  <Button variant="outline" onClick={() => setSelectedIndividualSplit(null)}>Voltar</Button>
-                 <Button onClick={handlePayIndividual} disabled={saving}>
-                   {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />} 
-                   Enviar
-                 </Button>
+                 <Button onClick={handlePayIndividual} disabled={saving || !receiptFile}>Enviar</Button>
                </DialogFooter>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="font-serif text-lg">Despesas por Categoria</CardTitle></CardHeader>
-          <CardContent>
-            {(categoryData?.length ?? 0) === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
-                    {categoryData?.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => `R$ ${v.toFixed(2)}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="font-serif text-lg">Despesas Mensais</CardTitle></CardHeader>
-          <CardContent>
-            {(monthlyData?.length ?? 0) === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" fontSize={11} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis fontSize={11} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `R$${v}`} />
-                  <Tooltip formatter={(v: number) => `R$ ${v.toFixed(2)}`} />
-                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent expenses */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-serif text-xl">Últimas Despesas</CardTitle>
-          <Link to="/expenses" className="text-sm text-primary hover:underline">Ver todas →</Link>
-        </CardHeader>
-        <CardContent>
-          {(recentExpenses?.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma despesa registrada ainda.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentExpenses?.map((e) => (
-                <div key={e.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{e.title}</p>
-                    <p className="text-xs text-muted-foreground">{format(new Date(e.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium font-serif">R$ {Number(e.amount).toFixed(2)}</p>
-                    <Badge variant={e.expense_type === "collective" ? "default" : "secondary"} className="text-xs">
-                      {e.expense_type === "collective" ? "Coletiva" : "Individual"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
