@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ export default function Bills() {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedCardId, setSelectedCardId] = useState<string>("all");
+  const [initialized, setInitialized] = useState(false);
 
   const month = currentDate.getMonth() + 1;
   const year = currentDate.getFullYear();
@@ -27,6 +28,21 @@ export default function Bills() {
     },
     enabled: !!user,
   });
+
+  // Effect to set initial month based on card closing date
+  useEffect(() => {
+    if (!initialized && cards.length > 0) {
+      // Use the first card as reference for the default view
+      const card = cards[0];
+      const now = new Date();
+      
+      // If today is past the closing day, the "current" bill is next month
+      if (now.getDate() >= card.closing_day) {
+        setCurrentDate(addMonths(now, 1));
+      }
+      setInitialized(true);
+    }
+  }, [cards, initialized]);
 
   const { data: billInstallments = [], isLoading } = useQuery({
     queryKey: ["bill-installments", user?.id, month, year, selectedCardId],
