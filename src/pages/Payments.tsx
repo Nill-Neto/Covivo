@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Plus, Check, X, Upload, Image } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, Plus, Check, X, Upload, Image, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addMonths, subMonths, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Payments() {
@@ -25,14 +25,48 @@ export default function Payments() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Fetch payments
-  const { data: payments, isLoading } = useQuery({
-    queryKey: ["payments", membership?.group_id],
+  // --- Date Cycle Logic ---
+  const { data: groupSettings } = useQuery({
+    queryKey: ["group-settings-payments", membership?.group_id],
     queryFn: async () => {
+      const { data } = await supabase.from("groups").select("closing_day").eq("id", membership!.group_id).single();
+      return data;
+    },
+    enabled: !!membership?.group_id
+  });
+
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    if (groupSettings) {
+      const today = new Date();
+      if (today.getDate() >= (groupSettings.closing_day || 1)) {
+        setCurrentDate(addMonths(today, 1));
+      } else {
+        setCurrentDate(today);
+      }
+    }
+  }, [groupSettings]);
+
+  const closingDay = groupSettings?.closing_day || 1;
+  const cycleStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, closingDay);
+  const cycleEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), closingDay);
+  cycleStart.setHours(0, 0, 0, 0);
+  cycleEnd.setHours(0, 0, 0, 0);
+
+  // Fetch payments FILTERED by cycle
+  const { data: payments, isLoading } = useQuery({
+    queryKey: ["payments", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
+    queryFn: async () => {
+      const dbStart = cycleStart.toISOString();
+      const dbEnd = cycleEnd.toISOString();
+
       const { data, error } = await supabase
         .from("payments")
         .select("*")
         .eq("group_id", membership!.group_id)
+        .gte("created_at", dbStart)
+        .lt("created_at", dbEnd)
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -47,7 +81,7 @@ export default function Payments() {
     enabled: !!membership?.group_id,
   });
 
-  // Fetch pending splits for current user
+  // Fetch pending splits for current user (Independent of cycle, always show ALL pending)
   const { data: pendingSplits } = useQuery({
     queryKey: ["my-pending-splits", membership?.group_id, user?.id],
     queryFn: async () => {
@@ -134,63 +168,83 @@ export default function Payments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-serif">Pagamentos</h1>
-          <p className="text-muted-foreground mt-1">{payments?.length ?? 0} pagamento(s)</p>
+          <p className="text-muted-foreground mt-1">Histórico de pagamentos.</p>
         </div>
-        {!isAdmin && (pendingSplits?.length ?? 0) > 0 && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2"><Plus className="h-4 w-4" /> Enviar Pagamento</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="font-serif">Enviar Comprovante</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Despesa</Label>
-                  <Select value={splitId} onValueChange={(v) => {
-                    setSplitId(v);
-                    const s = pendingSplits?.find((ps) => ps.id === v);
-                    if (s) setAmount(String(s.amount));
-                  }}>
-                    <SelectTrigger><SelectValue placeholder="Selecione a despesa..." /></SelectTrigger>
-                    <SelectContent>
-                      {pendingSplits?.map((s: any) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.expenses?.title} — R$ {Number(s.amount).toFixed(2)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="space-y-2">
-                  <Label>Valor (R$)</Label>
-                  <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Month Selector */}
+          <div className="flex items-center gap-2 bg-card border rounded-lg p-1 shadow-sm">
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+               <ChevronLeft className="h-4 w-4" />
+             </Button>
+             <div className="px-2 text-sm font-medium min-w-[140px] text-center capitalize">
+               {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+             </div>
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+               <ChevronRight className="h-4 w-4" />
+             </Button>
+           </div>
 
-                <div className="space-y-2">
-                  <Label>Comprovante *</Label>
-                  <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
-                  <p className="text-xs text-muted-foreground">Foto ou PDF do comprovante de pagamento</p>
-                </div>
+          {!isAdmin && (pendingSplits?.length ?? 0) > 0 && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 h-10"><Plus className="h-4 w-4" /> Enviar Pagamento</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="font-serif">Enviar Comprovante</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>Despesa</Label>
+                    <Select value={splitId} onValueChange={(v) => {
+                      setSplitId(v);
+                      const s = pendingSplits?.find((ps) => ps.id === v);
+                      if (s) setAmount(String(s.amount));
+                    }}>
+                      <SelectTrigger><SelectValue placeholder="Selecione a despesa..." /></SelectTrigger>
+                      <SelectContent>
+                        {pendingSplits?.map((s: any) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.expenses?.title} — R$ {Number(s.amount).toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label>Observações (opcional)</Label>
-                  <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: Pix enviado às 14h" />
-                </div>
+                  <div className="space-y-2">
+                    <Label>Valor (R$)</Label>
+                    <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                  </div>
 
-                <Button onClick={handleSubmitPayment} disabled={saving} className="w-full">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                  Enviar Pagamento
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+                  <div className="space-y-2">
+                    <Label>Comprovante *</Label>
+                    <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
+                    <p className="text-xs text-muted-foreground">Foto ou PDF do comprovante de pagamento</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Observações (opcional)</Label>
+                    <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: Pix enviado às 14h" />
+                  </div>
+
+                  <Button onClick={handleSubmitPayment} disabled={saving} className="w-full">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                    Enviar Pagamento
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        Exibindo ciclo: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
       </div>
 
       <Tabs defaultValue={isAdmin ? "pending" : "all"}>
@@ -202,7 +256,7 @@ export default function Payments() {
         {isAdmin && (
           <TabsContent value="pending" className="space-y-3 mt-4">
             {payments?.filter((p) => p.status === "pending").length === 0 && (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento pendente.</CardContent></Card>
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento pendente neste ciclo.</CardContent></Card>
             )}
             {payments?.filter((p) => p.status === "pending").map((p: any) => (
               <PaymentCard key={p.id} payment={p} isAdmin onConfirm={handleConfirm} />
@@ -212,7 +266,7 @@ export default function Payments() {
 
         <TabsContent value="all" className="space-y-3 mt-4">
           {payments?.length === 0 && (
-            <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento registrado.</CardContent></Card>
+            <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento registrado neste ciclo.</CardContent></Card>
           )}
           {payments?.map((p: any) => (
             <PaymentCard key={p.id} payment={p} isAdmin={isAdmin} onConfirm={handleConfirm} />

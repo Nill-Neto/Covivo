@@ -23,8 +23,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Plus, Calendar, Users, User, Save, Edit, CreditCard, Trash2, RefreshCw } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, Plus, Calendar, Users, User, Save, Edit, CreditCard, Trash2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addMonths, subMonths, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const CATEGORIES = [
   { value: "rent", label: "Aluguel" },
@@ -73,6 +74,35 @@ export default function Expenses() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceDay, setRecurrenceDay] = useState("5"); // Day of month
 
+  // --- Date Cycle Logic ---
+  const { data: groupSettings } = useQuery({
+    queryKey: ["group-settings", membership?.group_id],
+    queryFn: async () => {
+      const { data } = await supabase.from("groups").select("closing_day").eq("id", membership!.group_id).single();
+      return data;
+    },
+    enabled: !!membership?.group_id
+  });
+
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    if (groupSettings) {
+      const today = new Date();
+      if (today.getDate() >= (groupSettings.closing_day || 1)) {
+        setCurrentDate(addMonths(today, 1));
+      } else {
+        setCurrentDate(today);
+      }
+    }
+  }, [groupSettings]);
+
+  const closingDay = groupSettings?.closing_day || 1;
+  const cycleStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, closingDay);
+  const cycleEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), closingDay);
+  cycleStart.setHours(0, 0, 0, 0);
+  cycleEnd.setHours(0, 0, 0, 0);
+
   useEffect(() => {
     if (!editingId && activeTab !== "recurring") {
       setExpenseType(isAdmin ? "collective" : "individual");
@@ -88,13 +118,18 @@ export default function Expenses() {
   // --- QUERIES ---
 
   const { data: expenses, isLoading: loadingExpenses } = useQuery({
-    queryKey: ["expenses", membership?.group_id],
+    queryKey: ["expenses", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
     queryFn: async () => {
+      const dbStart = cycleStart.toISOString().split('T')[0];
+      const dbEnd = cycleEnd.toISOString().split('T')[0];
+
       const { data, error } = await supabase
         .from("expenses")
         .select("*, expense_splits(id, user_id, amount, status, paid_at)")
         .eq("group_id", membership!.group_id)
-        .order("created_at", { ascending: false });
+        .gte("purchase_date", dbStart)
+        .lt("purchase_date", dbEnd)
+        .order("purchase_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -331,14 +366,30 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-serif">Despesas</h1>
           <p className="text-muted-foreground mt-1">Gestão financeira do grupo</p>
         </div>
-        <Button className="gap-2" onClick={() => { resetForm(); setOpen(true); }}>
-          <Plus className="h-4 w-4" /> Nova Despesa
-        </Button>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Month Selector */}
+          <div className="flex items-center gap-2 bg-card border rounded-lg p-1 shadow-sm">
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+               <ChevronLeft className="h-4 w-4" />
+             </Button>
+             <div className="px-2 text-sm font-medium min-w-[140px] text-center capitalize">
+               {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+             </div>
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+               <ChevronRight className="h-4 w-4" />
+             </Button>
+           </div>
+
+          <Button className="gap-2 h-10" onClick={() => { resetForm(); setOpen(true); }}>
+            <Plus className="h-4 w-4" /> Nova Despesa
+          </Button>
+        </div>
 
         <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -475,6 +526,10 @@ export default function Expenses() {
         </Dialog>
       </div>
 
+      <div className="text-sm text-muted-foreground">
+        Exibindo ciclo: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="all">Todas</TabsTrigger>
@@ -484,27 +539,28 @@ export default function Expenses() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-3 mt-4">
-          {(expenses ?? []).length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada.</p>}
+          {(expenses ?? []).length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada neste ciclo.</p>}
           {(expenses ?? []).map((e) => (
             <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
         
         <TabsContent value="mine" className="space-y-3 mt-4">
-          {filteredMine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada.</p>}
+          {filteredMine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada neste ciclo.</p>}
           {filteredMine.map((e) => (
             <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
 
         <TabsContent value="collective" className="space-y-3 mt-4">
-          {filteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada.</p>}
+          {filteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada neste ciclo.</p>}
           {filteredCollective.map((e) => (
             <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
 
         <TabsContent value="recurring" className="space-y-3 mt-4">
+          <p className="text-xs text-muted-foreground mb-4">Modelos de despesas que se repetem (não dependem do filtro de mês).</p>
           {!recurringExpenses?.length && <p className="text-center text-muted-foreground py-8">Nenhuma recorrência configurada.</p>}
           {recurringExpenses?.map((r) => (
             <RecurringCard key={r.id} recurring={r} isAdmin={isAdmin} onEdit={() => openEditRecurring(r)} onDelete={() => deleteRecurring.mutate(r.id)} />
@@ -583,16 +639,18 @@ function RecurringCard({ recurring, isAdmin, onEdit, onDelete }: any) {
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <p className="font-medium">{recurring.title}</p>
               <Badge variant="outline" className="text-xs">{catLabel}</Badge>
-              <Badge variant={recurring.active ? "default" : "secondary"} className="text-xs">Dia {recurring.day_of_month}</Badge>
+              <Badge variant={recurring.active ? "default" : "secondary"} className="text-xs">
+                {recurring.active ? "Ativa" : "Pausada"}
+              </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">Próximo vencimento: {format(new Date(recurring.next_due_date), "dd/MM/yyyy")}</p>
           </div>
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 flex flex-col items-end gap-2">
              <p className="text-lg font-bold font-serif">R$ {Number(recurring.amount).toFixed(2)}</p>
              <p className="text-[10px] text-muted-foreground uppercase">Mensal</p>
           </div>
           {isAdmin && (
-             <div className="flex flex-col gap-1 ml-2">
+             <div className="flex items-center gap-1 mt-1">
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit}><Edit className="h-4 w-4" /></Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

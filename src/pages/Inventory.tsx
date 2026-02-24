@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +21,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Package, Plus, AlertTriangle, Minus, PlusCircle, Trash2 } from "lucide-react";
+import { Package, Plus, AlertTriangle, Minus, PlusCircle, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addMonths, subMonths, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const categories = [
   { value: "limpeza", label: "Limpeza" },
@@ -42,15 +44,54 @@ export default function Inventory() {
   const [filter, setFilter] = useState("all");
   const [form, setForm] = useState({ name: "", category: "geral", quantity: "1", unit: "un", min_quantity: "1" });
 
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ["inventory", membership?.group_id],
+  // --- Date Cycle Logic ---
+  const { data: groupSettings } = useQuery({
+    queryKey: ["group-settings-inventory", membership?.group_id],
     queryFn: async () => {
+      const { data } = await supabase.from("groups").select("closing_day").eq("id", membership!.group_id).single();
+      return data;
+    },
+    enabled: !!membership?.group_id
+  });
+
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    if (groupSettings) {
+      const today = new Date();
+      if (today.getDate() >= (groupSettings.closing_day || 1)) {
+        setCurrentDate(addMonths(today, 1));
+      } else {
+        setCurrentDate(today);
+      }
+    }
+  }, [groupSettings]);
+
+  const closingDay = groupSettings?.closing_day || 1;
+  const cycleStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, closingDay);
+  const cycleEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), closingDay);
+  cycleStart.setHours(0, 0, 0, 0);
+  cycleEnd.setHours(0, 0, 0, 0);
+
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["inventory", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
+    queryFn: async () => {
+      const dbStart = cycleStart.toISOString();
+      const dbEnd = cycleEnd.toISOString();
+
       const { data, error } = await supabase
         .from("inventory_items")
         .select("*")
         .eq("group_id", membership!.group_id)
+        .or(`updated_at.gte.${dbStart},created_at.gte.${dbStart}`) // Show items created OR updated in this cycle
+        .lt("updated_at", dbEnd) // ... up to end of cycle
         .order("category")
         .order("name");
+      
+      // Note: This logic is imperfect for historical inventory state but shows activity.
+      // A proper historical inventory needs a separate history table. 
+      // For now, filtering by modification date is the closest approximation.
+      
       if (error) throw error;
       return data;
     },
@@ -106,41 +147,61 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-serif">Estoque</h1>
-          <p className="text-muted-foreground text-sm">Itens compartilhados da república</p>
+          <p className="text-muted-foreground text-sm">Itens movimentados neste ciclo.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Novo item</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="font-serif">Adicionar item</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Detergente" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Categoria</Label>
-                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-                  </Select>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Month Selector */}
+          <div className="flex items-center gap-2 bg-card border rounded-lg p-1 shadow-sm">
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+               <ChevronLeft className="h-4 w-4" />
+             </Button>
+             <div className="px-2 text-sm font-medium min-w-[140px] text-center capitalize">
+               {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+             </div>
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+               <ChevronRight className="h-4 w-4" />
+             </Button>
+           </div>
+
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 h-10"><Plus className="mr-2 h-4 w-4" />Novo item</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle className="font-serif">Adicionar item</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Detergente" /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Categoria</Label>
+                    <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Unidade</Label>
+                    <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{units.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div><Label>Unidade</Label>
-                  <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{units.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Quantidade</Label><Input type="number" min="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></div>
+                  <div><Label>Qtd. mínima</Label><Input type="number" min="0" value={form.min_quantity} onChange={(e) => setForm({ ...form, min_quantity: e.target.value })} /></div>
                 </div>
+                <Button className="w-full" disabled={!form.name.trim()} onClick={() => addItem.mutate()}>Adicionar</Button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Quantidade</Label><Input type="number" min="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></div>
-                <div><Label>Qtd. mínima</Label><Input type="number" min="0" value={form.min_quantity} onChange={(e) => setForm({ ...form, min_quantity: e.target.value })} /></div>
-              </div>
-              <Button className="w-full" disabled={!form.name.trim()} onClick={() => addItem.mutate()}>Adicionar</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        Exibindo ciclo: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
       </div>
 
       {lowStock.length > 0 && (
@@ -165,7 +226,7 @@ export default function Inventory() {
       {isLoading ? (
         <p className="text-muted-foreground text-sm">Carregando...</p>
       ) : filtered.length === 0 ? (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhum item encontrado.</CardContent></Card>
+        <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhum item movimentado neste ciclo.</CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
