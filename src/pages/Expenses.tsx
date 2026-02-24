@@ -120,8 +120,8 @@ export default function Expenses() {
   const { data: expenses, isLoading: loadingExpenses } = useQuery({
     queryKey: ["expenses", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
     queryFn: async () => {
-      const dbStart = cycleStart.toISOString().split('T')[0];
-      const dbEnd = cycleEnd.toISOString().split('T')[0];
+      const dbStart = format(cycleStart, "yyyy-MM-dd");
+      const dbEnd = format(cycleEnd, "yyyy-MM-dd");
 
       const { data, error } = await supabase
         .from("expenses")
@@ -527,7 +527,7 @@ export default function Expenses() {
       </div>
 
       <div className="text-sm text-muted-foreground">
-        Exibindo ciclo: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
+        Exibindo competência: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -539,21 +539,21 @@ export default function Expenses() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-3 mt-4">
-          {(expenses ?? []).length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada neste ciclo.</p>}
+          {(expenses ?? []).length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
           {(expenses ?? []).map((e) => (
             <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
         
         <TabsContent value="mine" className="space-y-3 mt-4">
-          {filteredMine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada neste ciclo.</p>}
+          {filteredMine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
           {filteredMine.map((e) => (
             <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
 
         <TabsContent value="collective" className="space-y-3 mt-4">
-          {filteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada neste ciclo.</p>}
+          {filteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
           {filteredCollective.map((e) => (
             <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}

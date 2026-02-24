@@ -41,20 +41,15 @@ export default function Dashboard() {
   const closingDay = groupSettings?.closing_day || 1;
   const dueDay = groupSettings?.due_day || 10;
 
-  // Initialize currentDate based on Closing Day logic
-  // If today >= closingDay, the current competence is NEXT month.
-  const [currentDate, setCurrentDate] = useState<Date>(() => {
-    const today = new Date();
-    // We assume default closing day 1 if not loaded yet, 
-    // but useEffect below will correct it once settings load.
-    return today; 
-  });
+  // Initialize currentDate (The "Competence Month")
+  // Rule: If today >= closingDay, we are in the NEXT month's competence.
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
 
-  // Update currentDate once settings are loaded to reflect correct competence
   useEffect(() => {
     if (groupSettings) {
       const today = new Date();
       if (today.getDate() >= groupSettings.closing_day) {
+        // We are already in next month's competence
         setCurrentDate(addMonths(today, 1));
       } else {
         setCurrentDate(today);
@@ -63,24 +58,19 @@ export default function Dashboard() {
   }, [groupSettings]);
 
   // --- Cycle Calculation ---
-  // Cycle Start: Previous Month, on Closing Day.
-  // Cycle End: Current Month, on Closing Day.
-  // Example: View = March. Closing = 5. 
-  // Cycle = Feb 5 to March 5.
+  // Competence = CurrentDate (e.g. March)
+  // Start: Previous Month (Feb) on Closing Day (inclusive)
+  // End: Current Month (March) on Closing Day (exclusive)
   const cycleStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, closingDay);
   const cycleEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), closingDay);
   
-  // Set times to ensure full coverage (Start at 00:00:00, End at 00:00:00 exclusive)
-  cycleStart.setHours(0, 0, 0, 0);
-  cycleEnd.setHours(0, 0, 0, 0);
-
-  // Due Date: Current Month, on Due Day
+  // Payment Deadline:
+  // Defined by admin as "Due Day".
+  // Payment must be made by "Due Day - 1".
   const cycleDueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dueDay);
-  
-  // Limit Date (D-1)
   const cycleLimitDate = subDays(cycleDueDate, 1);
   
-  // Is Late? Only if looking at current/past cycle and today > limit
+  // Is Late?
   const isLate = isAfter(now, cycleLimitDate) && !isSameDay(now, cycleLimitDate);
 
   // --- Queries ---
@@ -89,16 +79,15 @@ export default function Dashboard() {
   const { data: monthExpenses } = useQuery({
     queryKey: ["month-expenses", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
     queryFn: async () => {
-      // Add 1 day to end date for API comparison to ensure we catch everything on the last day if times differ
-      const dbStart = cycleStart.toISOString().split('T')[0];
-      const dbEnd = cycleEnd.toISOString().split('T')[0];
+      const dbStart = format(cycleStart, "yyyy-MM-dd");
+      const dbEnd = format(cycleEnd, "yyyy-MM-dd");
 
       const { data } = await supabase
         .from("expenses")
         .select("amount, purchase_date, created_at")
         .eq("group_id", membership!.group_id)
         .gte("purchase_date", dbStart)
-        .lt("purchase_date", dbEnd);
+        .lt("purchase_date", dbEnd); // < End Date means it excludes the closing day of the next cycle
       
       return (data ?? []).reduce((sum, e) => sum + Number(e.amount), 0);
     },
@@ -124,8 +113,8 @@ export default function Dashboard() {
   const { data: currentBill } = useQuery({
     queryKey: ["personal-bill-summary", user?.id, currentDate.getMonth(), currentDate.getFullYear()],
     queryFn: async () => {
-      // Check which expense_installments match the selected month/year
-      // bill_month is 1-12
+      // Competence logic for bills is handled in the backend trigger/storage usually, 
+      // but here we just query by the assigned bill_month/year
       const targetMonth = currentDate.getMonth() + 1; 
       const targetYear = currentDate.getFullYear();
 
@@ -147,7 +136,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from("expenses")
-        .select("id, title, amount, category, created_at, expense_type")
+        .select("id, title, amount, category, created_at, expense_type, purchase_date")
         .eq("group_id", membership!.group_id)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -156,19 +145,18 @@ export default function Dashboard() {
     enabled: !!membership?.group_id,
   });
 
-  // --- Filtering Logic ---
+  // --- Filtering Logic for Pending Splits ---
   const filteredPendingSplits = (pendingSplits ?? []).filter((s: any) => {
-    // Prefer purchase_date, fallback to created_at
-    const dateStr = s.expenses?.purchase_date || s.expenses?.created_at;
+    // Strictly use purchase_date for competence
+    const dateStr = s.expenses?.purchase_date;
     if (!dateStr) return false;
     
-    // Normalize string to date object (midnight)
-    const expenseDate = new Date(dateStr + "T00:00:00"); 
-    // Fix: If dateStr is full ISO (has T), use standard constructor
-    const d = dateStr.includes("T") ? new Date(dateStr) : expenseDate;
+    // Convert to comparable values (YYYY-MM-DD string comparison is safe here)
+    const expenseDateStr = dateStr;
+    const startStr = format(cycleStart, "yyyy-MM-dd");
+    const endStr = format(cycleEnd, "yyyy-MM-dd");
     
-    // Normalize comparison to timestamps to avoid object reference issues
-    return d.getTime() >= cycleStart.getTime() && d.getTime() < cycleEnd.getTime();
+    return expenseDateStr >= startStr && expenseDateStr < endStr;
   });
 
   const collectivePending = filteredPendingSplits.filter((s: any) => s.expenses?.expense_type === "collective");
@@ -272,7 +260,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="gap-1.5 font-normal py-1 px-3 text-sm">
               <CalendarClock className="h-3.5 w-3.5 text-primary" /> 
-              Ciclo: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
+              Competência: <strong>{format(cycleStart, "dd/MM")}</strong> a <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
           </Badge>
           <Badge variant="outline" className="gap-1.5 font-normal py-1 px-3 text-sm">
               <Calendar className="h-3.5 w-3.5 text-destructive" /> 
@@ -294,7 +282,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-1 mt-1">
                 {isLate && totalCollective > 0 && <AlertCircle className="h-3 w-3 text-destructive" />}
                 <p className={`text-[10px] ${isLate && totalCollective > 0 ? "text-destructive font-bold" : "text-destructive/80"}`}>
-                   Referência: {format(currentDate, "MMM/yy")}
+                   Venc. {format(cycleDueDate, "dd/MM")}
                 </p>
               </div>
             </div>
@@ -372,7 +360,7 @@ export default function Dashboard() {
                 <div key={e.id} className="flex items-center justify-between border-b pb-2 last:border-0">
                   <div>
                     <p className="text-sm font-medium">{e.title}</p>
-                    <p className="text-[10px] text-muted-foreground">{format(new Date(e.created_at), "dd/MM/yyyy")}</p>
+                    <p className="text-[10px] text-muted-foreground">{format(new Date(e.purchase_date || e.created_at), "dd/MM/yyyy")}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold">R$ {Number(e.amount).toFixed(2)}</p>

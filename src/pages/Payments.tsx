@@ -58,8 +58,8 @@ export default function Payments() {
   const { data: payments, isLoading } = useQuery({
     queryKey: ["payments", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
     queryFn: async () => {
-      const dbStart = cycleStart.toISOString();
-      const dbEnd = cycleEnd.toISOString();
+      const dbStart = format(cycleStart, "yyyy-MM-dd");
+      const dbEnd = format(cycleEnd, "yyyy-MM-dd");
 
       const { data, error } = await supabase
         .from("payments")
@@ -244,7 +244,7 @@ export default function Payments() {
       </div>
 
       <div className="text-sm text-muted-foreground">
-        Exibindo ciclo: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
+        Exibindo competência: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
       </div>
 
       <Tabs defaultValue={isAdmin ? "pending" : "all"}>
@@ -256,7 +256,7 @@ export default function Payments() {
         {isAdmin && (
           <TabsContent value="pending" className="space-y-3 mt-4">
             {payments?.filter((p) => p.status === "pending").length === 0 && (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento pendente neste ciclo.</CardContent></Card>
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento pendente nesta competência.</CardContent></Card>
             )}
             {payments?.filter((p) => p.status === "pending").map((p: any) => (
               <PaymentCard key={p.id} payment={p} isAdmin onConfirm={handleConfirm} />
@@ -266,7 +266,7 @@ export default function Payments() {
 
         <TabsContent value="all" className="space-y-3 mt-4">
           {payments?.length === 0 && (
-            <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento registrado neste ciclo.</CardContent></Card>
+            <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento registrado nesta competência.</CardContent></Card>
           )}
           {payments?.map((p: any) => (
             <PaymentCard key={p.id} payment={p} isAdmin={isAdmin} onConfirm={handleConfirm} />

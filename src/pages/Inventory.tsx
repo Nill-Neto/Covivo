@@ -76,8 +76,8 @@ export default function Inventory() {
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["inventory", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
     queryFn: async () => {
-      const dbStart = cycleStart.toISOString();
-      const dbEnd = cycleEnd.toISOString();
+      const dbStart = format(cycleStart, "yyyy-MM-dd");
+      const dbEnd = format(cycleEnd, "yyyy-MM-dd");
 
       const { data, error } = await supabase
         .from("inventory_items")
@@ -87,10 +87,6 @@ export default function Inventory() {
         .lt("updated_at", dbEnd) // ... up to end of cycle
         .order("category")
         .order("name");
-      
-      // Note: This logic is imperfect for historical inventory state but shows activity.
-      // A proper historical inventory needs a separate history table. 
-      // For now, filtering by modification date is the closest approximation.
       
       if (error) throw error;
       return data;
@@ -128,7 +124,7 @@ export default function Inventory() {
       const { error } = await supabase.from("inventory_items").update({ quantity: newQty }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["inventory"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inventory"] });
   });
 
   const deleteItem = useMutation({
@@ -150,7 +146,7 @@ export default function Inventory() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-serif">Estoque</h1>
-          <p className="text-muted-foreground text-sm">Itens movimentados neste ciclo.</p>
+          <p className="text-muted-foreground text-sm">Itens movimentados nesta competência.</p>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -201,7 +197,7 @@ export default function Inventory() {
       </div>
 
       <div className="text-sm text-muted-foreground">
-        Exibindo ciclo: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
+        Exibindo competência: <strong>{format(cycleStart, "dd/MM")}</strong> até <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
       </div>
 
       {lowStock.length > 0 && (
@@ -226,7 +222,7 @@ export default function Inventory() {
       {isLoading ? (
         <p className="text-muted-foreground text-sm">Carregando...</p>
       ) : filtered.length === 0 ? (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhum item movimentado neste ciclo.</CardContent></Card>
+        <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhum item movimentado nesta competência.</CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
