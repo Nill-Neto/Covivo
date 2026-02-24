@@ -139,10 +139,14 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!isAdmin || !membership?.group_id) return null;
 
+      // Note: get_member_balances should now be updated to filter only collective expenses
       const [membersRes, balancesRes, pendingPaymentsRes, rolesRes] = await Promise.all([
         supabase.from("group_members").select("user_id, active").eq("group_id", membership.group_id).eq("active", true),
         supabase.rpc("get_member_balances", { _group_id: membership.group_id }),
-        supabase.from("payments").select("id", { count: 'exact' }).eq("group_id", membership.group_id).eq("status", "pending"),
+        supabase.from("payments")
+          .select("id, expense_split_id, expense_splits(expenses(expense_type))")
+          .eq("group_id", membership.group_id)
+          .eq("status", "pending"),
         supabase.from("user_roles").select("user_id, role").eq("group_id", membership.group_id)
       ]);
 
@@ -155,10 +159,18 @@ export default function Dashboard() {
         role: rolesRes.data?.find(r => r.user_id === m.user_id)?.role ?? 'morador'
       })) ?? [];
 
+      // Filter pending payments to only count Collective ones
+      // Logic: If expense_split_id is null (generic rateio payment) OR related expense is 'collective'
+      const pendingCollectiveCount = (pendingPaymentsRes.data || []).filter((p: any) => {
+        if (!p.expense_split_id) return true; // Rateio payment (usually null split)
+        const type = p.expense_splits?.expenses?.expense_type;
+        return type === 'collective';
+      }).length;
+
       return {
         members,
         balances: balancesRes.data ?? [],
-        pendingPaymentsCount: pendingPaymentsRes.count ?? 0
+        pendingPaymentsCount: pendingCollectiveCount
       };
     },
     enabled: !!membership?.group_id && isAdmin
