@@ -157,7 +157,7 @@ export default function ShoppingLists() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Listas de Compras</h1>
+          <h1 className="text-3xl font-serif">Listas de Compras</h1>
           <p className="text-muted-foreground text-sm">Coletivas e individuais</p>
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
@@ -165,7 +165,7 @@ export default function ShoppingLists() {
             <Button><Plus className="mr-2 h-4 w-4" />Nova lista</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle className="font-bold">Nova lista de compras</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="font-serif">Nova lista de compras</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div><Label>Nome</Label><Input value={newList.name} onChange={(e) => setNewList({ ...newList, name: e.target.value })} placeholder="Ex: Compras da semana" /></div>
               <div><Label>Tipo</Label>
@@ -188,7 +188,7 @@ export default function ShoppingLists() {
           <div className="flex items-center justify-between">
             <div>
               <Button variant="ghost" className="mb-1 px-0 text-muted-foreground" onClick={() => setSelectedList(null)}>← Voltar</Button>
-              <h2 className="text-xl font-bold">{currentList.name}</h2>
+              <h2 className="text-xl font-serif">{currentList.name}</h2>
               <div className="flex gap-2 mt-1">
                 <Badge variant={currentList.list_type === "collective" ? "default" : "secondary"}>
                   {currentList.list_type === "collective" ? "Coletiva" : "Individual"}

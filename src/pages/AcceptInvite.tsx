@@ -73,7 +73,7 @@ export default function AcceptInvite() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md text-center">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Convite Republi-K</CardTitle>
+          <CardTitle className="font-serif text-2xl">Convite Republi-K</CardTitle>
           <CardDescription>Você foi convidado para uma moradia</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

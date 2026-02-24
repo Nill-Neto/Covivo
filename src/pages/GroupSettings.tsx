@@ -79,7 +79,7 @@ export default function GroupSettings() {
   return (
     <div className="space-y-6 max-w-xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
+        <h1 className="text-3xl font-serif">Configurações</h1>
         <p className="text-muted-foreground mt-1">Gerencie os dados do grupo.</p>
       </div>
 

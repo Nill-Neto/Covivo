@@ -75,7 +75,7 @@ export default function Profile() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Meu Perfil</h1>
+        <h1 className="text-3xl font-serif">Meu Perfil</h1>
         <p className="text-muted-foreground text-sm">Gerencie suas informações pessoais</p>
       </div>
 
@@ -87,7 +87,7 @@ export default function Profile() {
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="font-bold">{profile?.full_name}</CardTitle>
+              <CardTitle className="font-serif">{profile?.full_name}</CardTitle>
               <CardDescription>{profile?.email}</CardDescription>
               {membership && (
                 <Badge variant={isAdmin ? "default" : "secondary"} className="mt-1">
@@ -123,7 +123,7 @@ export default function Profile() {
       {/* Reports section */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-bold text-lg flex items-center gap-2">
+          <CardTitle className="font-serif text-lg flex items-center gap-2">
             <FileText className="h-5 w-5" />Relatórios
           </CardTitle>
           <CardDescription>Gere relatórios mensais em PDF</CardDescription>
@@ -139,7 +139,7 @@ export default function Profile() {
       {/* Security info */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-bold text-lg flex items-center gap-2">
+          <CardTitle className="font-serif text-lg flex items-center gap-2">
             <Shield className="h-5 w-5" />Segurança
           </CardTitle>
         </CardHeader>

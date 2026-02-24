@@ -24,7 +24,7 @@ export default function Login() {
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-primary p-12 text-primary-foreground">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">Republi-K</h1>
+          <h1 className="text-4xl font-serif">Republi-K</h1>
           <p className="mt-2 text-primary-foreground/70 font-sans text-sm tracking-wide uppercase">
             Gestão de moradia compartilhada
           </p>
@@ -53,7 +53,7 @@ export default function Login() {
       <div className="flex flex-1 flex-col items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-8">
           <div className="text-center lg:text-left">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">Bem-vindo</h2>
+            <h2 className="text-3xl font-serif text-foreground">Bem-vindo</h2>
             <p className="mt-2 text-muted-foreground">
               Entre com sua conta Google para começar.
             </p>

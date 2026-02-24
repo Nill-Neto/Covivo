@@ -219,7 +219,7 @@ function TermsStep({ accepted, hasInvite, onAcceptChange, onContinue }: TermsSte
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Termos de Uso</CardTitle>
+          <CardTitle className="font-serif text-2xl">Termos de Uso</CardTitle>
           <CardDescription>
             {hasInvite
               ? "Você foi convidado para uma moradia. Leia e aceite os termos para continuar."
@@ -285,7 +285,7 @@ function CpfStep({
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Seus Dados</CardTitle>
+          <CardTitle className="font-serif text-2xl">Seus Dados</CardTitle>
           <CardDescription>Complete seu cadastro para continuar.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -349,7 +349,7 @@ function GroupStep({
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Criar Moradia</CardTitle>
+          <CardTitle className="font-serif text-2xl">Criar Moradia</CardTitle>
           <CardDescription>Você será o administrador deste grupo. Configure os detalhes da moradia.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
