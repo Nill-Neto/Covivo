@@ -7,14 +7,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, CreditCard } from "lucide-react";
 import { format, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const CATEGORIES: Record<string, string> = {
+  rent: "Aluguel",
+  utilities: "Contas",
+  internet: "Internet/TV",
+  cleaning: "Limpeza",
+  maintenance: "Manutenção",
+  groceries: "Mercado",
+  other: "Outros",
+};
 
 export default function Bills() {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedCardId, setSelectedCardId] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("date_desc");
   const [initialized, setInitialized] = useState(false);
 
   const month = currentDate.getMonth() + 1;
@@ -49,7 +60,7 @@ export default function Bills() {
     queryFn: async () => {
       let query = supabase
         .from("expense_installments" as any)
-        .select("*, expenses(title, credit_card_id)")
+        .select("*, expenses(title, credit_card_id, category, purchase_date)")
         .eq("user_id", user!.id)
         .eq("bill_month", month)
         .eq("bill_year", year);
@@ -66,6 +77,24 @@ export default function Bills() {
     enabled: !!user,
   });
 
+  const sortedInstallments = [...billInstallments].sort((a, b) => {
+    switch (sortBy) {
+      case "name":
+        return (a.expenses?.title || "").localeCompare(b.expenses?.title || "");
+      case "category":
+        return (a.expenses?.category || "").localeCompare(b.expenses?.category || "");
+      case "amount_desc":
+        return b.amount - a.amount;
+      case "amount_asc":
+        return a.amount - b.amount;
+      case "date_asc":
+        return new Date(a.expenses?.purchase_date || 0).getTime() - new Date(b.expenses?.purchase_date || 0).getTime();
+      case "date_desc":
+      default:
+        return new Date(b.expenses?.purchase_date || 0).getTime() - new Date(a.expenses?.purchase_date || 0).getTime();
+    }
+  });
+
   const totalBill = billInstallments.reduce((sum, i) => sum + Number(i.amount), 0);
 
   return (
@@ -78,7 +107,7 @@ export default function Bills() {
         
         <div className="flex items-center gap-2 bg-card border rounded-lg p-1">
           <Button variant="ghost" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}><ChevronLeft className="h-4 w-4" /></Button>
-          <div className="px-4 text-sm font-medium min-w-[120px] text-center">
+          <div className="px-4 text-sm font-medium min-w-[120px] text-center capitalize">
             {format(currentDate, "MMMM yyyy", { locale: ptBR })}
           </div>
           <Button variant="ghost" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
@@ -88,15 +117,33 @@ export default function Bills() {
       <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
         <div className="space-y-4">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm">Filtrar Cartão</CardTitle></CardHeader>
-            <CardContent>
-              <Select value={selectedCardId} onValueChange={setSelectedCardId}>
-                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os cartões</SelectItem>
-                  {cards.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">Filtros</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Cartão</label>
+                <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                  <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os cartões</SelectItem>
+                    {cards.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Ordenar por</label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date_desc">Data (Recentes)</SelectItem>
+                    <SelectItem value="date_asc">Data (Antigos)</SelectItem>
+                    <SelectItem value="amount_desc">Valor (Maior)</SelectItem>
+                    <SelectItem value="amount_asc">Valor (Menor)</SelectItem>
+                    <SelectItem value="name">Nome (A-Z)</SelectItem>
+                    <SelectItem value="category">Categoria</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
 
@@ -109,24 +156,46 @@ export default function Bills() {
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-lg">Detalhamento</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Detalhamento</CardTitle>
+            <Badge variant="outline" className="text-xs font-normal">
+              {sortedInstallments.length} lançamento(s)
+            </Badge>
+          </CardHeader>
           <CardContent>
-            {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div> : billInstallments.length === 0 ? (
+            {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div> : sortedInstallments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Calendar className="h-10 w-10 mb-2 opacity-20" /><p>Nenhum lançamento este mês.</p>
               </div>
             ) : (
               <ScrollArea className="h-[500px] pr-4">
                 <div className="space-y-3">
-                  {billInstallments.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
-                      <div>
-                        <p className="font-medium">{item.expenses?.title}</p>
-                        <Badge variant="outline" className="text-[10px] mt-1">Parcela {item.installment_number}</Badge>
+                  {sortedInstallments.map((item: any) => {
+                    const card = cards.find((c) => c.id === item.expenses?.credit_card_id);
+                    const categoryLabel = CATEGORIES[item.expenses?.category] || item.expenses?.category || "Outros";
+                    
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                        <div className="min-w-0 flex-1 mr-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium truncate">{item.expenses?.title}</p>
+                            <Badge variant="secondary" className="text-[10px] h-5">{categoryLabel}</Badge>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>{format(new Date(item.expenses?.purchase_date || item.created_at), "dd/MM/yyyy")}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <CreditCard className="h-3 w-3" />
+                              {card?.label || "Cartão"}
+                            </span>
+                            <span>•</span>
+                            <span>Parcela {item.installment_number}</span>
+                          </div>
+                        </div>
+                        <p className="font-bold text-lg whitespace-nowrap">R$ {Number(item.amount).toFixed(2)}</p>
                       </div>
-                      <p className="font-bold text-lg">R$ {Number(item.amount).toFixed(2)}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
             )}
