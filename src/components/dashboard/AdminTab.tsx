@@ -191,7 +191,7 @@ export function AdminTab({
                         </span>
                       </div>
                     ) : member.balance > 0.05 ? (
-                      <div className="flex items-center gap-1.5 text-emerald-600">
+                      <div className="flex items-center gap-1.5 text-green-600 dark:text-green-500">
                         <TrendingUp className="h-3.5 w-3.5" />
                         <span className="font-semibold text-sm tabular-nums">
                           +R$ {member.balance.toFixed(2)}
