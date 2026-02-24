@@ -1034,7 +1034,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      group_member_profiles: {
+        Row: {
+          active: boolean | null
+          avatar_url: string | null
+          full_name: string | null
+          group_id: string | null
+          id: string | null
+          split_percentage: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invite: { Args: { _token: string }; Returns: Json }

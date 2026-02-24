@@ -22,7 +22,7 @@ export default function Members() {
       const userIds = groupMembers.map((gm) => gm.user_id);
 
       const [{ data: profiles }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", userIds),
+        supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds),
         supabase.from("user_roles").select("user_id, role").eq("group_id", membership!.group_id),
       ]);
 
@@ -68,7 +68,7 @@ export default function Members() {
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{m.profile?.full_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{m.profile?.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{m.role === "admin" ? "Administrador" : "Morador"}</p>
                 </div>
                 <Badge variant={m.role === "admin" ? "default" : "secondary"} className="shrink-0">
                   {m.role === "admin" ? "Admin" : "Morador"}
