@@ -19,6 +19,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 export default function Dashboard() {
   const { profile, membership, isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
   
   // Date State for Navigation
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -44,10 +47,6 @@ export default function Dashboard() {
   const dueDay = groupSettings?.due_day || 10;
 
   // Initialize Date Logic based on Closing Day
-  // If today is after closing day, the "current" financial month is technically next month.
-  // But usually dashboards default to "This Month". Let's stick to the current calendar month unless adjusted.
-  // The Month Selector will drive the logic.
-
   // Calculate Cycle Dates based on currentDate state
   // Cycle Start: Month - 1, Day = closingDay
   // Cycle End: Month, Day = closingDay (Exclusive)
@@ -55,14 +54,14 @@ export default function Dashboard() {
   const cycleEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), closingDay);
   
   // Calculate Due Date for this specific selected month
-  // If selected month is Nov, and due day is 10. The due date is Nov 10.
   const cycleDueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dueDay);
   
   // Limit Date (D-1)
   const cycleLimitDate = subDays(cycleDueDate, 1);
   
   // Check if Late (only relevant if looking at current or past months)
-  const now = new Date();
+  // Logic: If today is after the limit date of the VIEWED cycle, and there is pending debt displayed, it is late.
+  // Note: We compare 'now' vs 'cycleLimitDate'. 
   const isLate = isAfter(now, cycleLimitDate) && !isSameDay(now, cycleLimitDate);
 
   // --- Queries ---
@@ -83,14 +82,13 @@ export default function Dashboard() {
     enabled: !!membership?.group_id
   });
 
-  // 2. Pending Splits (Debts) - ALWAYS Current Status (All Time)
-  // We don't filter debts by month because a debt is a debt until paid.
+  // 2. Pending Splits (Debts) - Fetch ALL pending first, then filter in memory
   const { data: pendingSplits } = useQuery({
     queryKey: ["my-pending-splits", membership?.group_id, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_splits")
-        .select("id, amount, status, expense_id, expenses:expense_id(title, group_id, expense_type)")
+        .select("id, amount, status, expense_id, expenses:expense_id(title, group_id, expense_type, created_at, purchase_date)") // Added dates
         .eq("user_id", user!.id)
         .eq("status", "pending");
       if (error) throw error;
@@ -133,10 +131,19 @@ export default function Dashboard() {
     enabled: !!membership?.group_id,
   });
 
-  // Split calculations
-  const collectivePending = (pendingSplits ?? []).filter((s: any) => s.expenses?.expense_type === "collective");
-  const individualPending = (pendingSplits ?? []).filter((s: any) => s.expenses?.expense_type === "individual");
-  const totalCollective = collectivePending.reduce((sum, s: any) => sum + Number(s.amount), 0);
+  // Filter Pending Splits by Selected Month Cycle
+  const filteredPendingSplits = (pendingSplits ?? []).filter((s: any) => {
+    // Use purchase_date if available, otherwise created_at
+    const dateStr = s.expenses?.purchase_date || s.expenses?.created_at;
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    return date >= cycleStart && date < cycleEnd;
+  });
+
+  const collectivePending = filteredPendingSplits.filter((s: any) => s.expenses?.expense_type === "collective");
+  const individualPending = filteredPendingSplits.filter((s: any) => s.expenses?.expense_type === "individual");
+  
+  const totalCollective = collectivePending.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
 
   // --- Handlers ---
   const handlePayRateio = async () => {
@@ -154,7 +161,7 @@ export default function Dashboard() {
         paid_by: user!.id,
         amount: totalCollective,
         receipt_url: urlData.publicUrl,
-        notes: "Pagamento de Rateio Coletivo"
+        notes: `Pagamento de Rateio - ${format(currentDate, "MMMM/yyyy", { locale: ptBR })}`
       });
 
       toast({ title: "Pagamento enviado!" });
@@ -246,7 +253,7 @@ export default function Dashboard() {
       {/* Main Financial Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         
-        {/* Collective Debt (Rateio) - This is mostly "All time" but we show alert based on current view date */}
+        {/* Collective Debt (Rateio) - Filtered by Month */}
         <Card className={`relative overflow-hidden transition-all ${isLate && totalCollective > 0 ? "border-destructive bg-destructive/10" : "border-destructive/20 bg-destructive/5"}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
@@ -272,7 +279,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Individual Pending */}
+        {/* Individual Pending - Filtered by Month */}
         <Card className="border-warning/20 bg-warning/5">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardDescription className="text-warning-foreground font-medium">Gastos Individuais Pendentes</CardDescription>
@@ -379,7 +386,7 @@ export default function Dashboard() {
           <DialogHeader><DialogTitle>Pagar Rateio Coletivo</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="p-4 bg-muted/50 rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">Total a pagar à república</p>
+              <p className="text-sm text-muted-foreground">Total a pagar à república ({format(currentDate, "MMMM/yy", { locale: ptBR })})</p>
               <p className="text-3xl font-bold font-serif text-primary mt-1">R$ {totalCollective.toFixed(2)}</p>
             </div>
 
