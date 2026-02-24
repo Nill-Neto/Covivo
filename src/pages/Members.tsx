@@ -46,7 +46,7 @@ export default function Members() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-serif">Moradores</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Moradores</h1>
         <p className="text-muted-foreground mt-1">{members?.length ?? 0} membro(s) ativo(s)</p>
       </div>
 

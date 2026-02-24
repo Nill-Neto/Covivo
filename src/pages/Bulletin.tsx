@@ -114,7 +114,7 @@ export default function Bulletin() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-serif">Mural de Avisos</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Mural de Avisos</h1>
           <p className="text-muted-foreground mt-1">Comunicados e recados para a república.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>

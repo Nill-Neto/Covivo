@@ -187,7 +187,7 @@ export default function Polls() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-serif">Votações</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Votações</h1>
           <p className="text-muted-foreground mt-1">Decisões coletivas da república.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>

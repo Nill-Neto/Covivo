@@ -92,7 +92,7 @@ export default function HouseRules() {
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-serif">Regras da Casa</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Regras da Casa</h1>
           <p className="text-muted-foreground mt-1">Combinados de convivência da república.</p>
         </div>
         {isAdmin && (

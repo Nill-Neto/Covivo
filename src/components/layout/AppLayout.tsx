@@ -95,7 +95,7 @@ export function AppLayout() {
   const SidebarContent = () => (
     <div className="flex h-full flex-col gap-4">
       <div className="flex h-14 items-center border-b px-6">
-        <Link to="/" className="flex items-center gap-2 font-serif text-xl font-bold tracking-tight">
+        <Link to="/" className="flex items-center gap-2 text-xl font-bold tracking-tight">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             R
           </div>
