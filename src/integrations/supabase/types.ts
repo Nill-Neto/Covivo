@@ -96,6 +96,80 @@ export type Database = {
           },
         ]
       }
+      credit_cards: {
+        Row: {
+          brand: string
+          closing_day: number
+          created_at: string
+          due_day: number
+          id: string
+          label: string
+          limit_amount: number | null
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          closing_day: number
+          created_at?: string
+          due_day: number
+          id?: string
+          label: string
+          limit_amount?: number | null
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          closing_day?: number
+          created_at?: string
+          due_day?: number
+          id?: string
+          label?: string
+          limit_amount?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expense_installments: {
+        Row: {
+          amount: number
+          bill_month: number
+          bill_year: number
+          created_at: string
+          expense_id: string
+          id: string
+          installment_number: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bill_month: number
+          bill_year: number
+          created_at?: string
+          expense_id: string
+          id?: string
+          installment_number: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bill_month?: number
+          bill_year?: number
+          created_at?: string
+          expense_id?: string
+          id?: string
+          installment_number?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_installments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_splits: {
         Row: {
           amount: number
@@ -140,12 +214,17 @@ export type Database = {
           category: string
           created_at: string
           created_by: string
+          credit_card_id: string | null
           description: string | null
           due_date: string | null
           expense_type: string
           group_id: string
           id: string
+          installments: number
+          instantallments: number | null
           paid_to_provider: boolean
+          payment_method: string
+          purchase_date: string
           receipt_url: string | null
           recurring_expense_id: string | null
           title: string
@@ -156,12 +235,17 @@ export type Database = {
           category?: string
           created_at?: string
           created_by: string
+          credit_card_id?: string | null
           description?: string | null
           due_date?: string | null
           expense_type?: string
           group_id: string
           id?: string
+          installments?: number
+          instantallments?: number | null
           paid_to_provider?: boolean
+          payment_method?: string
+          purchase_date?: string
           receipt_url?: string | null
           recurring_expense_id?: string | null
           title: string
@@ -172,18 +256,30 @@ export type Database = {
           category?: string
           created_at?: string
           created_by?: string
+          credit_card_id?: string | null
           description?: string | null
           due_date?: string | null
           expense_type?: string
           group_id?: string
           id?: string
+          installments?: number
+          instantallments?: number | null
           paid_to_provider?: boolean
+          payment_method?: string
+          purchase_date?: string
           receipt_url?: string | null
           recurring_expense_id?: string | null
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_group_id_fkey"
             columns: ["group_id"]
@@ -233,27 +329,33 @@ export type Database = {
       }
       groups: {
         Row: {
+          closing_day: number | null
           created_at: string
           created_by: string | null
           description: string | null
+          due_day: number | null
           id: string
           name: string
           splitting_rule: Database["public"]["Enums"]["splitting_rule"]
           updated_at: string
         }
         Insert: {
+          closing_day?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          due_day?: number | null
           id?: string
           name: string
           splitting_rule?: Database["public"]["Enums"]["splitting_rule"]
           updated_at?: string
         }
         Update: {
+          closing_day?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          due_day?: number | null
           id?: string
           name?: string
           splitting_rule?: Database["public"]["Enums"]["splitting_rule"]
@@ -490,6 +592,91 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personal_expense_installments: {
+        Row: {
+          amount: number
+          bill_month: number
+          bill_year: number
+          created_at: string
+          id: string
+          installment_number: number
+          personal_expense_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bill_month: number
+          bill_year: number
+          created_at?: string
+          id?: string
+          installment_number: number
+          personal_expense_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bill_month?: number
+          bill_year?: number
+          created_at?: string
+          id?: string
+          installment_number?: number
+          personal_expense_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_expense_installments_personal_expense_id_fkey"
+            columns: ["personal_expense_id"]
+            isOneToOne: false
+            referencedRelation: "personal_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personal_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          credit_card_id: string | null
+          id: string
+          installments: number
+          payment_method: string
+          purchase_date: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          credit_card_id?: string | null
+          id?: string
+          installments?: number
+          payment_method: string
+          purchase_date: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          credit_card_id?: string | null
+          id?: string
+          installments?: number
+          payment_method?: string
+          purchase_date?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_expenses_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -870,10 +1057,14 @@ export type Database = {
         Args: {
           _amount?: number
           _category?: string
+          _credit_card_id?: string
           _description?: string
           _due_date?: string
           _expense_type?: string
           _group_id: string
+          _installments?: number
+          _payment_method?: string
+          _purchase_date?: string
           _receipt_url?: string
           _recurring_expense_id?: string
           _target_user_id?: string
