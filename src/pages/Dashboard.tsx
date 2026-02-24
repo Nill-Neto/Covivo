@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, CreditCard } from "lucide-react";
+import { User, Users, CreditCard, Shield } from "lucide-react";
 import { format, subDays, isAfter, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
@@ -12,11 +12,12 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { RepublicTab } from "@/components/dashboard/RepublicTab";
 import { PersonalTab } from "@/components/dashboard/PersonalTab";
 import { CardsTab } from "@/components/dashboard/CardsTab";
+import { AdminTab } from "@/components/dashboard/AdminTab";
 import { PaymentDialogs } from "@/components/dashboard/PaymentDialogs";
 import { getCategoryLabel } from "@/constants/categories";
 
 export default function Dashboard() {
-  const { profile, membership, user } = useAuth();
+  const { profile, membership, user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const now = new Date();
   
@@ -132,6 +133,37 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
+  // 5. Admin Data
+  const { data: adminData } = useQuery({
+    queryKey: ["admin-dashboard-data", membership?.group_id],
+    queryFn: async () => {
+      if (!isAdmin || !membership?.group_id) return null;
+
+      const [membersRes, balancesRes, pendingPaymentsRes, rolesRes] = await Promise.all([
+        supabase.from("group_members").select("user_id, active").eq("group_id", membership.group_id).eq("active", true),
+        supabase.rpc("get_member_balances", { _group_id: membership.group_id }),
+        supabase.from("payments").select("id", { count: 'exact' }).eq("group_id", membership.group_id).eq("status", "pending"),
+        supabase.from("user_roles").select("user_id, role").eq("group_id", membership.group_id)
+      ]);
+
+      const userIds = membersRes.data?.map(m => m.user_id) ?? [];
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds);
+
+      const members = membersRes.data?.map(m => ({
+        ...m,
+        profile: profiles?.find(p => p.id === m.user_id),
+        role: rolesRes.data?.find(r => r.user_id === m.user_id)?.role ?? 'morador'
+      })) ?? [];
+
+      return {
+        members,
+        balances: balancesRes.data ?? [],
+        pendingPaymentsCount: pendingPaymentsRes.count ?? 0
+      };
+    },
+    enabled: !!membership?.group_id && isAdmin
+  });
+
   // --- Data Processing ---
 
   // Republic Data
@@ -173,9 +205,6 @@ export default function Dashboard() {
   // Bill Installments (Actual Bill to pay)
   const totalBill = billInstallments.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
 
-  // NEW FORMULA: Rateio + Individual Expenses (Credit only)
-  // Cash expenses are excluded as requested. Bill installments excluded as requested.
-  // This represents "New Debt Generated This Month".
   const totalUserExpenses = myCollectiveShare + totalPersonalCredit;
 
   const personalChartData = useMemo(() => {
@@ -305,8 +334,13 @@ export default function Dashboard() {
       />
 
       {/* Main Tabs */}
-      <Tabs defaultValue="republic" className="space-y-6">
+      <Tabs defaultValue={isAdmin ? "admin" : "republic"} className="space-y-6">
         <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-6">
+          {isAdmin && (
+            <TabsTrigger value="admin" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
+              <Shield className="h-4 w-4 mr-2" /> Administração
+            </TabsTrigger>
+          )}
           <TabsTrigger value="republic" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
             <Users className="h-4 w-4 mr-2" /> República
           </TabsTrigger>
@@ -317,6 +351,21 @@ export default function Dashboard() {
             <CreditCard className="h-4 w-4 mr-2" /> Cartões
           </TabsTrigger>
         </TabsList>
+
+        {/* ================= ABA ADMIN ================= */}
+        {isAdmin && (
+          <TabsContent value="admin" className="space-y-6">
+            {adminData ? (
+              <AdminTab 
+                memberBalances={adminData.balances} 
+                members={adminData.members} 
+                pendingPaymentsCount={adminData.pendingPaymentsCount}
+              />
+            ) : (
+              <div className="py-12 text-center text-muted-foreground">Carregando dados administrativos...</div>
+            )}
+          </TabsContent>
+        )}
 
         {/* ================= ABA REPÚBLICA ================= */}
         <TabsContent value="republic" className="space-y-6">
