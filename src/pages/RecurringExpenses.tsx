@@ -49,6 +49,7 @@ export default function RecurringExpenses() {
   const [frequency, setFrequency] = useState("monthly");
   const [dayOfMonth, setDayOfMonth] = useState("1");
   const [description, setDescription] = useState("");
+  const [expenseType, setExpenseType] = useState<"collective" | "individual">(isAdmin ? "collective" : "individual");
   const [saving, setSaving] = useState(false);
 
   const { data: recurring, isLoading } = useQuery({
@@ -73,6 +74,7 @@ export default function RecurringExpenses() {
     setFrequency("monthly");
     setDayOfMonth("1");
     setDescription("");
+    setExpenseType(isAdmin ? "collective" : "individual");
   };
 
   const handleOpenEdit = (rec: any) => {
@@ -83,6 +85,7 @@ export default function RecurringExpenses() {
     setFrequency(rec.frequency);
     setDayOfMonth(String(rec.day_of_month || 1));
     setDescription(rec.description || "");
+    setExpenseType(rec.expense_type || "collective");
     setOpen(true);
   };
 
@@ -105,7 +108,8 @@ export default function RecurringExpenses() {
         category,
         frequency,
         day_of_month: day,
-      };
+        expense_type: expenseType,
+      } as any;
 
       if (editingId) {
         const { error } = await supabase.from("recurring_expenses").update(basePayload).eq("id", editingId);
@@ -166,7 +170,7 @@ export default function RecurringExpenses() {
         _description: rec.description,
         _amount: rec.amount,
         _category: rec.category,
-        _expense_type: "collective",
+        _expense_type: rec.expense_type || "collective",
         _due_date: rec.next_due_date,
         _recurring_expense_id: rec.id,
       });
@@ -206,8 +210,7 @@ export default function RecurringExpenses() {
           <h1 className="text-3xl font-serif">Recorrências</h1>
           <p className="text-muted-foreground mt-1">Despesas automáticas mensais</p>
         </div>
-        {isAdmin && (
-          <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
+        <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
             <DialogTrigger asChild>
               <Button className="gap-2"><Plus className="h-4 w-4" /> Nova Recorrência</Button>
             </DialogTrigger>
@@ -216,6 +219,17 @@ export default function RecurringExpenses() {
                 <DialogTitle className="font-serif">{editingId ? "Editar Recorrência" : "Nova Despesa Recorrente"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
+                {/* Expense Type Selector */}
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select value={expenseType} onValueChange={(v) => setExpenseType(v as any)} disabled={!!editingId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {isAdmin && <SelectItem value="collective">Coletiva</SelectItem>}
+                      <SelectItem value="individual">Individual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Título</Label>
                   <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Aluguel" maxLength={200} />
@@ -263,7 +277,6 @@ export default function RecurringExpenses() {
               </div>
             </DialogContent>
           </Dialog>
-        )}
       </div>
 
       {recurring?.length === 0 && (
@@ -281,6 +294,9 @@ export default function RecurringExpenses() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium">{r.title}</p>
                       <Badge variant="outline" className="text-xs">{catLabel}</Badge>
+                      <Badge variant={(r as any).expense_type === "collective" ? "default" : "secondary"} className="text-xs">
+                        {(r as any).expense_type === "collective" ? "Coletiva" : "Individual"}
+                      </Badge>
                       <Badge variant={r.active ? "default" : "secondary"} className="text-xs">
                         {r.active ? "Ativa" : "Pausada"}
                       </Badge>
@@ -293,7 +309,7 @@ export default function RecurringExpenses() {
                   </div>
                   <div className="text-right shrink-0 flex flex-col items-end gap-2">
                     <p className="text-lg font-bold">R$ {Number(r.amount).toFixed(2)}</p>
-                    {isAdmin && (
+                    {(isAdmin || r.created_by === user?.id) && (
                       <div className="flex items-center gap-1 mt-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenEdit(r)} title="Editar">
                           <Edit className="h-4 w-4" />
