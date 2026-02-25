@@ -862,6 +862,7 @@ export type Database = {
           created_by: string
           day_of_month: number | null
           description: string | null
+          expense_type: string
           frequency: string
           group_id: string
           id: string
@@ -878,6 +879,7 @@ export type Database = {
           created_by: string
           day_of_month?: number | null
           description?: string | null
+          expense_type?: string
           frequency?: string
           group_id: string
           id?: string
@@ -894,6 +896,7 @@ export type Database = {
           created_by?: string
           day_of_month?: number | null
           description?: string | null
+          expense_type?: string
           frequency?: string
           group_id?: string
           id?: string

@@ -249,8 +249,9 @@ export default function Expenses() {
             frequency: "monthly",
             day_of_month: day,
             next_due_date: nextMonthDate.toISOString().split("T")[0],
-            active: true
-          });
+            active: true,
+            expense_type: expenseType
+          } as any);
           if (recError) {
              toast({ title: "Despesa criada", description: "Mas houve erro ao criar a recorrência: " + recError.message, variant: "destructive" });
           } else {
@@ -332,6 +333,12 @@ export default function Expenses() {
     setOpen(true);
   };
 
+  // Filter "all" to only expenses the user is involved in (has a split or created)
+  const filteredAll = (expenses ?? []).filter(e => {
+    if (e.created_by === user?.id) return true;
+    const splits = (e.expense_splits as any[]) || [];
+    return splits.some((s: any) => s.user_id === user?.id);
+  });
   const filteredMine = (expenses ?? []).filter(e => e.expense_type === 'individual' && e.created_by === user?.id);
   const filteredCollective = (expenses ?? []).filter(e => e.expense_type === 'collective');
 
@@ -514,8 +521,8 @@ export default function Expenses() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-3 mt-4">
-          {(expenses ?? []).length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
-          {(expenses ?? []).map((e) => (
+          {filteredAll.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
+          {filteredAll.map((e) => (
             <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
@@ -538,7 +545,7 @@ export default function Expenses() {
           <p className="text-xs text-muted-foreground mb-4">Modelos de despesas que se repetem (não dependem do filtro de mês).</p>
           {!recurringExpenses?.length && <p className="text-center text-muted-foreground py-8">Nenhuma recorrência configurada.</p>}
           {recurringExpenses?.map((r) => (
-            <RecurringCard key={r.id} recurring={r} isAdmin={isAdmin} onEdit={() => openEditRecurring(r)} onDelete={() => deleteRecurring.mutate(r.id)} />
+            <RecurringCard key={r.id} recurring={r} isAdmin={isAdmin} userId={user?.id} onEdit={() => openEditRecurring(r)} onDelete={() => deleteRecurring.mutate(r.id)} />
           ))}
         </TabsContent>
       </Tabs>
@@ -603,8 +610,9 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete }: any)
   );
 }
 
-function RecurringCard({ recurring, isAdmin, onEdit, onDelete }: any) {
+function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: any) {
   const catLabel = CATEGORIES.find((c) => c.value === recurring.category)?.label ?? recurring.category;
+  const canManage = isAdmin || recurring.created_by === userId;
   
   return (
     <Card className="border-l-4 border-l-primary">
@@ -614,6 +622,9 @@ function RecurringCard({ recurring, isAdmin, onEdit, onDelete }: any) {
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <p className="font-medium">{recurring.title}</p>
               <Badge variant="outline" className="text-xs">{catLabel}</Badge>
+              <Badge variant={recurring.expense_type === "collective" ? "default" : "secondary"} className="text-xs">
+                {recurring.expense_type === "collective" ? "Coletiva" : "Individual"}
+              </Badge>
               <Badge variant={recurring.active ? "default" : "secondary"} className="text-xs">
                 {recurring.active ? "Ativa" : "Pausada"}
               </Badge>
@@ -624,7 +635,7 @@ function RecurringCard({ recurring, isAdmin, onEdit, onDelete }: any) {
              <p className="text-lg font-bold">R$ {Number(recurring.amount).toFixed(2)}</p>
              <p className="text-[10px] text-muted-foreground uppercase">Mensal</p>
           </div>
-          {isAdmin && (
+          {canManage && (
              <div className="flex items-center gap-1 mt-1">
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit}><Edit className="h-4 w-4" /></Button>
                 <AlertDialog>
