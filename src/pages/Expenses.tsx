@@ -401,23 +401,16 @@ export default function Expenses() {
     setOpen(true);
   };
 
-  // Filter logic updated to ensure proper visibility in tabs
+  // Filter logic updated
   const filteredAll = (expenses ?? []).filter(e => {
-    // Show if collective
     if (e.expense_type === 'collective') return true;
-    // Show if I created it
     if (e.created_by === user?.id) return true;
-    // Show if I have a split in it (e.g. someone created an individual expense for me)
     const splits = (e.expense_splits as any[]) || [];
     return splits.some((s: any) => s.user_id === user?.id);
   });
 
-  const filteredMine = (expenses ?? []).filter(e => 
-    e.expense_type === 'individual' && (
-      e.created_by === user?.id || 
-      (e.expense_splits as any[])?.some(s => s.user_id === user?.id)
-    )
-  );
+  // Reverted logic for "Mine" as requested
+  const filteredMine = (expenses ?? []).filter(e => e.expense_type === 'individual' && e.created_by === user?.id);
 
   const filteredCollective = (expenses ?? []).filter(e => e.expense_type === 'collective');
 
