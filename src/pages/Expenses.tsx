@@ -194,23 +194,68 @@ export default function Expenses() {
       } 
       // 2. Handle Normal Expense Update
       else if (editingType === "expense" && editingId) {
+        const parsedAmount = parseFloat(amount);
+        const parsedInstallments = parseInt(installments) || 1;
+
         const { error } = await supabase
           .from("expenses")
           .update({
             title: title.trim(),
             description: description.trim() || null,
-            amount: parseFloat(amount),
+            amount: parsedAmount,
             category: categoryToSend,
             payment_method: paymentMethod,
             credit_card_id: finalCreditCardId,
-            installments: parseInt(installments) || 1,
+            installments: parsedInstallments,
             purchase_date: dateValue,
           })
           .eq("id", editingId);
         if (error) throw error;
+
+        // Re-create installments for credit card expenses
+        // 1. Delete old installments
+        await supabase
+          .from("expense_installments")
+          .delete()
+          .eq("expense_id", editingId);
+
+        // 2. Create new installments if credit card
+        if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
+          const card = cards.find((c) => c.id === finalCreditCardId);
+          if (card) {
+            const closingDay = card.closing_day;
+            const purchaseDate = new Date(dateValue + "T12:00:00");
+            const billBase = new Date(purchaseDate);
+            if (purchaseDate.getDate() > closingDay) {
+              billBase.setMonth(billBase.getMonth() + 1);
+            }
+
+            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
+            const installmentRows = [];
+            for (let i = 1; i <= parsedInstallments; i++) {
+              const installDate = new Date(billBase);
+              installDate.setMonth(installDate.getMonth() + (i - 1));
+              installmentRows.push({
+                user_id: user!.id,
+                expense_id: editingId,
+                installment_number: i,
+                amount: perInstallment,
+                bill_month: installDate.getMonth() + 1,
+                bill_year: installDate.getFullYear(),
+              });
+            }
+
+            const { error: instError } = await supabase
+              .from("expense_installments")
+              .insert(installmentRows);
+            if (instError) console.error("Installment re-creation error:", instError);
+          }
+        }
+
         toast({ title: "Despesa atualizada!" });
         queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      } 
+        queryClient.invalidateQueries({ queryKey: ["bill-installments"] });
+      }
       // 3. Handle Creation (New Expense)
       else {
         // Create the actual expense
