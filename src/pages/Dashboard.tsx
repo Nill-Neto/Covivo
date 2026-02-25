@@ -66,7 +66,8 @@ export default function Dashboard() {
   const targetMonth = currentDate.getMonth() + 1;
   const targetYear = currentDate.getFullYear();
 
-  // 1. All Expenses (used to get metadata and cash items)
+  // 1.1 All Expenses (used to get metadata and cash items)
+  // FIX: Explicitly exclude credit_card expenses from the raw fetch to avoid duplication/full amount display
   const { data: expensesRaw = [] } = useQuery({
     queryKey: ["expenses-dashboard-raw", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
     queryFn: async () => {
@@ -84,7 +85,8 @@ export default function Dashboard() {
         `)
         .eq("group_id", membership!.group_id)
         .gte("purchase_date", dbStart)
-        .lt("purchase_date", dbEnd);
+        .lt("purchase_date", dbEnd)
+        .neq("payment_method", "credit_card"); // Ensure we NEVER fetch credit card expenses here
       
       if (error) throw error;
       return data ?? [];
@@ -92,7 +94,7 @@ export default function Dashboard() {
     enabled: !!membership?.group_id
   });
 
-  // 2. All Installments for this cycle in this group
+  // 1.2 All Installments for this cycle in this group
   const { data: installmentsInCycle = [] } = useQuery({
     queryKey: ["installments-dashboard", membership?.group_id, targetMonth, targetYear],
     queryFn: async () => {
@@ -115,7 +117,7 @@ export default function Dashboard() {
     enabled: !!membership?.group_id
   });
 
-  // 3. Pending Splits
+  // 2. Pending Splits (Unchanged - for payment flow)
   const { data: pendingSplits = [] } = useQuery({
     queryKey: ["my-pending-splits", membership?.group_id, user?.id],
     queryFn: async () => {
@@ -130,7 +132,7 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
-  // 4. User Credit Cards
+  // 3. User Credit Cards (For the Cards tab)
   const { data: creditCards = [] } = useQuery({
     queryKey: ["my-credit-cards", user?.id],
     queryFn: async () => {
@@ -140,7 +142,7 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // 5. Admin Data
+  // 4. Admin Data
   const { data: adminData } = useQuery({
     queryKey: ["admin-dashboard-data", membership?.group_id],
     queryFn: async () => {
@@ -180,18 +182,13 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && isAdmin
   });
 
-  // --- DATA PROCESSING (Fixed) ---
+  // --- DATA PROCESSING ---
 
+  // Merge Cash Expenses and Current Installments
   const normalizedCycleItems = useMemo(() => {
-    // 1. Cash items: Strictly filter out anything that looks like a credit card expense
+    // 1. Get cash/debit expenses that happened in this cycle
     const cashItems = expensesRaw
-      .filter(e => {
-        // Must NOT have a credit card ID
-        if (e.credit_card_id) return false;
-        // Must NOT have payment_method as 'credit_card'
-        if (e.payment_method === 'credit_card') return false;
-        return true;
-      })
+      .filter(e => !e.credit_card_id) // Extra safety net for legacy data
       .map(e => ({
         id: e.id,
         title: e.title,
@@ -204,12 +201,11 @@ export default function Dashboard() {
         splits: (e.expense_splits as any[]) || []
       }));
 
-    // 2. Installments: These are the calculated partial amounts for this month
+    // 2. Get installments that fall into this cycle's bill
     const installmentItems = (installmentsInCycle as any[]).map((i: any) => {
       const e = i.expenses;
-      const splits = (e.expense_splits as any[]) || [];
-      
       // Calculate split proportion for this specific installment
+      const splits = (e.expense_splits as any[]) || [];
       const normalizedSplits = splits.map((s: any) => ({
         ...s,
         // (Total Split / Total Expense) * Installment Amount
@@ -222,7 +218,7 @@ export default function Dashboard() {
         amount: Number(i.amount),
         category: e.category,
         expense_type: e.expense_type,
-        purchase_date: e.purchase_date, // Keep original purchase date for reference/sorting
+        purchase_date: e.purchase_date, // Original purchase date for sorting
         created_by: e.created_by,
         is_installment: true,
         splits: normalizedSplits
@@ -234,24 +230,38 @@ export default function Dashboard() {
     );
   }, [expensesRaw, installmentsInCycle]);
 
-  // REPUBLIC TOTALS (Now calculated from normalized items)
+  // REPUBLIC TOTALS
   const collectiveItems = normalizedCycleItems.filter(e => e.expense_type === "collective");
   const totalMonthExpenses = collectiveItems.reduce((sum, e) => sum + e.amount, 0);
   
-  // PERSONAL TOTALS (Now calculated from normalized items)
-  const myPersonalItems = normalizedCycleItems.filter(e => e.created_by === user?.id && e.expense_type === "individual");
-  const totalPersonalCash = myPersonalItems.filter(e => !e.is_installment).reduce((sum, e) => sum + e.amount, 0);
-  const totalBill = normalizedCycleItems.filter(e => e.is_installment && e.created_by === user?.id).reduce((sum, e) => sum + e.amount, 0);
+  const myCollectiveShare = collectiveItems.reduce((sum, e) => {
+    const mySplit = e.splits.find((s: any) => s.user_id === user?.id);
+    return sum + (mySplit ? Number(mySplit.amount) : 0);
+  }, 0);
 
-  // CHARTS
   const republicChartData = useMemo(() => {
     const categories: Record<string, number> = {};
     collectiveItems.forEach(e => {
       const label = getCategoryLabel(e.category);
       categories[label] = (categories[label] || 0) + e.amount;
     });
-    return Object.entries(categories).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    return Object.entries(categories)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [collectiveItems]);
+
+  // PERSONAL TOTALS
+  const myPersonalItems = normalizedCycleItems.filter(e => e.created_by === user?.id && e.expense_type === "individual");
+  
+  const totalPersonalCash = myPersonalItems
+    .filter(e => !e.is_installment)
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const totalBill = normalizedCycleItems
+    .filter(e => e.is_installment && e.created_by === user?.id)
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const totalUserExpenses = myCollectiveShare + totalBill;
 
   const personalChartData = useMemo(() => {
     const categories: Record<string, number> = {};
@@ -259,7 +269,9 @@ export default function Dashboard() {
       const label = getCategoryLabel(e.category);
       categories[label] = (categories[label] || 0) + e.amount;
     });
-    return Object.entries(categories).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    return Object.entries(categories)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [myPersonalItems]);
 
   // PENDING PAYMENTS (Keep using DB state for actual debt)
@@ -292,7 +304,7 @@ export default function Dashboard() {
     return Object.entries(categories).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [installmentsInCycle, user?.id]);
 
-  // HANDLERS
+
   const handlePayRateio = async () => {
     if (!receiptFile) return;
     setSaving(true);
@@ -419,8 +431,8 @@ export default function Dashboard() {
             individualPending={individualPending}
             totalPersonalCash={totalPersonalCash}
             totalBill={totalBill}
-            totalUserExpenses={totalBill + totalCollectivePending} // Show total current liability
-            myCollectiveShare={totalCollectivePending}
+            totalUserExpenses={totalUserExpenses}
+            myCollectiveShare={myCollectiveShare}
             personalChartData={personalChartData}
             myPersonalExpenses={myPersonalItems}
             onPayIndividual={() => setPayIndividualOpen(true)}
