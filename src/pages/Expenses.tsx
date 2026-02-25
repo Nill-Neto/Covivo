@@ -93,61 +93,25 @@ export default function Expenses() {
   // --- QUERIES ---
 
   const { data: expenses, isLoading: loadingExpenses } = useQuery({
-    queryKey: ["expenses", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString(), currentDate.toISOString()],
+    queryKey: ["expenses", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
     queryFn: async () => {
       const dbStart = format(cycleStart, "yyyy-MM-dd");
       const dbEnd = format(cycleEnd, "yyyy-MM-dd");
       
-      // Target bill month/year based on the currently selected view
-      const targetMonth = currentDate.getMonth() + 1;
-      const targetYear = currentDate.getFullYear();
-
-      // 1. Fetch Non-Credit Card Expenses (Cash/Debit/Pix) - Filtered by Purchase Date
-      const { data: cashExpenses, error: cashError } = await supabase
+      // Busca simplificada: Pega TODAS as despesas da tabela expenses neste período.
+      // Removemos o filtro de 'credit_card' e a busca complexa de parcelas para garantir
+      // que o morador veja tudo o que está registrado na tabela principal.
+      const { data, error } = await supabase
         .from("expenses")
         .select("*, expense_splits(id, user_id, amount, status, paid_at)")
         .eq("group_id", membership!.group_id)
-        .neq("payment_method", "credit_card")
         .gte("purchase_date", dbStart)
-        .lt("purchase_date", dbEnd);
+        .lt("purchase_date", dbEnd)
+        .order("purchase_date", { ascending: false });
       
-      if (cashError) throw cashError;
+      if (error) throw error;
 
-      // 2. Fetch Credit Card Installments - Filtered by Bill Month/Year
-      const { data: installmentsData, error: instError } = await supabase
-        .from("expense_installments")
-        .select("*, expenses!inner(*, expense_splits(id, user_id, amount, status, paid_at))")
-        .eq("expenses.group_id", membership!.group_id)
-        .eq("bill_month", targetMonth)
-        .eq("bill_year", targetYear);
-
-      if (instError) throw instError;
-
-      // Transform installments to match the expense structure
-      const formattedInstallments = (installmentsData || []).map((inst: any) => {
-        const parent = inst.expenses;
-        
-        // Scale splits proportionally to the installment amount
-        const proportionalSplits = parent.expense_splits?.map((split: any) => ({
-          ...split,
-          amount: (Number(split.amount) / Number(parent.amount)) * Number(inst.amount)
-        }));
-
-        return {
-          ...parent,
-          id: parent.id, // Keep parent ID for edit/delete actions
-          real_id: `inst_${inst.id}`, // Unique ID for React rendering
-          title: `${parent.title} (${inst.installment_number}/${parent.installments})`,
-          amount: inst.amount, // Show installment amount
-          expense_splits: proportionalSplits,
-          is_installment: true,
-          original_amount: parent.amount
-        };
-      });
-
-      // Combine and sort by purchase date
-      const all = [...(cashExpenses || []), ...formattedInstallments];
-      return all.sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime());
+      return data ?? [];
     },
     enabled: !!membership?.group_id,
   });
@@ -359,12 +323,11 @@ export default function Expenses() {
   };
 
   const openEditExpense = (expense: any) => {
-    // Note: If editing an installment, this will edit the PARENT expense (which affects all installments)
     resetForm();
     setEditingType("expense");
     setEditingId(expense.id);
-    setTitle(expense.is_installment ? expense.title.replace(/\s\(\d+\/\d+\)$/, "") : expense.title);
-    setAmount(String(expense.original_amount || expense.amount)); // Edit the TOTAL amount
+    setTitle(expense.title);
+    setAmount(String(expense.amount));
     setDescription(expense.description || "");
     setDateValue(expense.purchase_date || format(new Date(), "yyyy-MM-dd"));
     setExpenseType(expense.expense_type);
@@ -401,16 +364,26 @@ export default function Expenses() {
     setOpen(true);
   };
 
-  // Filter logic updated
+  // Filter logic: Ensure collective expenses are seen by everyone
   const filteredAll = (expenses ?? []).filter(e => {
     if (e.expense_type === 'collective') return true;
     if (e.created_by === user?.id) return true;
+    // Also show individual expenses where the user is involved in the split
     const splits = (e.expense_splits as any[]) || [];
     return splits.some((s: any) => s.user_id === user?.id);
   });
 
-  // Reverted logic for "Mine" as requested
-  const filteredMine = (expenses ?? []).filter(e => e.expense_type === 'individual' && e.created_by === user?.id);
+  const filteredMine = (expenses ?? []).filter(e => {
+    // Only show "My" expenses (created by me or assigned to me) that are INDIVIDUAL
+    if (e.expense_type !== 'individual') return false;
+    
+    // Created by me
+    if (e.created_by === user?.id) return true;
+    
+    // Assigned to me (I am in the splits)
+    const splits = (e.expense_splits as any[]) || [];
+    return splits.some((s: any) => s.user_id === user?.id);
+  });
 
   const filteredCollective = (expenses ?? []).filter(e => e.expense_type === 'collective');
 
@@ -591,21 +564,21 @@ export default function Expenses() {
         <TabsContent value="all" className="space-y-3 mt-4">
           {filteredAll.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
           {filteredAll.map((e) => (
-            <ExpenseCard key={e.real_id || e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
+            <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
         
         <TabsContent value="mine" className="space-y-3 mt-4">
           {filteredMine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
           {filteredMine.map((e) => (
-            <ExpenseCard key={e.real_id || e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
+            <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
 
         <TabsContent value="collective" className="space-y-3 mt-4">
           {filteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
           {filteredCollective.map((e) => (
-            <ExpenseCard key={e.real_id || e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
+            <ExpenseCard key={e.id} expense={e} userId={user?.id} isAdmin={isAdmin} cards={cards} onEdit={() => openEditExpense(e)} onDelete={() => deleteExpense.mutate(e.id)} />
           ))}
         </TabsContent>
 
@@ -639,7 +612,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete }: any)
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-2">
                <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(new Date(expense.purchase_date || expense.created_at), "dd/MM/yyyy")}</span>
-               {expense.payment_method === "credit_card" && <span><CreditCard className="h-3 w-3 inline mr-1" /> {cardLabel} ({expense.installments}x)</span>}
+               {expense.payment_method === "credit_card" && <span><CreditCard className="h-3 w-3 inline mr-1" /> {cardLabel} {expense.installments > 1 && `(${expense.installments}x)`}</span>}
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -659,9 +632,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete }: any)
                     <AlertDialogHeader>
                       <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {expense.is_installment 
-                          ? "Isso excluirá a despesa original e todas as suas parcelas." 
-                          : "Tem certeza que deseja excluir esta despesa? Essa ação não pode ser desfeita."}
+                        Tem certeza que deseja excluir esta despesa? Essa ação não pode ser desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
