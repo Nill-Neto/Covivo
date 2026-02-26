@@ -100,33 +100,36 @@ export function PersonalTab({
                       <List className="h-3 w-3" /> Ver lista ({individualPending.length})
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[80vh]">
-                    <DialogHeader className="p-4 border-b shrink-0">
-                      <DialogTitle className="text-base font-medium flex items-center gap-2">
+                  <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+                    <DialogHeader className="p-6 border-b shrink-0 bg-background/95 backdrop-blur z-10">
+                      <DialogTitle className="text-lg font-serif">
                         Controle Individual
-                        <Badge variant="outline" className="ml-auto font-normal">
-                          Total: R$ {totalIndividualPending.toFixed(2)}
-                        </Badge>
                       </DialogTitle>
+                      <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                        Total acumulado: 
+                        <Badge variant="outline" className="font-bold text-foreground">
+                          R$ {totalIndividualPending.toFixed(2)}
+                        </Badge>
+                      </div>
                     </DialogHeader>
                     
-                    <div className="flex-1 overflow-hidden">
-                      <ScrollArea className="h-full">
-                        <div className="divide-y">
+                    <div className="h-[60vh] max-h-[500px] w-full bg-muted/5">
+                      <ScrollArea className="h-full w-full">
+                        <div className="divide-y p-0">
                           {individualPending.map((item) => (
-                            <div key={item.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                            <div key={item.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors bg-card">
                               <div className="min-w-0 pr-4">
                                 <p className="text-sm font-medium truncate">{item.expenses?.title}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal bg-muted text-muted-foreground border-0">
                                     {getCategoryLabel(item.expenses?.category)}
-                                  </span>
+                                  </Badge>
                                   <span className="text-[10px] text-muted-foreground">
                                     {item.expenses?.purchase_date ? format(new Date(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
                                   </span>
                                 </div>
                               </div>
-                              <span className="font-semibold text-sm tabular-nums whitespace-nowrap">
+                              <span className="font-bold text-sm tabular-nums whitespace-nowrap">
                                 R$ {Number(item.amount).toFixed(2)}
                               </span>
                             </div>
@@ -177,7 +180,7 @@ export function PersonalTab({
                     <p className="text-sm">Nenhuma despesa pessoal este mês.</p>
                   </div>
                 ) : (
-                  myPersonalExpenses.slice(0, 15).map((e: any) => (
+                  myPersonalExpenses.slice(0, 15).map(e => (
                     <div key={e.id} className="flex items-center justify-between border-b border-border/40 pb-3 last:border-0 last:pb-0 hover:bg-muted/30 p-2 rounded-md transition-colors">
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium">{e.title}</p>
@@ -190,7 +193,7 @@ export function PersonalTab({
                           </span>
                         </div>
                       </div>
-                      <span className="font-semibold text-sm">R$ {Number(e.display_amount || e.amount).toFixed(2)}</span>
+                      <span className="font-semibold text-sm">R$ {Number(e.amount).toFixed(2)}</span>
                     </div>
                   ))
                 )}
