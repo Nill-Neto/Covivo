@@ -53,6 +53,8 @@ export default function Members() {
   const [cpfValue, setCpfValue] = useState<string | null>(null);
   const [loadingCpf, setLoadingCpf] = useState(false);
   const [showCpf, setShowCpf] = useState(false);
+  const [contactInfo, setContactInfo] = useState<{ email: string | null; phone: string | null } | null>(null);
+  const [loadingContact, setLoadingContact] = useState(false);
 
   // Fetch Group Details (to check splitting rule)
   const { data: group } = useQuery({
@@ -78,14 +80,13 @@ export default function Members() {
         .eq("active", true);
       if (gmErr) throw gmErr;
 
-      const userIds = groupMembers.map((gm) => gm.user_id);
-
-      // Fetch from 'profiles' table directly to get email and phone
-      const [{ data: profiles }, { data: roles }] = await Promise.all([
+      // Use view for non-sensitive data (name, avatar) - accessible to all group members
+      const [{ data: viewProfiles }, { data: roles }] = await Promise.all([
         supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url, email, phone")
-          .in("id", userIds),
+          .from("group_member_profiles")
+          .select("id, full_name, avatar_url")
+          .eq("group_id", membership!.group_id)
+          .eq("active", true),
         supabase
           .from("user_roles")
           .select("user_id, role")
@@ -93,11 +94,11 @@ export default function Members() {
       ]);
 
       return groupMembers.map((gm) => {
-        const profile = profiles?.find((p) => p.id === gm.user_id);
+        const profile = viewProfiles?.find((p) => p.id === gm.user_id);
         const role = roles?.find((r) => r.user_id === gm.user_id);
         return {
           ...gm,
-          profile,
+          profile: profile ? { ...profile, email: null, phone: null } : null,
           role: role?.role as "admin" | "morador" | undefined,
         };
       });
@@ -143,7 +144,24 @@ export default function Members() {
     if (viewingMember) {
       setCpfValue(null);
       setShowCpf(false);
+      setContactInfo(null);
       fetchCpf();
+
+      // Fetch email/phone for self or as admin
+      const isMe = viewingMember.user_id === user?.id;
+      if (isMe || isAdmin) {
+        setLoadingContact(true);
+        const fetchContact = async () => {
+          const { data } = await supabase
+            .from("profiles")
+            .select("email, phone")
+            .eq("id", viewingMember.user_id)
+            .single();
+          if (data) setContactInfo({ email: data.email, phone: data.phone });
+          setLoadingContact(false);
+        };
+        fetchContact();
+      }
     }
   }, [viewingMember, isAdmin, user]);
 
@@ -385,7 +403,7 @@ export default function Members() {
                       <div className="bg-muted p-2 rounded-full"><Mail className="h-4 w-4 text-muted-foreground" /></div>
                       <div className="flex-1">
                         <p className="text-xs text-muted-foreground">Email</p>
-                        <p className="text-sm font-medium">{viewingMember.profile?.email}</p>
+                        <p className="text-sm font-medium">{loadingContact ? <Loader2 className="h-3 w-3 animate-spin" /> : (contactInfo?.email || "Não informado")}</p>
                       </div>
                     </div>
 
@@ -393,7 +411,7 @@ export default function Members() {
                       <div className="bg-muted p-2 rounded-full"><Phone className="h-4 w-4 text-muted-foreground" /></div>
                       <div className="flex-1">
                         <p className="text-xs text-muted-foreground">Telefone</p>
-                        <p className="text-sm font-medium">{viewingMember.profile?.phone || "Não informado"}</p>
+                        <p className="text-sm font-medium">{loadingContact ? <Loader2 className="h-3 w-3 animate-spin" /> : (contactInfo?.phone || "Não informado")}</p>
                       </div>
                     </div>
                   </>
