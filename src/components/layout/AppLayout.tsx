@@ -76,18 +76,18 @@ export function AppLayout() {
 
   const sidebarGroups = isAdmin ? [...mainNavGroups, adminGroup] : mainNavGroups;
 
-  const SidebarContent = () => (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex h-14 items-center border-b px-6">
-        <Link to="/" className="flex items-center gap-2 font-serif text-xl font-bold tracking-tight">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            R
-          </div>
-          Republi-K
-        </Link>
+  const Logo = () => (
+    <Link to="/" className="flex items-center gap-2 font-serif text-xl font-bold tracking-tight">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+        R
       </div>
+      <span className="hidden xs:inline">Republi-K</span>
+    </Link>
+  );
 
-      <div className="flex-1 overflow-auto py-4 px-3">
+  const SidebarContent = () => (
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto py-4 px-3">
         <nav className="space-y-6">
           {sidebarGroups.map((group) => (
             <CollapsibleNavGroup key={group.title} title={group.title} items={group.items} location={location} />
@@ -102,71 +102,79 @@ export function AppLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 flex-col border-r bg-card/50 md:flex">
-        <SidebarContent />
-      </aside>
-
-      <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex flex-1 items-center gap-4 min-w-0">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden shrink-0">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <SidebarContent />
-              </SheetContent>
-            </Sheet>
-
-            <UserMenu />
-
-            {membership && (
-              <div className="hidden sm:flex items-center gap-2 border-l pl-4 min-w-0">
-                <span className="text-xs font-medium text-muted-foreground/80 whitespace-nowrap">
-                  Moradia:
-                </span>
-                <span className="text-sm font-semibold truncate">{membership.group_name}</span>
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      {/* Header Superior Fixo */}
+      <header className="z-40 flex h-14 shrink-0 items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden shrink-0">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <div className="p-6 border-b">
+                <Logo />
               </div>
-            )}
-          </div>
+              <SidebarContent />
+            </SheetContent>
+          </Sheet>
 
-          <div className="flex items-center gap-1 shrink-0">
-            <div className="hidden md:flex items-center gap-1 mr-2 border-r pr-2">
-              {convenienceItems.map((item) => {
-                const isActive = location.pathname === item.to;
-                return (
-                  <Tooltip key={item.to}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={isActive ? "secondary" : "ghost"}
-                        size="icon"
-                        className={cn("h-9 w-9", isActive && "text-primary")}
-                        asChild
-                      >
-                        <Link to={item.to}>
-                          <item.icon className="h-4 w-4" />
-                          <span className="sr-only">{item.label}</span>
-                        </Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{item.label}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
+          <Logo />
+
+          {membership && (
+            <div className="hidden sm:flex items-center gap-2 border-l pl-4 min-w-0">
+              <span className="text-xs font-medium text-muted-foreground/80 whitespace-nowrap">
+                Moradia:
+              </span>
+              <span className="text-sm font-semibold truncate">{membership.group_name}</span>
             </div>
+          )}
+        </div>
 
-            <NotificationBell />
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
+          <div className="hidden md:flex items-center gap-1 border-r pr-2">
+            {convenienceItems.map((item) => {
+              const isActive = location.pathname === item.to;
+              return (
+                <Tooltip key={item.to}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={isActive ? "secondary" : "ghost"}
+                      size="icon"
+                      className={cn("h-9 w-9", isActive && "text-primary")}
+                      asChild
+                    >
+                      <Link to={item.to}>
+                        <item.icon className="h-4 w-4" />
+                        <span className="sr-only">{item.label}</span>
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{item.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
-        </header>
 
-        <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
-          <Outlet />
+          <NotificationBell />
+          <UserMenu />
+        </div>
+      </header>
+
+      {/* Conteúdo Principal (Sidebar + Main) */}
+      <div className="flex flex-1 overflow-hidden">
+        <aside className="hidden w-64 shrink-0 border-r bg-card/30 md:flex md:flex-col overflow-y-auto">
+          <SidebarContent />
+        </aside>
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="max-w-7xl mx-auto w-full">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
