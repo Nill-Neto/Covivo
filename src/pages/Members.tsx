@@ -38,6 +38,7 @@ import { Loader2, Pencil, Trash2, Shield, User, Eye, EyeOff } from "lucide-react
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { InfoCard, DetailItem } from "@/components/ui/insurance-card";
+import { PageHero } from "@/components/layout/PageHero";
 
 export default function Members() {
   const { membership, isAdmin, user } = useAuth();
@@ -289,12 +290,13 @@ export default function Members() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif">Moradores</h1>
-        <p className="text-muted-foreground mt-1">
-          {members?.length ?? 0} membro(s) ativo(s)
-        </p>
-      </div>
+      <PageHero
+        title="Moradores"
+        subtitle={`${members?.length ?? 0} membro(s) ativo(s)`}
+        tone="primary"
+        icon={<User className="h-4 w-4" />}
+        badge={<Badge variant="secondary">Grupo ativo</Badge>}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {members?.map((m) => {

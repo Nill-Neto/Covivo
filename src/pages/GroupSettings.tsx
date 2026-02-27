@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, SlidersHorizontal } from "lucide-react";
+import { PageHero } from "@/components/layout/PageHero";
 
 export default function GroupSettings() {
   const { membership, refreshMembership } = useAuth();
@@ -78,10 +79,12 @@ export default function GroupSettings() {
 
   return (
     <div className="space-y-6 max-w-xl">
-      <div>
-        <h1 className="text-3xl font-serif">Configurações</h1>
-        <p className="text-muted-foreground mt-1">Gerencie os dados do grupo.</p>
-      </div>
+      <PageHero
+        title="Configurações"
+        subtitle="Gerencie os dados do grupo."
+        tone="warning"
+        icon={<SlidersHorizontal className="h-4 w-4" />}
+      />
 
       <Card>
         <CardHeader>

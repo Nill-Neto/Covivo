@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PageHero } from "@/components/layout/PageHero";
 import { Calendar, ChevronLeft, ChevronRight, Loader2, CreditCard } from "lucide-react";
 import { format, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -100,20 +101,20 @@ export default function Bills() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Faturas</h1>
-          <p className="text-muted-foreground mt-1">Parcelas de cartões de crédito.</p>
-        </div>
-        
-        <div className="flex items-center gap-2 bg-card border rounded-lg p-1">
-          <Button variant="ghost" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}><ChevronLeft className="h-4 w-4" /></Button>
-          <div className="px-4 text-sm font-medium min-w-[120px] text-center capitalize">
-            {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+      <PageHero
+        title="Faturas"
+        subtitle="Parcelas de cartões de crédito."
+        icon={<CreditCard className="h-4 w-4" />}
+        actions={
+          <div className="flex items-center gap-2 rounded-lg border bg-card p-1">
+            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}><ChevronLeft className="h-4 w-4" /></Button>
+            <div className="min-w-[120px] px-4 text-center text-sm font-medium capitalize">
+              {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
         <div className="space-y-4">

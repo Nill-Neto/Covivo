@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
+import { History, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PageHero } from "@/components/layout/PageHero";
 
 const actionLabels: Record<string, string> = {
   create: "Criou",
@@ -50,10 +51,11 @@ export default function AuditLog() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif">Histórico</h1>
-        <p className="text-muted-foreground mt-1">Log de atividades do grupo.</p>
-      </div>
+      <PageHero
+        title="Histórico"
+        subtitle="Log de atividades do grupo."
+        icon={<History className="h-4 w-4" />}
+      />
 
       {!logs?.length ? (
         <p className="text-sm text-muted-foreground">Nenhuma atividade registrada.</p>
