@@ -12,11 +12,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   LayoutDashboard,
   Users,
   UserPlus,
@@ -119,7 +114,7 @@ export function AppLayout() {
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
-      {/* Header Superior Fixo */}
+      {/* Header */}
       <header className="z-50 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
           <Button
@@ -161,7 +156,6 @@ export function AppLayout() {
                     whileTap={{ scale: 0.95 }}
                   >
                     <item.icon size={18} strokeWidth={2} />
-                    
                     <motion.div
                       initial={false}
                       animate={{
@@ -180,21 +174,17 @@ export function AppLayout() {
               );
             })}
           </div>
-
           <AnimatedThemeToggler />
           <NotificationBell />
           <UserMenu />
         </div>
       </header>
 
-      {/* Conteúdo Principal (Sidebar + Main) */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar Desktop */}
         <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex md:flex-col overflow-y-auto shadow-xl">
           <SidebarContent />
         </aside>
 
-        {/* Sidebar Mobile */}
         {mobileMenuOpen && (
           <>
             <div 
@@ -207,10 +197,14 @@ export function AppLayout() {
           </>
         )}
 
-        <main className="flex-1 overflow-y-auto bg-background relative">
-          {/* Brilho decorativo de fundo para o topo da página */}
-          <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-primary/[0.08] via-transparent to-transparent pointer-events-none -z-10" />
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/[0.03] blur-[100px] rounded-full pointer-events-none -z-10 -translate-y-1/2 translate-x-1/2" />
+        <main className="flex-1 overflow-y-auto bg-background relative scroll-smooth">
+          {/* Seção Hero - Cor sólida para destaque */}
+          <div className="absolute top-0 left-0 right-0 h-[240px] bg-primary overflow-hidden -z-10">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-blue-700 opacity-90" />
+            {/* Elementos abstratos de brilho */}
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 blur-[100px] rounded-full" />
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-400/20 blur-[100px] rounded-full" />
+          </div>
           
           <div className="p-4 md:p-8">
             <div className="max-w-7xl mx-auto w-full relative z-0">
@@ -235,7 +229,6 @@ function CollapsibleNavGroup({
   onItemClick?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(true);
-
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-1">
       <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1 hover:bg-sidebar-accent/50 rounded-md transition-colors group cursor-pointer">
