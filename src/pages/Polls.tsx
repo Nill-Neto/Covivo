@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { PageHero } from "@/components/layout/PageHero";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -185,16 +186,16 @@ export default function Polls() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Votações</h1>
-          <p className="text-muted-foreground mt-1">Decisões coletivas da república.</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Nova Votação</Button>
-          </DialogTrigger>
-          <DialogContent>
+      <PageHero
+        title="Votações"
+        subtitle="Decisões coletivas da república."
+        tone="primary"
+        actions={
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />Nova Votação</Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader><DialogTitle>Criar Votação</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <Input placeholder="Pergunta" value={question} onChange={(e) => setQuestion(e.target.value)} />
@@ -238,9 +239,10 @@ export default function Polls() {
                 Criar Votação
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {polls.length === 0 ? (
         <Card>

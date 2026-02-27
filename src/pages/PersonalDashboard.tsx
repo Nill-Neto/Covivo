@@ -9,6 +9,7 @@ import { startOfMonth, endOfMonth } from "date-fns";
 import { Link } from "react-router-dom";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { getCategoryLabel, CHART_COLORS } from "@/constants/categories";
+import { PageHero } from "@/components/layout/PageHero";
 
 export default function PersonalDashboard() {
   const { user } = useAuth();
@@ -118,20 +119,20 @@ export default function PersonalDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Meu Financeiro</h1>
-          <p className="text-muted-foreground mt-1">Gastos individuais e faturas.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/expenses"><Calendar className="h-4 w-4 mr-2" /> Todas Despesas</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link to="/personal/bills"><CreditCard className="h-4 w-4 mr-2" /> Minhas Faturas</Link>
-          </Button>
-        </div>
-      </div>
+      <PageHero
+        title="Meu Financeiro"
+        subtitle="Gastos individuais e faturas."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/expenses"><Calendar className="h-4 w-4 mr-2" /> Todas Despesas</Link>
+            </Button>
+            <Button size="sm" asChild>
+              <Link to="/personal/bills"><CreditCard className="h-4 w-4 mr-2" /> Minhas Faturas</Link>
+            </Button>
+          </div>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="bg-primary text-primary-foreground">
