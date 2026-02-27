@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 import { Button } from "@/components/ui/button";
+import { MenuToggleIcon } from "@/components/ui/menu-toggle-icon";
 import {
   Collapsible,
   CollapsibleContent,
@@ -29,8 +30,6 @@ import {
   Vote,
   Wallet,
   ChevronDown,
-  Menu,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -121,13 +120,13 @@ export function AppLayout() {
       {/* Header Superior Fixo */}
       <header className="z-50 flex h-14 shrink-0 items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="md:hidden shrink-0"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <MenuToggleIcon open={mobileMenuOpen} className="h-6 w-6" />
             <span className="sr-only">Menu</span>
           </Button>
 
