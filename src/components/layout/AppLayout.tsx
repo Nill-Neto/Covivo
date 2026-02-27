@@ -80,20 +80,20 @@ export function AppLayout() {
 
   const Logo = () => (
     <Link to="/" className="flex items-center gap-2 font-serif text-xl font-bold tracking-tight">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-blue-600 text-white shadow-sm">
         R
       </div>
-      <span className="text-foreground">Republi-K</span>
+      <span className="text-foreground hidden xs:block">Republi-K</span>
     </Link>
   );
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
-      <div className="flex items-center h-14 shrink-0 px-4 md:hidden border-b border-sidebar-border">
+      <div className="flex items-center h-16 shrink-0 px-6 md:hidden border-b border-sidebar-border bg-sidebar-background">
          <span className="text-lg font-bold tracking-tight text-sidebar-foreground">Republi-K</span>
       </div>
-      <div className="flex-1 overflow-y-auto py-4 px-3">
-        <nav className="space-y-6">
+      <div className="flex-1 overflow-y-auto py-6 px-4">
+        <nav className="space-y-8">
           {sidebarGroups.map((group) => (
             <CollapsibleNavGroup 
               key={group.title} 
@@ -119,16 +119,19 @@ export function AppLayout() {
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
-      {/* Header Superior Fixo */}
-      <header className="z-50 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Header Superior Fixo com mais cor */}
+      <header className="z-50 relative flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 md:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+        {/* Colorful top accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-blue-500 to-indigo-600" />
+        
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden shrink-0 h-12 w-12"
+            className="md:hidden shrink-0 h-12 w-12 hover:bg-primary/5 active:scale-95 transition-transform"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <MenuToggleIcon open={mobileMenuOpen} className="h-8 w-8 scale-125" />
+            <MenuToggleIcon open={mobileMenuOpen} className="h-8 w-8 scale-125 text-primary" />
             <span className="sr-only">Menu</span>
           </Button>
 
@@ -136,10 +139,10 @@ export function AppLayout() {
 
           {membership && (
             <div className="hidden sm:flex items-center gap-2 border-l pl-4 min-w-0">
-              <span className="text-xs font-medium text-muted-foreground/80 whitespace-nowrap">
-                Moradia:
+              <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider whitespace-nowrap">
+                Moradia
               </span>
-              <span className="text-sm font-semibold truncate">{membership.group_name}</span>
+              <span className="text-sm font-bold truncate bg-primary/10 text-primary px-2 py-0.5 rounded-full">{membership.group_name}</span>
             </div>
           )}
         </div>
@@ -152,15 +155,15 @@ export function AppLayout() {
                 <Link key={item.to} to={item.to}>
                   <motion.div
                     className={cn(
-                      "flex items-center rounded-full transition-colors duration-200 h-9 px-3 relative",
+                      "flex items-center rounded-full transition-all duration-300 h-9 px-3 relative",
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "bg-transparent text-muted-foreground hover:bg-muted"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                        : "bg-transparent text-muted-foreground hover:bg-primary/5 hover:text-primary"
                     )}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <item.icon size={18} strokeWidth={2} />
+                    <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                     
                     <motion.div
                       initial={false}
@@ -171,7 +174,7 @@ export function AppLayout() {
                       }}
                       className="overflow-hidden flex items-center"
                     >
-                      <span className="text-sm font-medium whitespace-nowrap">
+                      <span className="text-sm font-bold whitespace-nowrap">
                         {item.label}
                       </span>
                     </motion.div>
@@ -181,9 +184,11 @@ export function AppLayout() {
             })}
           </div>
 
-          <AnimatedThemeToggler />
-          <NotificationBell />
-          <UserMenu />
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <AnimatedThemeToggler />
+            <NotificationBell />
+            <UserMenu />
+          </div>
         </div>
       </header>
 
@@ -198,7 +203,7 @@ export function AppLayout() {
         {mobileMenuOpen && (
           <>
             <div 
-              className="absolute inset-0 z-30 md:hidden bg-black/50 backdrop-blur-sm" 
+              className="absolute inset-0 z-30 md:hidden bg-black/50 backdrop-blur-sm transition-opacity duration-300" 
               onClick={() => setMobileMenuOpen(false)}
             />
             <div className="absolute top-0 left-0 bottom-0 z-40 w-64 md:hidden bg-sidebar text-sidebar-foreground shadow-2xl overflow-y-auto animate-in slide-in-from-left duration-300 border-r border-sidebar-border">
@@ -233,7 +238,7 @@ function CollapsibleNavGroup({
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-1">
       <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1 hover:bg-sidebar-accent/50 rounded-md transition-colors group cursor-pointer">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/50 group-hover:text-sidebar-foreground">
+        <h4 className="text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/60 group-hover:text-sidebar-foreground">
           {title}
         </h4>
         <ChevronDown
@@ -254,15 +259,15 @@ function CollapsibleNavGroup({
               className={cn(
                 "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all relative",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm font-semibold"
+                  ? "bg-primary/20 text-white shadow-sm"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
               )}
             >
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-sidebar-primary rounded-r-full" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-primary rounded-r-full" />
               )}
               <item.icon
-                className={cn("h-4 w-4 shrink-0 transition-colors", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground")}
+                className={cn("h-4 w-4 shrink-0 transition-colors", isActive ? "text-primary brightness-150" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground")}
               />
               {item.label}
             </Link>
