@@ -125,10 +125,10 @@ export function AppLayout() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden shrink-0"
+            className="md:hidden shrink-0 h-12 w-12"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <MenuToggleIcon open={mobileMenuOpen} className="h-6 w-6" />
+            <MenuToggleIcon open={mobileMenuOpen} className="h-8 w-8" />
             <span className="sr-only">Menu</span>
           </Button>
 
