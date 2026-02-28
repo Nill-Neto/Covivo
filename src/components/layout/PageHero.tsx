@@ -18,8 +18,8 @@ const toneAccentClass: Record<NonNullable<PageHeroProps["tone"]>, string> = {
 
 const toneGlowClass: Record<NonNullable<PageHeroProps["tone"]>, string> = {
   default: "bg-muted/60",
-  primary: "bg-primary/15",
-  warning: "bg-warning/20",
+  primary: "bg-primary/80",
+  warning: "bg-warning/80",
 };
 
 export function PageHero({
@@ -31,15 +31,14 @@ export function PageHero({
   tone = "default",
 }: PageHeroProps) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border bg-card/70 p-5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:p-6">
-      <div className={cn("absolute inset-x-0 top-0 h-1.5", toneAccentClass[tone])} aria-hidden="true" />
-      <div className={cn("pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full blur-3xl", toneGlowClass[tone])} aria-hidden="true" />
+    <section className="relative overflow-hidden rounded-xl border bg-card/70 p-5 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:p-6">
+      <div className={cn("absolute inset-x-0 top-0 h-1", toneAccentClass[tone])} aria-hidden="true" />
 
-      <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="min-w-0">
           {(badge || icon) && (
             <div className="mb-3 flex items-center gap-2 text-muted-foreground">
-              {icon ? <span className="shrink-0 rounded-md bg-background/70 p-1.5">{icon}</span> : null}
+              {icon ? <span className="shrink-0">{icon}</span> : null}
               {badge}
             </div>
           )}
