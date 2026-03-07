@@ -772,6 +772,29 @@ export default function Expenses() {
           </DialogContent>
         </Dialog>
 
+        {/* Cycle Alert Dialog for credit card closing mismatch */}
+        <AlertDialog open={cycleAlertOpen} onOpenChange={setCycleAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cartão já fechou nesta competência</AlertDialogTitle>
+              <AlertDialogDescription>
+                O cartão selecionado já fechou (dia {cards.find((c: any) => c.id === creditCardId)?.closing_day}), 
+                mas a competência atual do grupo ainda está aberta (fecha dia {groupClosingDay}). 
+                Esta despesa cairá na próxima fatura do cartão. Em qual competência do grupo deseja lançá-la?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <Button variant="outline" onClick={() => { setCycleAlertOpen(false); handleSave('next'); }}>
+                Próxima competência
+              </Button>
+              <Button onClick={() => { setCycleAlertOpen(false); handleSave('current'); }}>
+                Competência atual
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Edit confirmation for installment expenses */}
         <AlertDialog open={!!editConfirmExpense} onOpenChange={(v) => { if (!v) setEditConfirmExpense(null); }}>
           <AlertDialogContent>
