@@ -93,13 +93,36 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_splits")
-        .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method)")
+        .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method, credit_card_id, credit_cards:credit_card_id(closing_day))")
         .eq("user_id", user!.id)
         .eq("status", "pending");
       if (error) throw error;
       return (data ?? []).filter((s: any) => s.expenses?.group_id === membership!.group_id);
     },
     enabled: !!membership?.group_id && !!user?.id,
+  });
+
+  const collectivePendingExpenseIds = useMemo(() => {
+    return [...new Set(
+      pendingSplits
+        .filter((s: any) => s.expenses?.expense_type === "collective")
+        .map((s: any) => s.expense_id)
+        .filter(Boolean)
+    )];
+  }, [pendingSplits]);
+
+  const { data: collectiveInstallments = [] } = useQuery({
+    queryKey: ["collective-installments-dashboard", collectivePendingExpenseIds],
+    queryFn: async () => {
+      if (collectivePendingExpenseIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("expense_installments" as any)
+        .select("expense_id, installment_number, bill_month, bill_year")
+        .in("expense_id", collectivePendingExpenseIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: collectivePendingExpenseIds.length > 0,
   });
 
   const { data: creditCards = [] } = useQuery({
@@ -292,7 +315,8 @@ export default function Dashboard() {
 
   const collectivePendingPreviousByCompetence = useMemo(() => {
     const grouped = collectivePendingPrevious.reduce((acc: Record<string, any[]>, item: any) => {
-      const competence = item.competenceKey ? formatCompetenceKey(item.competenceKey) : "Sem competência";
+      const purchaseDate = item.expenses?.purchase_date ? new Date(item.expenses.purchase_date) : null;
+      const competence = purchaseDate ? format(purchaseDate, "MM/yyyy") : "Sem competência";
       if (!acc[competence]) acc[competence] = [];
       acc[competence].push(item);
       return acc;
@@ -305,9 +329,6 @@ export default function Dashboard() {
         total: items.reduce((sum, split) => sum + Number(split.amount), 0),
       }))
       .sort((a, b) => {
-        if (a.competence === "Sem competência") return 1;
-        if (b.competence === "Sem competência") return -1;
-
         const [monthA, yearA] = a.competence.split("/").map(Number);
         const [monthB, yearB] = b.competence.split("/").map(Number);
 
