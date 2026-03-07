@@ -102,6 +102,29 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
+  const collectivePendingExpenseIds = useMemo(() => {
+    return [...new Set(
+      pendingSplits
+        .filter((s: any) => s.expenses?.expense_type === "collective")
+        .map((s: any) => s.expense_id)
+        .filter(Boolean)
+    )];
+  }, [pendingSplits]);
+
+  const { data: collectiveInstallments = [] } = useQuery({
+    queryKey: ["collective-installments-dashboard", collectivePendingExpenseIds],
+    queryFn: async () => {
+      if (collectivePendingExpenseIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("expense_installments" as any)
+        .select("expense_id, installment_number, bill_month, bill_year")
+        .in("expense_id", collectivePendingExpenseIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: collectivePendingExpenseIds.length > 0,
+  });
+
   const { data: creditCards = [] } = useQuery({
     queryKey: ["my-credit-cards", user?.id],
     queryFn: async () => {
