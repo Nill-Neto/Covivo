@@ -15,11 +15,14 @@ import { CardsTab } from "@/components/dashboard/CardsTab";
 import { AdminTab } from "@/components/dashboard/AdminTab";
 import { PaymentDialogs, type RateioScope } from "@/components/dashboard/PaymentDialogs";
 import { getCategoryLabel } from "@/constants/categories";
+import { useLocation } from "react-router-dom";
 
 export default function Dashboard() {
   const { profile, membership, user, isAdmin } = useAuth();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const now = new Date();
+  const isPersonalFinancePage = location.pathname === "/personal/financas";
   
   // Payment State
   const [payRateioOpen, setPayRateioOpen] = useState(false);
@@ -453,25 +456,31 @@ export default function Dashboard() {
         onPrevMonth={() => setCurrentDate(subMonths(currentDate, 1))}
       />
 
-      <Tabs defaultValue={isAdmin ? "admin" : "republic"} className="space-y-6">
+      <Tabs defaultValue={isPersonalFinancePage ? "personal" : (isAdmin ? "admin" : "republic")} className="space-y-6">
         <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-6">
-          {isAdmin && (
+          {!isPersonalFinancePage && isAdmin && (
             <TabsTrigger value="admin" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
               <Shield className="h-4 w-4 mr-2" /> Administração
             </TabsTrigger>
           )}
-          <TabsTrigger value="republic" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
-            <Users className="h-4 w-4 mr-2" /> República
-          </TabsTrigger>
-          <TabsTrigger value="personal" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
-            <User className="h-4 w-4 mr-2" /> Pessoal
-          </TabsTrigger>
-          <TabsTrigger value="cards" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
-            <CreditCard className="h-4 w-4 mr-2" /> Cartões
-          </TabsTrigger>
+          {!isPersonalFinancePage && (
+            <TabsTrigger value="republic" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
+              <Users className="h-4 w-4 mr-2" /> República
+            </TabsTrigger>
+          )}
+          {isPersonalFinancePage && (
+            <>
+              <TabsTrigger value="personal" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
+                <User className="h-4 w-4 mr-2" /> Dashboard Pessoal
+              </TabsTrigger>
+              <TabsTrigger value="cards" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3 transition-all hover:text-primary">
+                <CreditCard className="h-4 w-4 mr-2" /> Cartões
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
-        {isAdmin && (
+        {!isPersonalFinancePage && isAdmin && (
           <TabsContent value="admin" className="space-y-6">
             {adminData ? (
            <AdminTab 
