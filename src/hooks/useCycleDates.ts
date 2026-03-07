@@ -56,5 +56,6 @@ export function useCycleDates(groupId: string | undefined) {
     nextMonth,
     prevMonth,
     loading: isLoading,
+    closingDay,
   };
 }

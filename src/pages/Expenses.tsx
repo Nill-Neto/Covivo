@@ -129,8 +129,17 @@ export default function Expenses() {
   const [deleteConfirmExpense, setDeleteConfirmExpense] = useState<any>(null);
   const [editConfirmExpense, setEditConfirmExpense] = useState<any>(null);
 
+  // Paid toggle (for cash/pix/debit on creation)
+  const [isPaid, setIsPaid] = useState(false);
+
+  // Cycle alert for credit card closing mismatch
+  const [cycleAlertOpen, setCycleAlertOpen] = useState(false);
+
+  // Original amount for proportional split update on edit
+  const [editingOriginalAmount, setEditingOriginalAmount] = useState<number | null>(null);
+
   // --- Date Cycle Logic ---
-  const { currentDate, cycleStart, cycleEnd, nextMonth, prevMonth, loading } = useCycleDates(membership?.group_id);
+  const { currentDate, cycleStart, cycleEnd, nextMonth, prevMonth, loading, closingDay: groupClosingDay } = useCycleDates(membership?.group_id);
 
   useEffect(() => {
     if (!editingId && activeTab !== "recurring") {
@@ -271,7 +280,7 @@ export default function Expenses() {
     onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
-  const handleSave = async () => {
+  const handleSave = async (forcedCycleChoice?: 'current' | 'next') => {
     if (!title.trim() || !amount || parseFloat(amount) <= 0) {
       toast({ title: "Erro", description: "Preencha título e valor.", variant: "destructive" });
       return;
@@ -282,8 +291,29 @@ export default function Expenses() {
       return;
     }
 
+    // Check credit card closing vs group closing (only on creation)
+    if (!editingId && editingType === "expense" && paymentMethod === "credit_card" && creditCardId !== "none" && !forcedCycleChoice) {
+      const card = cards.find((c: any) => c.id === creditCardId);
+      if (card && card.closing_day < groupClosingDay) {
+        const today = new Date().getDate();
+        if (today >= card.closing_day && today < groupClosingDay) {
+          setCycleAlertOpen(true);
+          return;
+        }
+      }
+    }
+
     const categoryToSend = category === "other" ? customCategory.trim() : category;
     const finalCreditCardId = creditCardId === "none" ? null : creditCardId;
+
+    // Adjust purchase_date if user chose next cycle
+    let finalPurchaseDate = dateValue;
+    if (forcedCycleChoice === 'next') {
+      const now = new Date();
+      const closingDate = new Date(now.getFullYear(), now.getMonth(), groupClosingDay);
+      if (closingDate <= now) closingDate.setMonth(closingDate.getMonth() + 1);
+      finalPurchaseDate = format(closingDate, "yyyy-MM-dd");
+    }
 
     setSaving(true);
     try {
@@ -321,6 +351,23 @@ export default function Expenses() {
           .eq("id", editingId);
         if (error) throw error;
 
+        // Update split amounts proportionally if amount changed
+        if (editingOriginalAmount && parsedAmount !== editingOriginalAmount) {
+          const ratio = parsedAmount / editingOriginalAmount;
+          const { data: splits } = await supabase
+            .from("expense_splits")
+            .select("id, amount")
+            .eq("expense_id", editingId);
+          if (splits && splits.length > 0) {
+            for (const split of splits) {
+              await supabase
+                .from("expense_splits")
+                .update({ amount: Math.round(Number(split.amount) * ratio * 100) / 100 })
+                .eq("id", split.id);
+            }
+          }
+        }
+
         // Regenerate installments
         await supabase.from("expense_installments").delete().eq("expense_id", editingId);
 
@@ -357,8 +404,11 @@ export default function Expenses() {
         queryClient.invalidateQueries({ queryKey: ["bill-installments"] });
         queryClient.invalidateQueries({ queryKey: ["expense-installments-by-month"] });
         queryClient.invalidateQueries({ queryKey: ["installment-parent-expenses"] });
+        queryClient.invalidateQueries({ queryKey: ["member-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["expense-splits"] });
       } else {
-        const { error } = await supabase.rpc("create_expense_with_splits", {
+        const { data: newExpenseId, error } = await supabase.rpc("create_expense_with_splits", {
           _group_id: membership!.group_id,
           _title: title.trim(),
           _description: description.trim() || null,
@@ -372,9 +422,17 @@ export default function Expenses() {
           _payment_method: paymentMethod,
           _credit_card_id: finalCreditCardId,
           _installments: parseInt(installments) || 1,
-          _purchase_date: dateValue,
+          _purchase_date: finalPurchaseDate,
         });
         if (error) throw error;
+
+        // Mark splits as paid if toggle is on (cash/pix/debit only)
+        if (isPaid && paymentMethod !== "credit_card" && newExpenseId) {
+          await supabase
+            .from("expense_splits")
+            .update({ status: "paid", paid_at: new Date().toISOString() })
+            .eq("expense_id", newExpenseId);
+        }
 
         if (isRecurring) {
           const day = parseInt(recurrenceDay);
@@ -402,6 +460,8 @@ export default function Expenses() {
         queryClient.invalidateQueries({ queryKey: ["expenses"] });
         queryClient.invalidateQueries({ queryKey: ["expense-installments-by-month"] });
         queryClient.invalidateQueries({ queryKey: ["installment-parent-expenses"] });
+        queryClient.invalidateQueries({ queryKey: ["member-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       }
 
       setOpen(false);
@@ -428,6 +488,8 @@ export default function Expenses() {
     setInstallments("1");
     setIsRecurring(false);
     setRecurrenceDay("5");
+    setIsPaid(false);
+    setEditingOriginalAmount(null);
   };
 
   const openEditExpense = (expense: any) => {
@@ -436,6 +498,7 @@ export default function Expenses() {
     setEditingId(expense.id);
     setTitle(expense.title);
     setAmount(String(expense.amount));
+    setEditingOriginalAmount(Number(expense.amount));
     setDescription(expense.description || "");
     setDateValue(expense.purchase_date || format(new Date(), "yyyy-MM-dd"));
     setExpenseType(expense.expense_type);
@@ -667,6 +730,13 @@ export default function Expenses() {
                       </div>
                     </div>
                   )}
+
+                  {paymentMethod !== "credit_card" && !editingId && (
+                    <div className="flex items-center gap-2 pt-2 border-t border-dashed">
+                      <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
+                      <Label htmlFor="paid-switch" className="cursor-pointer text-sm">Já está paga?</Label>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -694,13 +764,36 @@ export default function Expenses() {
                 </div>
               )}
 
-              <Button onClick={handleSave} disabled={saving} className="w-full">
+              <Button onClick={() => handleSave()} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 {editingId ? "Atualizar" : "Salvar"}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Cycle Alert Dialog for credit card closing mismatch */}
+        <AlertDialog open={cycleAlertOpen} onOpenChange={setCycleAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cartão já fechou nesta competência</AlertDialogTitle>
+              <AlertDialogDescription>
+                O cartão selecionado já fechou (dia {cards.find((c: any) => c.id === creditCardId)?.closing_day}), 
+                mas a competência atual do grupo ainda está aberta (fecha dia {groupClosingDay}). 
+                Esta despesa cairá na próxima fatura do cartão. Em qual competência do grupo deseja lançá-la?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <Button variant="outline" onClick={() => { setCycleAlertOpen(false); handleSave('next'); }}>
+                Próxima competência
+              </Button>
+              <Button onClick={() => { setCycleAlertOpen(false); handleSave('current'); }}>
+                Competência atual
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Edit confirmation for installment expenses */}
         <AlertDialog open={!!editConfirmExpense} onOpenChange={(v) => { if (!v) setEditConfirmExpense(null); }}>
