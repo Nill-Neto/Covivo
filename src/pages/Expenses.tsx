@@ -129,6 +129,15 @@ export default function Expenses() {
   const [deleteConfirmExpense, setDeleteConfirmExpense] = useState<any>(null);
   const [editConfirmExpense, setEditConfirmExpense] = useState<any>(null);
 
+  // Paid toggle (for cash/pix/debit on creation)
+  const [isPaid, setIsPaid] = useState(false);
+
+  // Cycle alert for credit card closing mismatch
+  const [cycleAlertOpen, setCycleAlertOpen] = useState(false);
+
+  // Original amount for proportional split update on edit
+  const [editingOriginalAmount, setEditingOriginalAmount] = useState<number | null>(null);
+
   // --- Date Cycle Logic ---
   const { currentDate, cycleStart, cycleEnd, nextMonth, prevMonth, loading } = useCycleDates(membership?.group_id);
 
