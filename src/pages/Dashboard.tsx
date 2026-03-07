@@ -93,7 +93,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_splits")
-        .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method)")
+        .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method, credit_card_id, credit_cards:credit_card_id(closing_day))")
         .eq("user_id", user!.id)
         .eq("status", "pending");
       if (error) throw error;
@@ -240,7 +240,48 @@ export default function Dashboard() {
   
   // 1. Collective Debt (Rateio Pendente)
   const collectivePending = pendingSplits.filter((s: any) => s.expenses?.expense_type === "collective");
-  const totalCollectivePending = collectivePending.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const cycleStartKey = format(cycleStart, "yyyy-MM-dd");
+  const cycleEndKey = format(cycleEnd, "yyyy-MM-dd");
+
+  const getPurchaseDateKey = (split: any) => {
+    const rawDate = split.expenses?.purchase_date;
+    if (!rawDate) return null;
+
+    let purchaseDate: Date;
+    if (typeof rawDate === "string") {
+      purchaseDate = new Date(`${rawDate.slice(0, 10)}T12:00:00`);
+    } else {
+      purchaseDate = new Date(rawDate);
+    }
+
+    if (split.expenses?.payment_method === "credit_card") {
+      const closingDay = Number(split.expenses?.credit_cards?.closing_day || 0);
+      if (closingDay > 0 && purchaseDate.getDate() > closingDay) {
+        purchaseDate = addMonths(purchaseDate, 1);
+      }
+    }
+
+    return format(purchaseDate, "yyyy-MM-dd");
+  };
+
+  const collectivePendingPrevious = collectivePending.filter((s: any) => {
+    const purchaseDateKey = getPurchaseDateKey(s);
+    return purchaseDateKey ? purchaseDateKey < cycleStartKey : false;
+  });
+
+  const collectivePendingCurrent = collectivePending.filter((s: any) => {
+    const purchaseDateKey = getPurchaseDateKey(s);
+    return purchaseDateKey ? purchaseDateKey >= cycleStartKey && purchaseDateKey < cycleEndKey : false;
+  });
+
+  const collectivePendingFuture = collectivePending.filter((s: any) => {
+    const purchaseDateKey = getPurchaseDateKey(s);
+    return purchaseDateKey ? purchaseDateKey >= cycleEndKey : false;
+  });
+
+  const totalCollectivePendingPrevious = collectivePendingPrevious.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const totalCollectivePendingCurrent = collectivePendingCurrent.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const totalCollectivePendingFuture = collectivePendingFuture.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
 
   // 2. Individual Pending (Manual + Installments)
   // A. Manual pending splits (Cash/Pix/Debit that are pending) - EXCLUDE credit card splits here as they are parcelled
@@ -304,7 +345,7 @@ export default function Dashboard() {
         group_id: membership!.group_id,
         expense_split_id: null,
         paid_by: user!.id,
-        amount: totalCollectivePending,
+        amount: totalCollectivePendingPrevious,
         receipt_url: urlData.publicUrl,
         notes: `Pagamento de Rateio - ${format(currentDate, "MMMM/yyyy", { locale: ptBR })}`
       });
@@ -408,7 +449,8 @@ export default function Dashboard() {
             collectiveExpenses={collectiveExpenses}
             totalMonthExpenses={totalMonthExpenses}
             republicChartData={republicChartData}
-            totalCollectivePending={totalCollectivePending}
+            totalCollectivePendingPrevious={totalCollectivePendingPrevious}
+            totalCollectivePendingCurrent={totalCollectivePendingCurrent}
             isLate={isLate}
             onPayRateio={() => setPayRateioOpen(true)}
           />
@@ -417,7 +459,8 @@ export default function Dashboard() {
         <TabsContent value="personal" className="space-y-6">
           <PersonalTab
             totalIndividualPending={totalIndividualPending}
-            totalCollectivePending={totalCollectivePending}
+            totalCollectivePendingPrevious={totalCollectivePendingPrevious}
+            totalCollectivePendingCurrent={totalCollectivePendingCurrent}
             individualPending={individualPending}
             totalPersonalCash={totalPersonalCash}
             totalBill={totalBill}
@@ -447,8 +490,12 @@ export default function Dashboard() {
         setPayIndividualOpen={setPayIndividualOpen}
         selectedIndividualSplit={selectedIndividualSplit}
         setSelectedIndividualSplit={setSelectedIndividualSplit}
-        totalCollectivePending={totalCollectivePending}
-        collectivePending={collectivePending}
+        totalCollectivePendingPrevious={totalCollectivePendingPrevious}
+        totalCollectivePendingCurrent={totalCollectivePendingCurrent}
+        totalCollectivePendingFuture={totalCollectivePendingFuture}
+        collectivePendingPrevious={collectivePendingPrevious}
+        collectivePendingCurrent={collectivePendingCurrent}
+        collectivePendingFuture={collectivePendingFuture}
         individualPending={individualPending}
         currentDate={currentDate}
         onPayRateio={handlePayRateio}
