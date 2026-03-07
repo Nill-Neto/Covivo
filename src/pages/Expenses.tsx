@@ -498,6 +498,7 @@ export default function Expenses() {
     setEditingId(expense.id);
     setTitle(expense.title);
     setAmount(String(expense.amount));
+    setEditingOriginalAmount(Number(expense.amount));
     setDescription(expense.description || "");
     setDateValue(expense.purchase_date || format(new Date(), "yyyy-MM-dd"));
     setExpenseType(expense.expense_type);
