@@ -488,6 +488,8 @@ export default function Expenses() {
     setInstallments("1");
     setIsRecurring(false);
     setRecurrenceDay("5");
+    setIsPaid(false);
+    setEditingOriginalAmount(null);
   };
 
   const openEditExpense = (expense: any) => {
