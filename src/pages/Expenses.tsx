@@ -764,7 +764,7 @@ export default function Expenses() {
                 </div>
               )}
 
-              <Button onClick={handleSave} disabled={saving} className="w-full">
+              <Button onClick={() => handleSave()} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 {editingId ? "Atualizar" : "Salvar"}
               </Button>
