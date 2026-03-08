@@ -121,7 +121,7 @@ export function PersonalTab({
                   </div>
 
                   <div className="border-t">
-                    <ScrollArea className="max-h-[50vh]">
+                    <div className="overflow-y-auto max-h-[50vh]">
                       <div className="divide-y">
                         {collectivePendingPreviousByCompetence.map((group) => (
                           <div key={group.competence} className="px-5 py-4 space-y-2.5">
@@ -154,7 +154,7 @@ export function PersonalTab({
                           </div>
                         ))}
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -200,7 +200,7 @@ export function PersonalTab({
                   </div>
 
                   <div className="border-t">
-                    <ScrollArea className="max-h-[50vh]">
+                    <div className="overflow-y-auto max-h-[50vh]">
                       <div className="divide-y">
                         {collectivePendingCurrent.map((item) => (
                           <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
@@ -218,7 +218,7 @@ export function PersonalTab({
                           </div>
                         ))}
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -265,7 +265,7 @@ export function PersonalTab({
                     </div>
                     
                     <div className="border-t">
-                      <ScrollArea className="max-h-[50vh]">
+                      <div className="overflow-y-auto max-h-[50vh]">
                         <div className="divide-y">
                           {individualPending.map((item) => (
                             <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
@@ -286,7 +286,7 @@ export function PersonalTab({
                             </div>
                           ))}
                         </div>
-                      </ScrollArea>
+                      </div>
                     </div>
                     
                     <div className="px-5 py-3 bg-muted/30 border-t text-center shrink-0">
@@ -337,7 +337,7 @@ export function PersonalTab({
                   </div>
 
                   <div className="border-t">
-                    <ScrollArea className="max-h-[50vh]">
+                    <div className="overflow-y-auto max-h-[50vh]">
                       <div className="divide-y">
                         {cashExpenses.map((e: any) => {
                           const methodMap: Record<string, string> = { cash: "Dinheiro", pix: "Pix", debit: "Débito" };
@@ -361,7 +361,7 @@ export function PersonalTab({
                           );
                         })}
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
