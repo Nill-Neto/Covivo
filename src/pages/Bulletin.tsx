@@ -136,8 +136,9 @@ export default function Bulletin() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        }
+      />
 
       {posts.length === 0 ? (
         <Card>
