@@ -98,7 +98,7 @@ export function PersonalTab({
             {collectivePendingPreviousByCompetence.length > 0 && (
               <Dialog open={isPreviousCollectiveOpen} onOpenChange={setIsPreviousCollectiveOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="link" className="h-auto p-0 mt-2 text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                  <Button variant="outline" size="sm" className="mt-2 h-7 text-xs gap-1.5">
                     <List className="h-3 w-3" /> Ver detalhamento
                   </Button>
                 </DialogTrigger>
