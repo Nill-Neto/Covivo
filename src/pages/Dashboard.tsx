@@ -155,7 +155,7 @@ export default function Dashboard() {
 
       const { data } = await supabase
         .from("expense_installments" as any)
-        .select("id, amount, expenses(title, category, credit_card_id, expense_type, purchase_date)")
+        .select("id, amount, installment_number, expenses(title, category, credit_card_id, expense_type, purchase_date, installments)")
         .eq("user_id", user!.id)
         .eq("bill_month", targetMonth)
         .eq("bill_year", targetYear);
