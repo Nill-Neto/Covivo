@@ -72,8 +72,8 @@
   .dark {
     /* Professional Dark Theme */
     
-    /* Main Background: Lighter navy */
-    --background: 217 33% 17%;
+    /* Main Background: Was sidebar dark navy */
+    --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 
     /* Cards: Slightly lighter to separate from background */
