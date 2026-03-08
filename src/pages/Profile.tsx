@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, Shield, FileText, FileSpreadsheet, Loader2, Download } from "lucide-react";
+import { PageHero } from "@/components/layout/PageHero";
+import { ScrollRevealGroup } from "@/components/ui/scroll-reveal";
 
 export default function Profile() {
   const { profile, membership, isAdmin, user, refreshProfile } = useAuth();
