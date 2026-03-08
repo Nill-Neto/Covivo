@@ -227,10 +227,12 @@ export function AppLayout() {
         )}
 
         <main ref={mainRef} className="flex-1 overflow-x-hidden overflow-y-auto p-4 pt-1 md:px-8 md:pt-2 bg-background relative">
-          {/* Decorative background — radial gradients + blurred shapes */}
-          <div className="pointer-events-none absolute inset-0 -z-10 [background:radial-gradient(125%_125%_at_50%_0%,transparent_40%,hsl(var(--primary)/0.08)_100%)]" />
-          <div className="pointer-events-none absolute -top-24 -right-24 -z-10 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 -left-32 -z-10 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
+          {/* Decorative background — clipped to prevent scroll overflow */}
+          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute inset-0 [background:radial-gradient(125%_125%_at_50%_0%,transparent_40%,hsl(var(--primary)/0.08)_100%)]" />
+            <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
+            <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
+          </div>
           <div className="max-w-7xl mx-auto w-full">
             <Outlet />
           </div>
