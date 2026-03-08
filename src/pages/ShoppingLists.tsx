@@ -157,15 +157,16 @@ export default function ShoppingLists() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Listas de Compras</h1>
-          <p className="text-muted-foreground text-sm">Coletivas e individuais</p>
-        </div>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Nova lista</Button>
-          </DialogTrigger>
+      <PageHero
+        title="Listas de Compras"
+        subtitle="Coletivas e individuais"
+        tone="primary"
+        icon={<ShoppingCart className="h-4 w-4" />}
+        actions={
+          <Dialog open={openNew} onOpenChange={setOpenNew}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" />Nova lista</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle className="font-serif">Nova lista de compras</DialogTitle></DialogHeader>
             <div className="space-y-4">
