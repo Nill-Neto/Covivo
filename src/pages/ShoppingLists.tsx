@@ -269,7 +269,7 @@ export default function ShoppingLists() {
           </div>
         </div>
       ) : (
-        <Tabs defaultValue="active">
+        <>
           <TabsList>
             <TabsTrigger value="active">Ativas ({activeLists.length})</TabsTrigger>
             <TabsTrigger value="completed">Concluídas ({completedLists.length})</TabsTrigger>
@@ -305,8 +305,9 @@ export default function ShoppingLists() {
               </Card>
             ))}
           </TabsContent>
-        </Tabs>
+        </>
       )}
     </div>
+    </Tabs>
   );
 }
