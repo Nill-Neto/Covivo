@@ -7,6 +7,7 @@ import { User, Users, CreditCard, Shield } from "lucide-react";
 import { format, subDays, isAfter, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
+import { parseLocalDate } from "@/lib/utils";
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { RepublicTab } from "@/components/dashboard/RepublicTab";
