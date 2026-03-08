@@ -80,13 +80,15 @@ export function RepublicTab({
           </CardContent>
         </Card>
 
-        <Card className="col-span-1">
+        <Card className="col-span-1 border-l-4 border-l-warning bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Estoque Crítico</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/10">
+              <Package className="h-4 w-4 text-warning" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">--</div>
+            <div className="text-2xl font-bold text-foreground">--</div>
             <Button variant="link" className="h-auto p-0 text-xs text-primary mt-1" asChild>
               <Link to="/inventory">Ver estoque →</Link>
             </Button>
