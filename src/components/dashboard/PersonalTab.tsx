@@ -347,7 +347,7 @@ export function PersonalTab({
         <Card className="md:col-span-8 lg:col-span-8">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" /> Histórico Recente (Pessoal)
+              <TrendingUp className="h-4 w-4 text-primary" /> Despesas Individuais (Competência)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -355,10 +355,10 @@ export function PersonalTab({
               <div className="space-y-4">
                 {myPersonalExpenses.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full py-10 text-muted-foreground">
-                    <p className="text-sm">Nenhuma despesa pessoal este mês.</p>
+                    <p className="text-sm">Nenhuma despesa individual nesta competência.</p>
                   </div>
                 ) : (
-                  myPersonalExpenses.slice(0, 15).map(e => (
+                  [...myPersonalExpenses].sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime()).map(e => (
                     <div key={e.id} className="flex items-center justify-between border-b border-border/40 pb-3 last:border-0 last:pb-0 hover:bg-muted/30 p-2 rounded-md transition-colors">
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium">{e.title}</p>
