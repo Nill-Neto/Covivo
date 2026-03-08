@@ -280,6 +280,18 @@ export function PersonalTab({
             <p className="text-xs text-muted-foreground mt-1">Dinheiro, Pix ou Débito.</p>
           </CardContent>
         </Card>
+
+        {/* Total Gasto na Competência */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-primary">Total Gasto (Competência)</CardTitle>
+            <Receipt className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">R$ {totalSpentCompetence.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Rateio + À Vista + Fatura.</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-12">
