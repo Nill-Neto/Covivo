@@ -312,7 +312,7 @@ export function PersonalTab({
                                     {getCategoryLabel(e.category)}
                                   </span>
                                   <span className="text-[10px] text-muted-foreground">
-                                    {e.purchase_date ? format(new Date(e.purchase_date), "dd/MM/yyyy") : ""} • {methodMap[e.payment_method] || e.payment_method}
+                                    {e.purchase_date ? format(parseLocalDate(e.purchase_date), "dd/MM/yyyy") : ""} • {methodMap[e.payment_method] || e.payment_method}
                                   </span>
                                 </div>
                               </div>
