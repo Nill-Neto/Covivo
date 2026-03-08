@@ -105,7 +105,7 @@ export function PersonalTab({
                     <List className="h-3 w-3" /> Ver detalhamento
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh] bg-background">
                   <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
                     <DialogTitle className="text-lg font-semibold text-foreground">
                       Rateio Pendente
@@ -113,7 +113,6 @@ export function PersonalTab({
                     <p className="text-sm text-muted-foreground mt-0.5">Competências anteriores ao ciclo vigente</p>
                   </DialogHeader>
 
-                  {/* Summary Banner */}
                   <div className="mx-5 mb-4 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">Total pendente</span>
                     <span className="text-lg font-bold text-destructive tabular-nums">
@@ -121,8 +120,8 @@ export function PersonalTab({
                     </span>
                   </div>
 
-                  <div className="flex-1 overflow-hidden border-t">
-                    <ScrollArea className="h-full">
+                  <div className="flex-1 min-h-0 border-t">
+                    <ScrollArea className="max-h-[45vh]">
                       <div className="divide-y">
                         {collectivePendingPreviousByCompetence.map((group) => (
                           <div key={group.competence} className="px-5 py-4 space-y-2.5">
@@ -142,9 +141,9 @@ export function PersonalTab({
                                     <p className="text-sm font-medium truncate text-foreground">
                                       {item.expenses?.title || "Despesa sem título"}
                                     </p>
-                                    <span className="text-xs text-muted-foreground">
+                                    <Badge variant="outline" className="text-xs h-5 px-2 font-normal mt-1">
                                       {getCategoryLabel(item.expenses?.category)}
-                                    </span>
+                                    </Badge>
                                   </div>
                                   <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-foreground">
                                     R$ {Number(item.amount).toFixed(2)}
@@ -185,7 +184,7 @@ export function PersonalTab({
                     <List className="h-3 w-3" /> Ver itens atuais ({collectivePendingCurrent.length})
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh] bg-background">
                   <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
                     <DialogTitle className="text-lg font-semibold text-foreground">
                       Rateio em Aberto
@@ -200,8 +199,8 @@ export function PersonalTab({
                     </span>
                   </div>
 
-                  <div className="flex-1 overflow-hidden border-t">
-                    <ScrollArea className="h-full">
+                  <div className="flex-1 min-h-0 border-t">
+                    <ScrollArea className="max-h-[45vh]">
                       <div className="divide-y">
                         {collectivePendingCurrent.map((item) => (
                           <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
@@ -209,9 +208,9 @@ export function PersonalTab({
                               <p className="text-sm font-medium truncate text-foreground">
                                 {item.expenses?.title || "Despesa sem título"}
                               </p>
-                              <span className="text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-xs h-5 px-2 font-normal mt-1">
                                 {getCategoryLabel(item.expenses?.category)}
-                              </span>
+                              </Badge>
                             </div>
                             <span className="font-semibold text-sm tabular-nums whitespace-nowrap text-foreground">
                               R$ {Number(item.amount).toFixed(2)}
@@ -250,7 +249,7 @@ export function PersonalTab({
                       <List className="h-3 w-3" /> Ver lista ({individualPending.length})
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                  <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh] bg-background">
                     <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
                       <DialogTitle className="text-lg font-semibold text-foreground">
                         Controle Individual
@@ -265,15 +264,15 @@ export function PersonalTab({
                       </span>
                     </div>
                     
-                    <div className="flex-1 overflow-hidden border-t">
-                      <ScrollArea className="h-full">
+                    <div className="flex-1 min-h-0 border-t">
+                      <ScrollArea className="max-h-[40vh]">
                         <div className="divide-y">
                           {individualPending.map((item) => (
                             <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
                               <div className="min-w-0 pr-4">
                                 <p className="text-sm font-medium truncate text-foreground">{item.expenses?.title}</p>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                  <Badge variant="outline" className="text-xs h-5 px-2 font-normal">
                                     {getCategoryLabel(item.expenses?.category)}
                                   </Badge>
                                   <span className="text-xs text-muted-foreground">
@@ -322,7 +321,7 @@ export function PersonalTab({
                     <List className="h-3 w-3" /> Ver itens ({cashExpenses.length})
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh] bg-background">
                   <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
                     <DialogTitle className="text-lg font-semibold text-foreground">
                       Gastos à Vista
@@ -337,8 +336,8 @@ export function PersonalTab({
                     </span>
                   </div>
 
-                  <div className="flex-1 overflow-hidden border-t">
-                    <ScrollArea className="h-full">
+                  <div className="flex-1 min-h-0 border-t">
+                    <ScrollArea className="max-h-[45vh]">
                       <div className="divide-y">
                         {cashExpenses.map((e: any) => {
                           const methodMap: Record<string, string> = { cash: "Dinheiro", pix: "Pix", debit: "Débito" };
@@ -347,7 +346,7 @@ export function PersonalTab({
                               <div className="min-w-0 pr-4">
                                 <p className="text-sm font-medium truncate text-foreground">{e.title}</p>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                  <Badge variant="outline" className="text-xs h-5 px-2 font-normal">
                                     {getCategoryLabel(e.category)}
                                   </Badge>
                                   <span className="text-xs text-muted-foreground">
@@ -405,11 +404,11 @@ export function PersonalTab({
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium">{e.title}</p>
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal bg-muted text-muted-foreground border-0">
+                          <Badge variant="outline" className="text-xs h-5 px-2 font-normal">
                             {getCategoryLabel(e.category)}
                           </Badge>
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(parseLocalDate(e.purchase_date), "dd/MM")} • {e.payment_method === 'credit_card' ? 'Cartão' : 'À vista'}
+                          <span className="text-xs text-muted-foreground">
+                            {format(parseLocalDate(e.purchase_date), "dd/MM")} · {e.payment_method === 'credit_card' ? 'Cartão' : 'À vista'}
                           </span>
                         </div>
                       </div>

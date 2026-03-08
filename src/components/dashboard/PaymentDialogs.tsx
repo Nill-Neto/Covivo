@@ -88,7 +88,7 @@ export function PaymentDialogs({
     <>
       {/* Rateio Payment Dialog */}
       <Dialog open={payRateioOpen} onOpenChange={setPayRateioOpen}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh] bg-background">
           <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
             <DialogTitle className="text-lg font-semibold text-foreground">
               {selectedScopeLabel}
@@ -100,7 +100,6 @@ export function PaymentDialogs({
             </p>
           </DialogHeader>
 
-          {/* Summary Banner */}
           <div className="mx-5 mb-4 rounded-lg bg-primary/10 border border-primary/20 px-4 py-3 text-center">
             <p className="text-sm text-muted-foreground">Valor total</p>
             <p className="text-2xl font-bold text-primary mt-0.5 tabular-nums">
@@ -113,7 +112,7 @@ export function PaymentDialogs({
               <div className="px-4 py-2.5 bg-muted/40 border-b">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Detalhamento</p>
               </div>
-              <ScrollArea className="max-h-[140px]">
+              <ScrollArea className="max-h-[160px]">
                 <div className="divide-y">
                   {rateioScope === "previous"
                     ? groupedPreviousEntries.map(([competence, items]) => (
@@ -155,7 +154,7 @@ export function PaymentDialogs({
 
       {/* Individual Payment Dialog */}
       <Dialog open={payIndividualOpen} onOpenChange={(v) => { if (!v) { setPayIndividualOpen(false); setSelectedIndividualSplit(null); } else setPayIndividualOpen(true); }}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh] bg-background">
           <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
             <DialogTitle className="text-lg font-semibold text-foreground">
               {selectedIndividualSplit ? "Confirmar Pagamento" : "Pagar Individual"}
@@ -166,8 +165,8 @@ export function PaymentDialogs({
           </DialogHeader>
 
           {!selectedIndividualSplit ? (
-            <div className="flex-1 overflow-hidden border-t">
-              <ScrollArea className="h-full max-h-[350px]">
+            <div className="flex-1 min-h-0 border-t">
+              <ScrollArea className="max-h-[45vh]">
                 <div className="divide-y">
                   {individualPending.map((s: any) => (
                     <div key={s.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
