@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Wallet, CreditCard, Plus, PieChart as PieChartIcon, Loader2, Settings, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { CHART_COLORS, CATEGORY_COLORS } from "@/constants/categories";
+import { CHART_COLORS, CATEGORY_COLORS, getCategoryLabel } from "@/constants/categories";
 import { DonutChart, type DonutChartSegment } from "@/components/ui/donut-chart";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
