@@ -105,38 +105,50 @@ export function PersonalTab({
                     <List className="h-3 w-3" /> Ver detalhamento
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[80vh]">
-                  <DialogHeader className="p-4 border-b shrink-0">
-                    <DialogTitle className="text-base font-medium flex items-center gap-2">
-                      Rateio pendente (competências anteriores)
-                      <Badge variant="outline" className="ml-auto font-normal">
-                        Total: R$ {totalCollectivePendingPrevious.toFixed(2)}
-                      </Badge>
+                <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                  <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+                    <DialogTitle className="text-lg font-semibold text-foreground">
+                      Rateio Pendente
                     </DialogTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">Competências anteriores ao ciclo vigente</p>
                   </DialogHeader>
 
-                  <div className="flex-1 overflow-hidden">
+                  {/* Summary Banner */}
+                  <div className="mx-5 mb-4 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Total pendente</span>
+                    <span className="text-lg font-bold text-destructive tabular-nums">
+                      R$ {totalCollectivePendingPrevious.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-hidden border-t">
                     <ScrollArea className="h-full">
                       <div className="divide-y">
                         {collectivePendingPreviousByCompetence.map((group) => (
-                          <div key={group.competence} className="p-4 space-y-3">
+                          <div key={group.competence} className="px-5 py-4 space-y-2.5">
                             <div className="flex items-center justify-between">
-                              <p className="text-sm font-semibold">Competência {group.competence}</p>
-                              <Badge variant="secondary" className="font-normal">
+                              <p className="text-sm font-semibold text-foreground">
+                                Competência {group.competence}
+                              </p>
+                              <Badge variant="secondary" className="font-semibold text-xs">
                                 R$ {group.total.toFixed(2)}
                               </Badge>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               {group.items.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
+                                <div key={item.id} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
                                   <div className="min-w-0 pr-4">
-                                    <p className="text-xs font-medium truncate">{item.expenses?.title || "Despesa sem título"}</p>
-                                    <span className="text-[10px] text-muted-foreground">
+                                    <p className="text-sm font-medium truncate text-foreground">
+                                      {item.expenses?.title || "Despesa sem título"}
+                                    </p>
+                                    <span className="text-xs text-muted-foreground">
                                       {getCategoryLabel(item.expenses?.category)}
                                     </span>
                                   </div>
-                                  <span className="text-xs font-semibold whitespace-nowrap">R$ {Number(item.amount).toFixed(2)}</span>
+                                  <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-foreground">
+                                    R$ {Number(item.amount).toFixed(2)}
+                                  </span>
                                 </div>
                               ))}
                             </div>
