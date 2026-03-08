@@ -9,7 +9,6 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 import Login from "./pages/Login";
-import Demo from "./pages/Demo";
 
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
@@ -42,7 +41,6 @@ const App = () => (
           <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/demo" element={<Demo />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/invite" element={<AcceptInvite />} />
 
