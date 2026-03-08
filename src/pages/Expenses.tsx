@@ -846,7 +846,6 @@ export default function Expenses() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
 
       <div className="text-sm text-muted-foreground">
         Exibindo competência: <strong>{format(cycleStart, "dd/MM")}</strong> até{" "}
