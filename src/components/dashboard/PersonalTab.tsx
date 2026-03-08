@@ -250,33 +250,38 @@ export function PersonalTab({
                       <List className="h-3 w-3" /> Ver lista ({individualPending.length})
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[80vh]">
-                    <DialogHeader className="p-4 border-b shrink-0">
-                      <DialogTitle className="text-base font-medium flex items-center gap-2">
+                  <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                    <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+                      <DialogTitle className="text-lg font-semibold text-foreground">
                         Controle Individual
-                        <Badge variant="outline" className="ml-auto font-normal">
-                          Total: R$ {totalIndividualPending.toFixed(2)}
-                        </Badge>
                       </DialogTitle>
+                      <p className="text-sm text-muted-foreground mt-0.5">Despesas pessoais de acompanhamento próprio</p>
                     </DialogHeader>
+
+                    <div className="mx-5 mb-4 rounded-lg bg-muted/60 border border-border px-4 py-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Total pendente</span>
+                      <span className="text-lg font-bold text-foreground tabular-nums">
+                        R$ {totalIndividualPending.toFixed(2)}
+                      </span>
+                    </div>
                     
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden border-t">
                       <ScrollArea className="h-full">
                         <div className="divide-y">
                           {individualPending.map((item) => (
-                            <div key={item.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                            <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
                               <div className="min-w-0 pr-4">
-                                <p className="text-sm font-medium truncate">{item.expenses?.title}</p>
+                                <p className="text-sm font-medium truncate text-foreground">{item.expenses?.title}</p>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
                                     {getCategoryLabel(item.expenses?.category)}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground">
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
                                     {item.expenses?.purchase_date ? format(parseLocalDate(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
                                   </span>
                                 </div>
                               </div>
-                              <span className="font-semibold text-sm tabular-nums whitespace-nowrap">
+                              <span className="font-semibold text-sm tabular-nums whitespace-nowrap text-foreground">
                                 R$ {Number(item.amount).toFixed(2)}
                               </span>
                             </div>
@@ -285,9 +290,9 @@ export function PersonalTab({
                       </ScrollArea>
                     </div>
                     
-                    <div className="p-3 bg-muted/20 border-t text-center shrink-0">
-                      <p className="text-[10px] text-muted-foreground">
-                        Despesas pessoais (controle próprio, não envolve o grupo).
+                    <div className="px-5 py-3 bg-muted/30 border-t text-center shrink-0">
+                      <p className="text-xs text-muted-foreground">
+                        Controle próprio — não envolve o grupo.
                       </p>
                     </div>
                   </DialogContent>
