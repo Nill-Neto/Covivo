@@ -138,7 +138,7 @@ export default function Dashboard() {
     enabled: collectivePendingExpenseIds.length > 0,
   });
 
-  const { data: creditCards = [] } = useQuery({
+  const { data: creditCards = [], isLoading: isLoadingCreditCards } = useQuery({
     queryKey: ["my-credit-cards", user?.id],
     queryFn: async () => {
       const { data } = await supabase.from("credit_cards").select("*").eq("user_id", user!.id);
@@ -147,7 +147,7 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  const { data: billInstallments = [] } = useQuery({
+  const { data: billInstallments = [], isLoading: isLoadingBillInstallments } = useQuery({
     queryKey: ["bill-installments-dashboard", user?.id, currentDate.getMonth(), currentDate.getFullYear()],
     queryFn: async () => {
       const targetMonth = currentDate.getMonth() + 1; 
@@ -548,6 +548,7 @@ export default function Dashboard() {
             creditCards={creditCards}
             cardsBreakdown={cardsBreakdown}
             billInstallments={billInstallments}
+            isLoading={isLoadingCreditCards || isLoadingBillInstallments}
           />
         </TabsContent>
       </Tabs>

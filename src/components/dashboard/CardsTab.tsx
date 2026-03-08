@@ -43,6 +43,7 @@ interface CardsTabProps {
   creditCards: any[];
   cardsBreakdown: Record<string, number>;
   billInstallments: any[];
+  isLoading?: boolean;
 }
 
 const cardSchema = z.object({
@@ -77,6 +78,7 @@ export function CardsTab({
   creditCards,
   cardsBreakdown,
   billInstallments,
+  isLoading = false,
 }: CardsTabProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -242,7 +244,14 @@ export function CardsTab({
           <CreditCard className="h-5 w-5 text-primary" /> Meus Cartões
         </h3>
         
-        {creditCards.length === 0 ? (
+        {isLoading ? (
+          <Card className="border-dashed bg-muted/20">
+            <CardContent className="py-10 flex flex-col items-center justify-center text-center">
+              <Loader2 className="h-6 w-6 text-muted-foreground animate-spin mb-3" />
+              <p className="text-sm text-muted-foreground">Carregando cartões...</p>
+            </CardContent>
+          </Card>
+        ) : creditCards.length === 0 ? (
           <Card className="border-dashed bg-muted/20">
             <CardContent className="py-10 flex flex-col items-center justify-center text-center">
               <div className="bg-muted p-3 rounded-full mb-3">
