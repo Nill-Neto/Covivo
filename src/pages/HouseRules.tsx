@@ -114,8 +114,8 @@ export default function HouseRules() {
               </div>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {rules.length === 0 ? (
         <Card>
