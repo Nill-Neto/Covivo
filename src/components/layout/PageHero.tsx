@@ -28,7 +28,7 @@ const toneGlowClass: Record<NonNullable<PageHeroProps["tone"]>, string> = {
   warning: "bg-warning/80",
 };
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -39,22 +39,22 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 12, filter: "blur(8px)" },
   visible: {
     opacity: 1,
     y: 0,
     filter: "blur(0px)",
-    transition: { type: "spring", bounce: 0.3, duration: 0.8 },
+    transition: { type: "spring" as const, bounce: 0.3, duration: 0.8 },
   },
 };
 
-const accentVariants = {
+const accentVariants: Variants = {
   hidden: { scaleX: 0, opacity: 0 },
   visible: {
     scaleX: 1,
     opacity: 1,
-    transition: { type: "spring", bounce: 0.2, duration: 0.6 },
+    transition: { type: "spring" as const, bounce: 0.2, duration: 0.6 },
   },
 };
 

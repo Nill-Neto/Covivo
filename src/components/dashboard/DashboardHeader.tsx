@@ -18,7 +18,7 @@ interface DashboardHeaderProps {
   onPrevMonth: () => void;
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -26,13 +26,13 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 12, filter: "blur(8px)" },
   visible: {
     opacity: 1,
     y: 0,
     filter: "blur(0px)",
-    transition: { type: "spring", bounce: 0.3, duration: 0.8 },
+    transition: { type: "spring" as const, bounce: 0.3, duration: 0.8 },
   },
 };
 
