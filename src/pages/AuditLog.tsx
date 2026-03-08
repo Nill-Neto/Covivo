@@ -62,7 +62,7 @@ export default function AuditLog() {
       {!logs?.length ? (
         <p className="text-sm text-muted-foreground">Nenhuma atividade registrada.</p>
       ) : (
-        <div className="space-y-2">
+        <ScrollRevealGroup preset="fade" className="space-y-2">
           {logs.map((log) => {
             const profileData = log.profiles as unknown as { full_name: string } | null;
             return (
