@@ -78,23 +78,24 @@ export function PersonalTab({
         </Card>
 
         {/* Rateio pendente (competências anteriores) */}
-        <Card className={`${totalCollectivePendingPrevious > 0 ? "border-destructive/30 bg-destructive/5" : ""}`}>
+        <Card className={`border-l-4 ${totalCollectivePendingPrevious > 0 ? "border-l-destructive" : "border-l-success"} bg-card shadow-sm`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className={`text-sm font-medium ${totalCollectivePendingPrevious > 0 ? "text-destructive" : "text-muted-foreground"}`}>
-              Rateio pendente (competências anteriores)
-
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Rateio Pendente (Anteriores)
             </CardTitle>
-            <Users className={`h-4 w-4 ${totalCollectivePendingPrevious > 0 ? "text-destructive" : "text-muted-foreground"}`} />
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${totalCollectivePendingPrevious > 0 ? "bg-destructive/10" : "bg-success/10"}`}>
+              <Users className={`h-4 w-4 ${totalCollectivePendingPrevious > 0 ? "text-destructive" : "text-success"}`} />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${totalCollectivePendingPrevious > 0 ? "text-destructive" : ""}`}>
+            <div className={`text-2xl font-bold ${totalCollectivePendingPrevious > 0 ? "text-destructive" : "text-foreground"}`}>
               R$ {totalCollectivePendingPrevious.toFixed(2)}
             </div>
             {totalCollectivePendingPrevious > 0 ? (
-              <p className="text-xs text-destructive mt-1 font-medium">Inclui apenas competências anteriores (não inclui a atual nem futuras).</p>
+              <p className="text-xs text-muted-foreground mt-1">Apenas competências anteriores.</p>
             ) : (
               <p className="text-xs text-success mt-1 flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Sem pendências em competências anteriores.
+                <CheckCircle2 className="h-3 w-3" /> Sem pendências anteriores.
               </p>
             )}
             {collectivePendingPreviousByCompetence.length > 0 && (
