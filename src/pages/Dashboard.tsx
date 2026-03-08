@@ -477,24 +477,27 @@ export default function Dashboard() {
     }
   };
 
+  const tabTriggerClass = "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-foreground/60 text-xs font-semibold px-3 py-1.5 rounded-md transition-all";
+  const tabListClass = "w-full justify-start overflow-x-auto bg-muted/50 rounded-lg p-1 h-auto gap-1";
+
   const compactTabsList = (
-    <TabsList className="w-full justify-start overflow-x-auto bg-transparent gap-2 h-auto p-0">
+    <TabsList className={tabListClass}>
       {!isPersonalFinancePage && isAdmin && (
-        <TabsTrigger value="admin" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+        <TabsTrigger value="admin" className={tabTriggerClass}>
           <Shield className="h-3.5 w-3.5 mr-1.5" /> Admin
         </TabsTrigger>
       )}
       {!isPersonalFinancePage && (
-        <TabsTrigger value="republic" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+        <TabsTrigger value="republic" className={tabTriggerClass}>
           <Users className="h-3.5 w-3.5 mr-1.5" /> República
         </TabsTrigger>
       )}
       {isPersonalFinancePage && (
         <>
-          <TabsTrigger value="personal" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+          <TabsTrigger value="personal" className={tabTriggerClass}>
             <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
           </TabsTrigger>
-          <TabsTrigger value="cards" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+          <TabsTrigger value="cards" className={tabTriggerClass}>
             <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
           </TabsTrigger>
         </>
@@ -519,23 +522,23 @@ export default function Dashboard() {
 
       <div className="space-y-6">
         {!heroCompact && (
-        <TabsList className="w-full justify-start overflow-x-auto bg-transparent gap-2 h-auto p-0">
+        <TabsList className={tabListClass}>
           {!isPersonalFinancePage && isAdmin && (
-            <TabsTrigger value="admin" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+            <TabsTrigger value="admin" className={tabTriggerClass}>
               <Shield className="h-3.5 w-3.5 mr-1.5" /> Admin
             </TabsTrigger>
           )}
           {!isPersonalFinancePage && (
-            <TabsTrigger value="republic" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+            <TabsTrigger value="republic" className={tabTriggerClass}>
               <Users className="h-3.5 w-3.5 mr-1.5" /> República
             </TabsTrigger>
           )}
           {isPersonalFinancePage && (
             <>
-              <TabsTrigger value="personal" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+              <TabsTrigger value="personal" className={tabTriggerClass}>
                 <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
               </TabsTrigger>
-              <TabsTrigger value="cards" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">
+              <TabsTrigger value="cards" className={tabTriggerClass}>
                 <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
               </TabsTrigger>
             </>
