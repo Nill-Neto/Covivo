@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +31,15 @@ export default function Dashboard() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [rateioScope, setRateioScope] = useState<RateioScope>("previous");
+  const [activeTab, setActiveTab] = useState(isPersonalFinancePage ? "personal" : (isAdmin ? "admin" : "republic"));
+
+  useEffect(() => {
+    if (isPersonalFinancePage) {
+      setActiveTab("personal");
+    } else {
+      setActiveTab(isAdmin ? "admin" : "republic");
+    }
+  }, [isPersonalFinancePage, isAdmin]);
 
   // --- Group Settings & Initial Date Logic ---
   const { data: groupSettings } = useQuery({
@@ -310,13 +319,13 @@ export default function Dashboard() {
       if (!acc[competence]) acc[competence] = [];
       acc[competence].push(item);
       return acc;
-    }, {});
+    }, {} as Record<string, any[]>);
 
     return Object.entries(grouped)
-      .map(([competence, items]) => ({
+      .map(([competence, items]: [string, any[]]) => ({
         competence,
         items,
-        total: items.reduce((sum, split) => sum + Number(split.amount), 0),
+        total: items.reduce((sum: number, split: any) => sum + Number(split.amount), 0),
       }))
       .sort((a, b) => {
         const [monthA, yearA] = a.competence.split("/").map(Number);
