@@ -92,12 +92,12 @@ export default function HouseRules() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Regras da Casa</h1>
-          <p className="text-muted-foreground mt-1">Combinados de convivência da república.</p>
-        </div>
-        {isAdmin && (
+      <PageHero
+        title="Regras da Casa"
+        subtitle="Combinados de convivência da república."
+        tone="primary"
+        icon={<BookOpen className="h-4 w-4" />}
+        actions={isAdmin ? (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />Nova Regra</Button>
