@@ -41,6 +41,9 @@ import {
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCycleDates } from "@/hooks/useCycleDates";
+import { PageHero } from "@/components/layout/PageHero";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { Receipt } from "lucide-react";
 
 const CATEGORIES = [
   { value: "rent", label: "Aluguel" },
@@ -594,32 +597,33 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Despesas</h1>
-          <p className="text-muted-foreground mt-1">Gestão financeira do grupo</p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2 bg-card border rounded-lg p-1 shadow-sm">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="px-2 text-sm font-medium min-w-[140px] text-center capitalize">
-              {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+      <PageHero
+        title="Despesas"
+        subtitle="Gestão financeira do grupo"
+        tone="primary"
+        icon={<Receipt className="h-4 w-4" />}
+        actions={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 bg-card border rounded-lg p-1 shadow-sm">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="px-2 text-sm font-medium min-w-[140px] text-center capitalize">
+                {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth}>
-              <ChevronRight className="h-4 w-4" />
+            <Button className="gap-2 h-10" onClick={() => { resetForm(); setOpen(true); }}>
+              <Plus className="h-4 w-4" /> Nova Despesa
             </Button>
           </div>
+        }
+      />
 
-          <Button className="gap-2 h-10" onClick={() => { resetForm(); setOpen(true); }}>
-            <Plus className="h-4 w-4" /> Nova Despesa
-          </Button>
-        </div>
-
-        {/* Edit form dialog */}
-        <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
+      {/* Edit form dialog */}
+      <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-serif">
@@ -842,7 +846,6 @@ export default function Expenses() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
 
       <div className="text-sm text-muted-foreground">
         Exibindo competência: <strong>{format(cycleStart, "dd/MM")}</strong> até{" "}

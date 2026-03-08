@@ -26,6 +26,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PageHero } from "@/components/layout/PageHero";
+import { ScrollRevealGroup } from "@/components/ui/scroll-reveal";
 
 export default function ShoppingLists() {
   const { membership, user } = useAuth();
@@ -155,15 +157,16 @@ export default function ShoppingLists() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Listas de Compras</h1>
-          <p className="text-muted-foreground text-sm">Coletivas e individuais</p>
-        </div>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Nova lista</Button>
-          </DialogTrigger>
+      <PageHero
+        title="Listas de Compras"
+        subtitle="Coletivas e individuais"
+        tone="primary"
+        icon={<ShoppingCart className="h-4 w-4" />}
+        actions={
+          <Dialog open={openNew} onOpenChange={setOpenNew}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" />Nova lista</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle className="font-serif">Nova lista de compras</DialogTitle></DialogHeader>
             <div className="space-y-4">
@@ -180,8 +183,9 @@ export default function ShoppingLists() {
               <Button className="w-full" disabled={!newList.name.trim()} onClick={() => createList.mutate()}>Criar lista</Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        }
+      />
 
       {selectedList && currentList ? (
         <div className="space-y-4">
