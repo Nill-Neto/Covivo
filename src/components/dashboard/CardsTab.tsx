@@ -274,7 +274,7 @@ export function CardsTab({
                         </span>
                       </div>
                       <span className="font-semibold tabular-nums">
-                        R$ {segment.value.toFixed(0)}
+                        R$ {segment.value.toFixed(2)}
                       </span>
                     </div>
                   ))}
