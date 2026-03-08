@@ -145,13 +145,13 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-serif">Estoque</h1>
-          <p className="text-muted-foreground text-sm">Itens movimentados nesta competência.</p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <PageHero
+        title="Estoque"
+        subtitle="Itens movimentados nesta competência."
+        tone="primary"
+        icon={<Package className="h-4 w-4" />}
+        actions={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {/* Month Selector */}
           <div className="flex items-center gap-2 bg-card border rounded-lg p-1 shadow-sm">
              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
