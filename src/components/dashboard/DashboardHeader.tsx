@@ -20,6 +20,7 @@ interface DashboardHeaderProps {
   onNextMonth: () => void;
   onPrevMonth: () => void;
   compactTabs?: ReactNode;
+  onCompactChange?: (isCompact: boolean) => void;
 }
 
 export function DashboardHeader({
