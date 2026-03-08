@@ -322,34 +322,40 @@ export function PersonalTab({
                     <List className="h-3 w-3" /> Ver itens ({cashExpenses.length})
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[80vh]">
-                  <DialogHeader className="p-4 border-b shrink-0">
-                    <DialogTitle className="text-base font-medium flex items-center gap-2">
+                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                  <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+                    <DialogTitle className="text-lg font-semibold text-foreground">
                       Gastos à Vista
-                      <Badge variant="outline" className="ml-auto font-normal">
-                        Total: R$ {totalPersonalCash.toFixed(2)}
-                      </Badge>
                     </DialogTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">Dinheiro, Pix e Débito</p>
                   </DialogHeader>
-                  <div className="flex-1 overflow-hidden">
+
+                  <div className="mx-5 mb-4 rounded-lg bg-secondary/50 border border-border px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Total</span>
+                    <span className="text-lg font-bold text-foreground tabular-nums">
+                      R$ {totalPersonalCash.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-hidden border-t">
                     <ScrollArea className="h-full">
                       <div className="divide-y">
                         {cashExpenses.map((e: any) => {
                           const methodMap: Record<string, string> = { cash: "Dinheiro", pix: "Pix", debit: "Débito" };
                           return (
-                            <div key={e.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                            <div key={e.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
                               <div className="min-w-0 pr-4">
-                                <p className="text-sm font-medium truncate">{e.title}</p>
+                                <p className="text-sm font-medium truncate text-foreground">{e.title}</p>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
                                     {getCategoryLabel(e.category)}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {e.purchase_date ? format(parseLocalDate(e.purchase_date), "dd/MM/yyyy") : ""} • {methodMap[e.payment_method] || e.payment_method}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {e.purchase_date ? format(parseLocalDate(e.purchase_date), "dd/MM/yyyy") : ""} · {methodMap[e.payment_method] || e.payment_method}
                                   </span>
                                 </div>
                               </div>
-                              <span className="font-semibold text-sm tabular-nums whitespace-nowrap">
+                              <span className="font-semibold text-sm tabular-nums whitespace-nowrap text-foreground">
                                 R$ {Number(e.amount).toFixed(2)}
                               </span>
                             </div>
