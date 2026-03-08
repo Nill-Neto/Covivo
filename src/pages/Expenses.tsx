@@ -865,7 +865,7 @@ export default function Expenses() {
         <strong>{format(subDays(cycleEnd, 1), "dd/MM")}</strong>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <div>
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="all">Todas</TabsTrigger>
           <TabsTrigger value="mine">Minhas</TabsTrigger>
