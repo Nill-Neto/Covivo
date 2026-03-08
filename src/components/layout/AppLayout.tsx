@@ -131,10 +131,10 @@ export function AppLayout() {
       {/* Header Superior Fixo — scroll-aware */}
       <motion.header
         className={cn(
-          "z-50 flex h-16 shrink-0 items-center justify-between px-4 md:px-6 transition-all duration-300",
+          "z-50 flex h-16 shrink-0 items-center justify-between px-4 md:px-6 transition-all duration-300 border-b",
           isScrolled
-            ? "border-b bg-background/80 backdrop-blur-lg shadow-sm"
-            : "border-b border-transparent bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+            ? "bg-card/80 backdrop-blur-xl shadow-sm"
+            : "bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60"
         )}
         initial={{ opacity: 0, y: -12, filter: "blur(8px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
