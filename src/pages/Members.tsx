@@ -411,7 +411,7 @@ export default function Members() {
             </Card>
           );
         })}
-      </div>
+      </ScrollRevealGroup>
 
       {/* Edit Role/Percentage Modal */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
