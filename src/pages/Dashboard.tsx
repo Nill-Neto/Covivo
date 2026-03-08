@@ -601,7 +601,7 @@ export default function Dashboard() {
             isLoading={isLoadingCreditCards || isLoadingBillInstallments}
           />
         </TabsContent>
-      </Tabs>
+      </div>
 
       <PaymentDialogs
         payRateioOpen={payRateioOpen}
@@ -623,6 +623,6 @@ export default function Dashboard() {
         receiptFile={receiptFile}
         setReceiptFile={setReceiptFile}
       />
-    </div>
+    </Tabs>
   );
 }
