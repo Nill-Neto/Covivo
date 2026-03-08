@@ -192,7 +192,7 @@ export function CardsTab({
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Fatura Atual</p>
                       <p className="text-2xl font-bold text-primary">R$ {billValue.toFixed(2)}</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2 text-[10px] bg-muted/40 p-2 rounded border border-border/50">
                       <div>
                         <span className="text-muted-foreground block">Fecha dia</span>
@@ -204,7 +204,7 @@ export function CardsTab({
                       </div>
                     </div>
                   </CardContent>
-                </Card>
+                </button>
               );
             })}
             
