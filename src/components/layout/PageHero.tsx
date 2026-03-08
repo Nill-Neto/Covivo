@@ -11,6 +11,8 @@ interface PageHeroProps {
   badge?: ReactNode;
   icon?: ReactNode;
   tone?: "default" | "primary" | "warning";
+  /** Tabs element rendered inside the hero when in compact/sticky mode */
+  compactTabs?: ReactNode;
 }
 
 const toneAccentClass: Record<NonNullable<PageHeroProps["tone"]>, string> = {
