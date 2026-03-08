@@ -16,6 +16,8 @@ import { Loader2, Plus, Check, X, Upload, Image, ChevronLeft, ChevronRight, Chev
 import { format, addMonths, subMonths, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { PageHero } from "@/components/layout/PageHero";
+import { ScrollRevealGroup } from "@/components/ui/scroll-reveal";
 
 export default function Payments() {
   const { membership, isAdmin, user } = useAuth();
