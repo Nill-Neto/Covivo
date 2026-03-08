@@ -609,7 +609,7 @@ export default function Expenses() {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHero
         compactTabs={compactTabsList}
         onCompactChange={setHeroCompact}

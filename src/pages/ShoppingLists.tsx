@@ -165,7 +165,7 @@ export default function ShoppingLists() {
 
   return (
     <Tabs defaultValue="active">
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHero
         title="Listas de Compras"
         subtitle="Coletivas e individuais"

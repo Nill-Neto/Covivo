@@ -217,7 +217,7 @@ export default function Payments() {
 
   return (
     <Tabs defaultValue={defaultTab}>
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHero
         compactTabs={compactTabsList}
         onCompactChange={setHeroCompact}
