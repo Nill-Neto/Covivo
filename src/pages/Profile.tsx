@@ -89,11 +89,13 @@ export default function Profile() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-3xl font-serif">Meu Perfil</h1>
-        <p className="text-muted-foreground text-sm">Gerencie suas informações pessoais</p>
-      </div>
+      <PageHero
+        title="Meu Perfil"
+        subtitle="Gerencie suas informações pessoais"
+        icon={<User className="h-4 w-4" />}
+      />
 
+      <ScrollRevealGroup preset="blur-slide" className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
