@@ -34,6 +34,7 @@ export default function ShoppingLists() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [openNew, setOpenNew] = useState(false);
+  const [heroCompact, setHeroCompact] = useState(false);
   const [newList, setNewList] = useState({ name: "", list_type: "collective" });
   const [selectedList, setSelectedList] = useState<string | null>(null);
   const [newItemName, setNewItemName] = useState("");
