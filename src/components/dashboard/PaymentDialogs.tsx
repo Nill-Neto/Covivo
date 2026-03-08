@@ -112,7 +112,7 @@ export function PaymentDialogs({
               <div className="px-4 py-2.5 bg-muted/40 border-b">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Detalhamento</p>
               </div>
-              <ScrollArea className="max-h-[160px]">
+              <ScrollArea className="h-[160px]">
                 <div className="divide-y">
                   {rateioScope === "previous"
                     ? groupedPreviousEntries.map(([competence, items]) => (
@@ -165,8 +165,8 @@ export function PaymentDialogs({
           </DialogHeader>
 
           {!selectedIndividualSplit ? (
-            <div className="flex-1 min-h-0 border-t">
-              <ScrollArea className="max-h-[45vh]">
+            <div className="flex-1 min-h-0 overflow-hidden border-t">
+              <ScrollArea className="h-full max-h-[50vh]">
                 <div className="divide-y">
                   {individualPending.map((s: any) => (
                     <div key={s.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
