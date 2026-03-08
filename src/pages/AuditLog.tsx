@@ -7,6 +7,7 @@ import { History, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PageHero } from "@/components/layout/PageHero";
+import { ScrollRevealGroup } from "@/components/ui/scroll-reveal";
 
 const actionLabels: Record<string, string> = {
   create: "Criou",
