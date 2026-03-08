@@ -276,9 +276,9 @@ export default function ShoppingLists() {
       ) : (
         <>
           {!heroCompact && (
-            <TabsList className="w-full justify-start overflow-x-auto bg-transparent gap-2 h-auto p-0">
-              <TabsTrigger value="active" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">Ativas ({activeLists.length})</TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">Concluídas ({completedLists.length})</TabsTrigger>
+            <TabsList className={tabListClass}>
+              <TabsTrigger value="active" className={tabTriggerClass}>Ativas ({activeLists.length})</TabsTrigger>
+              <TabsTrigger value="completed" className={tabTriggerClass}>Concluídas ({completedLists.length})</TabsTrigger>
             </TabsList>
           )}
           <TabsContent value="active" className="space-y-3 mt-4">

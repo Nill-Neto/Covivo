@@ -315,9 +315,9 @@ export default function Payments() {
       </div>
 
       {!heroCompact && (
-        <TabsList className="w-full justify-start overflow-x-auto bg-transparent gap-2 h-auto p-0">
-          {isAdmin && <TabsTrigger value="pending" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">Pendentes</TabsTrigger>}
-          <TabsTrigger value="all" className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-xs font-semibold px-2.5 py-1.5 rounded-md">Todos</TabsTrigger>
+        <TabsList className={tabListClass}>
+          {isAdmin && <TabsTrigger value="pending" className={tabTriggerClass}>Pendentes</TabsTrigger>}
+          <TabsTrigger value="all" className={tabTriggerClass}>Todos</TabsTrigger>
         </TabsList>
       )}
 
