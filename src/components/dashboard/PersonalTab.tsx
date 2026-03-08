@@ -185,28 +185,35 @@ export function PersonalTab({
                     <List className="h-3 w-3" /> Ver itens atuais ({collectivePendingCurrent.length})
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[80vh]">
-                  <DialogHeader className="p-4 border-b shrink-0">
-                    <DialogTitle className="text-base font-medium flex items-center gap-2">
-                      Rateio em aberto (competência atual)
-                      <Badge variant="outline" className="ml-auto font-normal">
-                        Total: R$ {totalCollectivePendingCurrent.toFixed(2)}
-                      </Badge>
+                <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                  <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+                    <DialogTitle className="text-lg font-semibold text-foreground">
+                      Rateio em Aberto
                     </DialogTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">Competência vigente</p>
                   </DialogHeader>
 
-                  <div className="flex-1 overflow-hidden">
+                  <div className="mx-5 mb-4 rounded-lg bg-warning/10 border border-warning/20 px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Total em aberto</span>
+                    <span className="text-lg font-bold text-warning tabular-nums">
+                      R$ {totalCollectivePendingCurrent.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-hidden border-t">
                     <ScrollArea className="h-full">
                       <div className="divide-y">
                         {collectivePendingCurrent.map((item) => (
-                          <div key={item.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                          <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
                             <div className="min-w-0 pr-4">
-                              <p className="text-sm font-medium truncate">{item.expenses?.title || "Despesa sem título"}</p>
-                              <span className="text-[10px] text-muted-foreground">
+                              <p className="text-sm font-medium truncate text-foreground">
+                                {item.expenses?.title || "Despesa sem título"}
+                              </p>
+                              <span className="text-xs text-muted-foreground">
                                 {getCategoryLabel(item.expenses?.category)}
                               </span>
                             </div>
-                            <span className="font-semibold text-sm tabular-nums whitespace-nowrap">
+                            <span className="font-semibold text-sm tabular-nums whitespace-nowrap text-foreground">
                               R$ {Number(item.amount).toFixed(2)}
                             </span>
                           </div>
