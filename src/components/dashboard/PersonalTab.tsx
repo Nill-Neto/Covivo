@@ -381,7 +381,7 @@ export function PersonalTab({
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-4 lg:col-span-4 flex flex-col">
+        <Card className="lg:col-span-4 flex flex-col">
           <CardHeader>
             <CardTitle className="text-base">Categorias (Pessoal)</CardTitle>
           </CardHeader>
