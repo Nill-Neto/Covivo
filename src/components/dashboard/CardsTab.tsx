@@ -244,7 +244,7 @@ export function CardsTab({
                           </p>
                           {activeSegment && (
                             <p className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full mt-1">
-                              {displayPercentage.toFixed(0)}%
+                              {displayPercentage.toFixed(1)}%
                             </p>
                           )}
                         </motion.div>
