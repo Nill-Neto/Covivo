@@ -126,6 +126,55 @@ export function CardsTab({
     createCard.mutate(values);
   };
 
+  const handleOpenEdit = (card: any) => {
+    form.reset({
+      label: card.label,
+      brand: card.brand,
+      closing_day: card.closing_day,
+      due_day: card.due_day,
+      limit_amount: card.limit_amount ? String(card.limit_amount) : "",
+    });
+    setSelectedCard(card);
+    setEditCardOpen(true);
+  };
+
+  const updateCard = useMutation({
+    mutationFn: async (values: CardFormValues) => {
+      const limitAmount = values.limit_amount ? Number(values.limit_amount) : null;
+      const { error } = await supabase.from("credit_cards").update({
+        label: values.label.trim(),
+        brand: values.brand,
+        closing_day: values.closing_day,
+        due_day: values.due_day,
+        limit_amount: limitAmount,
+      }).eq("id", selectedCard!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-credit-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-cards"] });
+      setEditCardOpen(false);
+      setSelectedCard(null);
+      form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "" });
+      toast({ title: "Cartão atualizado", description: "Alterações salvas." });
+    },
+    onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteCard = useMutation({
+    mutationFn: async (cardId: string) => {
+      const { error } = await supabase.from("credit_cards").delete().eq("id", cardId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-credit-cards"] });
+      queryClient.invalidateQueries({ queryKey: ["credit-cards"] });
+      setDeletingCard(null);
+      toast({ title: "Cartão excluído" });
+    },
+    onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
   const donutData: DonutChartSegment[] = cardsChartData.map((entry, index) => ({
     label: entry.name,
     value: entry.value,
