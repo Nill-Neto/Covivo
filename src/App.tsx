@@ -29,6 +29,7 @@ const Bulletin = lazy(() => import("./pages/Bulletin"));
 const HouseRules = lazy(() => import("./pages/HouseRules"));
 const Polls = lazy(() => import("./pages/Polls"));
 const PersonalDashboard = lazy(() => import("./pages/PersonalDashboard"));
+const NewGroup = lazy(() => import("./pages/NewGroup"));
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="/rules" element={<HouseRules />} />
                 <Route path="/polls" element={<Polls />} />
                 <Route path="/audit-log" element={<AuditLog />} />
+                <Route path="/groups/new" element={<NewGroup />} />
                 <Route path="/personal/dashboard" element={<PersonalDashboard />} />
                 <Route path="/personal/financas" element={<Dashboard />} />
               </Route>
