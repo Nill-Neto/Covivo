@@ -75,17 +75,12 @@ export function AppLayout() {
   const { isAdmin } = useAuth();
   const location = useLocation();
   
-  // Estado que define se a sidebar foi fixada aberta ou não pelo botão de hambúrguer
-  const [menuOpen, setMenuOpen] = useState(true);
-  // Estado para capturar quando o mouse está sobre a sidebar
-  const [isHovered, setIsHovered] = useState(false);
+  // Estado único que define se a sidebar está aberta ou fechada
+  const [menuOpen, setMenuOpen] = useState(false);
   
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-
-  // A sidebar ficará expandida se estiver fixada (menuOpen) OU se tiver hover no desktop
-  const isSidebarOpen = isMobileViewport ? menuOpen : (menuOpen || isHovered);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -102,7 +97,8 @@ export function AppLayout() {
 
     const syncSidebarState = () => {
       setIsMobileViewport(mediaQuery.matches);
-      setMenuOpen(!mediaQuery.matches);
+      // Sempre inicia fechada quando redimensiona para evitar inconsistências
+      setMenuOpen(false);
     };
 
     syncSidebarState();
@@ -112,7 +108,7 @@ export function AppLayout() {
   }, []);
 
   const Logo = () => (
-    <Link to="/dashboard" className="flex items-center gap-2 font-serif text-xl font-bold tracking-tight">
+    <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 font-serif text-xl font-bold tracking-tight">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
         R
       </div>
@@ -122,7 +118,7 @@ export function AppLayout() {
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
-      <div className={cn("flex-1 overflow-y-auto py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", isSidebarOpen ? "px-3" : "px-2")}>
+      <div className={cn("flex-1 overflow-y-auto py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", menuOpen ? "px-3" : "px-2")}>
         <nav className="space-y-4">
           {sidebarGroups.map((group) => (
             <CollapsibleNavGroup
@@ -130,8 +126,8 @@ export function AppLayout() {
               title={group.title}
               items={group.items}
               location={location}
-              onItemClick={() => isMobileViewport && setMenuOpen(false)}
-              menuOpen={isSidebarOpen}
+              onItemClick={() => setMenuOpen(false)} // Sempre fecha ao clicar num item
+              menuOpen={menuOpen}
             />
           ))}
 
@@ -140,8 +136,8 @@ export function AppLayout() {
               title="Convivência"
               items={convenienceItems}
               location={location}
-              onItemClick={() => isMobileViewport && setMenuOpen(false)}
-              menuOpen={isSidebarOpen}
+              onItemClick={() => setMenuOpen(false)} // Sempre fecha ao clicar num item
+              menuOpen={menuOpen}
             />
           </div>
         </nav>
@@ -225,12 +221,12 @@ export function AppLayout() {
       <div className="relative flex flex-1 overflow-hidden">
         <div 
           className="z-20 h-full flex shrink-0"
-          onMouseEnter={() => !isMobileViewport && setIsHovered(true)}
-          onMouseLeave={() => !isMobileViewport && setIsHovered(false)}
+          onMouseEnter={() => !isMobileViewport && setMenuOpen(true)}
+          onMouseLeave={() => !isMobileViewport && setMenuOpen(false)}
         >
           <Sidebar 
-            open={isSidebarOpen} 
-            setOpen={isMobileViewport ? setMenuOpen : () => {}}
+            open={menuOpen} 
+            setOpen={setMenuOpen}
           >
             <SidebarBody className="justify-between gap-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl">
               <SidebarContent />
