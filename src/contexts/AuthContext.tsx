@@ -42,6 +42,23 @@ const ACTIVE_GROUP_KEY = "republi-k-active-group";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+
+const withTimeout = async <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -97,10 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserData = async (user: User) => {
     try {
-      const [profile, memberships] = await Promise.all([
-        ensureProfile(user),
-        fetchMemberships(user.id),
-      ]);
+      const [profile, memberships] = await withTimeout(
+        Promise.all([
+          ensureProfile(user),
+          fetchMemberships(user.id),
+        ]),
+        10000,
+        "Tempo limite ao carregar perfil e grupos",
+      );
 
       setState((prev) => {
         // Auto-select active group: stored preference → first membership
@@ -133,18 +154,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    const safeSetState: typeof setState = (updater) => {
+      if (!isMounted) return;
+      setState(updater);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const user = session?.user ?? null;
-        setState((prev) => ({ ...prev, user, session }));
+        safeSetState((prev) => ({ ...prev, user, session, loading: !!user }));
 
         if (user) {
-          setTimeout(() => {
-            void loadUserData(user);
-          }, 0);
+          void loadUserData(user);
         } else {
           localStorage.removeItem(ACTIVE_GROUP_KEY);
-          setState({
+          safeSetState({
             user: null,
             session: null,
             profile: null,
@@ -160,19 +186,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .getSession()
       .then(({ data: { session } }) => {
         const user = session?.user ?? null;
-        setState((prev) => ({ ...prev, user, session }));
+        safeSetState((prev) => ({ ...prev, user, session, loading: !!user }));
         if (user) {
           void loadUserData(user);
         } else {
-          setState((prev) => ({ ...prev, loading: false }));
+          safeSetState((prev) => ({ ...prev, loading: false }));
         }
       })
       .catch((error) => {
         console.error("Erro ao recuperar sessão", error);
-        setState((prev) => ({ ...prev, loading: false }));
+        safeSetState((prev) => ({ ...prev, loading: false }));
       });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const setActiveGroupId = useCallback((groupId: string) => {
