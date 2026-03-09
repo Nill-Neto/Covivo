@@ -144,6 +144,23 @@ export default function Invites() {
     onSettled: () => setRegeneratingId(null),
   });
 
+  const deleteInvite = useMutation({
+    mutationFn: async (inviteId: string) => {
+      const { error } = await supabase
+        .from("invites")
+        .delete()
+        .eq("id", inviteId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invites"] });
+      toast({ title: "Convite excluído" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleSend = () => {
     const result = emailSchema.safeParse(email);
     if (!result.success) {
