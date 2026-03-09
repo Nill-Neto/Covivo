@@ -133,18 +133,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    const safeSetState: typeof setState = (updater) => {
+      if (!isMounted) return;
+      setState(updater);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const user = session?.user ?? null;
-        setState((prev) => ({ ...prev, user, session }));
+        safeSetState((prev) => ({ ...prev, user, session, loading: !!user }));
 
         if (user) {
-          setTimeout(() => {
-            void loadUserData(user);
-          }, 0);
+          void loadUserData(user);
         } else {
           localStorage.removeItem(ACTIVE_GROUP_KEY);
-          setState({
+          safeSetState({
             user: null,
             session: null,
             profile: null,
@@ -160,19 +165,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .getSession()
       .then(({ data: { session } }) => {
         const user = session?.user ?? null;
-        setState((prev) => ({ ...prev, user, session }));
+        safeSetState((prev) => ({ ...prev, user, session, loading: !!user }));
         if (user) {
           void loadUserData(user);
         } else {
-          setState((prev) => ({ ...prev, loading: false }));
+          safeSetState((prev) => ({ ...prev, loading: false }));
         }
       })
       .catch((error) => {
         console.error("Erro ao recuperar sessão", error);
-        setState((prev) => ({ ...prev, loading: false }));
+        safeSetState((prev) => ({ ...prev, loading: false }));
       });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const setActiveGroupId = useCallback((groupId: string) => {
