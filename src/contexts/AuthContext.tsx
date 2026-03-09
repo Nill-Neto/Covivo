@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -11,7 +11,7 @@ interface Profile {
   onboarding_completed: boolean;
 }
 
-interface GroupMembership {
+export interface GroupMembership {
   group_id: string;
   role: "admin" | "morador";
   group_name: string;
@@ -21,17 +21,23 @@ interface AuthState {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
-  membership: GroupMembership | null;
+  memberships: GroupMembership[];
+  activeGroupId: string | null;
   loading: boolean;
-  isAdmin: boolean;
 }
 
 interface AuthContextType extends AuthState {
+  /** Active group membership (derived from activeGroupId) */
+  membership: GroupMembership | null;
+  isAdmin: boolean;
+  setActiveGroupId: (groupId: string) => void;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshMembership: () => Promise<void>;
 }
+
+const ACTIVE_GROUP_KEY = "republi-k-active-group";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -40,9 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: null,
     session: null,
     profile: null,
-    membership: null,
+    memberships: [],
+    activeGroupId: localStorage.getItem(ACTIVE_GROUP_KEY),
     loading: true,
-    isAdmin: false,
   });
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
@@ -54,21 +60,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   };
 
-  const fetchMembership = async (userId: string): Promise<GroupMembership | null> => {
+  const fetchMemberships = async (userId: string): Promise<GroupMembership[]> => {
     const { data } = await supabase
       .from("user_roles")
       .select("role, group_id, groups:group_id(name)")
-      .eq("user_id", userId)
-      .maybeSingle();
+      .eq("user_id", userId);
 
-    if (!data) return null;
+    if (!data || data.length === 0) return [];
 
-    const groupData = data.groups as unknown as { name: string } | null;
-    return {
-      group_id: data.group_id,
-      role: data.role as "admin" | "morador",
-      group_name: groupData?.name ?? "",
-    };
+    return data.map((row) => {
+      const groupData = row.groups as unknown as { name: string } | null;
+      return {
+        group_id: row.group_id,
+        role: row.role as "admin" | "morador",
+        group_name: groupData?.name ?? "",
+      };
+    });
   };
 
   const ensureProfile = async (user: User): Promise<Profile> => {
@@ -89,25 +96,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserData = async (user: User) => {
     try {
-      const [profile, membership] = await Promise.all([
+      const [profile, memberships] = await Promise.all([
         ensureProfile(user),
-        fetchMembership(user.id),
+        fetchMemberships(user.id),
       ]);
 
-      setState((prev) => ({
-        ...prev,
-        profile,
-        membership,
-        isAdmin: membership?.role === "admin",
-        loading: false,
-      }));
+      setState((prev) => {
+        // Auto-select active group: stored preference → first membership
+        let activeGroupId = prev.activeGroupId;
+        const validIds = memberships.map((m) => m.group_id);
+        if (!activeGroupId || !validIds.includes(activeGroupId)) {
+          activeGroupId = validIds[0] ?? null;
+        }
+        if (activeGroupId) {
+          localStorage.setItem(ACTIVE_GROUP_KEY, activeGroupId);
+        }
+
+        return {
+          ...prev,
+          profile,
+          memberships,
+          activeGroupId,
+          loading: false,
+        };
+      });
     } catch (error) {
       console.error("Erro ao carregar dados do usuário", error);
       setState((prev) => ({
         ...prev,
         profile: null,
-        membership: null,
-        isAdmin: false,
+        memberships: [],
         loading: false,
       }));
     }
@@ -115,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         const user = session?.user ?? null;
         setState((prev) => ({ ...prev, user, session }));
 
@@ -124,13 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             void loadUserData(user);
           }, 0);
         } else {
+          localStorage.removeItem(ACTIVE_GROUP_KEY);
           setState({
             user: null,
             session: null,
             profile: null,
-            membership: null,
+            memberships: [],
+            activeGroupId: null,
             loading: false,
-            isAdmin: false,
           });
         }
       }
@@ -155,6 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const setActiveGroupId = useCallback((groupId: string) => {
+    localStorage.setItem(ACTIVE_GROUP_KEY, groupId);
+    setState((prev) => ({ ...prev, activeGroupId: groupId }));
+  }, []);
+
   const signInWithGoogle = async () => {
     const redirectPath = window.location.pathname + window.location.search;
     const redirectTo = `${window.location.origin}${redirectPath}`;
@@ -162,10 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo,
-        skipBrowserRedirect: true,
-      },
+      options: { redirectTo, skipBrowserRedirect: true },
     });
 
     if (error) throw error;
@@ -175,11 +196,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.open(data.url, "_blank", "noopener,noreferrer");
       return;
     }
-
     window.location.assign(data.url);
   };
 
   const signOut = async () => {
+    localStorage.removeItem(ACTIVE_GROUP_KEY);
     await supabase.auth.signOut();
   };
 
@@ -192,18 +213,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshMembership = async () => {
     if (state.user) {
-      const membership = await fetchMembership(state.user.id);
-      setState((prev) => ({
-        ...prev,
-        membership,
-        isAdmin: membership?.role === "admin",
-      }));
+      const memberships = await fetchMemberships(state.user.id);
+      setState((prev) => {
+        let activeGroupId = prev.activeGroupId;
+        const validIds = memberships.map((m) => m.group_id);
+        if (!activeGroupId || !validIds.includes(activeGroupId)) {
+          activeGroupId = validIds[0] ?? null;
+        }
+        if (activeGroupId) {
+          localStorage.setItem(ACTIVE_GROUP_KEY, activeGroupId);
+        }
+        return { ...prev, memberships, activeGroupId };
+      });
     }
   };
 
+  // Derived values
+  const membership = state.memberships.find((m) => m.group_id === state.activeGroupId) ?? null;
+  const isAdmin = membership?.role === "admin";
+
   return (
     <AuthContext.Provider
-      value={{ ...state, signInWithGoogle, signOut, refreshProfile, refreshMembership }}
+      value={{
+        ...state,
+        membership,
+        isAdmin,
+        setActiveGroupId,
+        signInWithGoogle,
+        signOut,
+        refreshProfile,
+        refreshMembership,
+      }}
     >
       {children}
     </AuthContext.Provider>
