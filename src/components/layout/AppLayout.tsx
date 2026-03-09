@@ -153,15 +153,7 @@ export function AppLayout() {
           </Button>
 
           <Logo />
-
-          {membership && (
-            <div className="hidden sm:flex items-center gap-2 border-l pl-4 min-w-0">
-              <span className="text-xs font-medium text-muted-foreground/80 whitespace-nowrap">
-                Moradia:
-              </span>
-              <span className="text-sm font-semibold truncate">{membership.group_name}</span>
-            </div>
-          )}
+          <GroupSwitcher />
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 shrink-0">
