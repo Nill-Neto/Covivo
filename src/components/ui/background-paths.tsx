@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 function FloatingPaths({ position }: { position: number }) {
   const paths = Array.from({ length: 36 }, (_, i) => ({
@@ -42,14 +41,9 @@ function FloatingPaths({ position }: { position: number }) {
   );
 }
 
-export function BackgroundPathsLayer({ overlay = false }: { overlay?: boolean }) {
+export function BackgroundPathsLayer() {
   return (
-    <div
-      className={cn(
-        "pointer-events-none fixed inset-0 overflow-hidden",
-        overlay ? "z-20 opacity-50 mix-blend-multiply dark:mix-blend-screen" : "-z-10",
-      )}
-    >
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <FloatingPaths position={1} />
       <FloatingPaths position={-1} />
     </div>
