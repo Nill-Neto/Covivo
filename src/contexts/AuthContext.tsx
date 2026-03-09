@@ -42,6 +42,16 @@ const ACTIVE_GROUP_KEY = "republi-k-active-group";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+
+const withTimeout = <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -97,10 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserData = async (user: User) => {
     try {
-      const [profile, memberships] = await Promise.all([
-        ensureProfile(user),
-        fetchMemberships(user.id),
-      ]);
+      const [profile, memberships] = await withTimeout(
+        Promise.all([
+          ensureProfile(user),
+          fetchMemberships(user.id),
+        ]),
+        10000,
+        "Tempo limite ao carregar perfil e grupos",
+      );
 
       setState((prev) => {
         // Auto-select active group: stored preference → first membership
