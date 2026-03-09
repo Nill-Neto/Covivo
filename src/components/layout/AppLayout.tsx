@@ -144,7 +144,7 @@ export function AppLayout() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-transparent">
       {/* Header Superior Fixo — scroll-aware */}
       <motion.header
         className={cn(
@@ -223,7 +223,7 @@ export function AppLayout() {
           </SidebarBody>
         </Sidebar>
 
-        <main ref={mainRef} className="relative flex-1 overflow-x-hidden overflow-y-auto bg-background p-4 pt-1 md:px-8 md:pt-2">
+        <main ref={mainRef} className="relative flex-1 overflow-x-hidden overflow-y-auto bg-transparent p-4 pt-1 md:px-8 md:pt-2">
           {/* Decorative background — clipped to prevent scroll overflow */}
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute inset-0 [background:radial-gradient(125%_125%_at_50%_0%,transparent_40%,hsl(var(--primary)/0.08)_100%)]" />
