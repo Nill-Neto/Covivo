@@ -50,22 +50,35 @@ export default function Payments() {
   const [editAmount, setEditAmount] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editStatus, setEditStatus] = useState("");
+  const [editDate, setEditDate] = useState("");
 
   const openManage = (payment: any) => {
     setEditingPayment(payment);
     setEditAmount(String(payment.amount));
     setEditNotes(payment.notes || "");
     setEditStatus(payment.status);
+    setEditDate(payment.created_at ? format(new Date(payment.created_at), "yyyy-MM-dd") : "");
   };
 
   const updatePayment = useMutation({
-    mutationFn: async (values: { amount: string; notes: string; status: string }) => {
+    mutationFn: async (values: { amount: string; notes: string; status: string; date: string }) => {
+      let newDate = editingPayment.created_at;
+      
+      if (values.date) {
+        // Mantém a hora original, mas altera o ano/mês/dia para mover a competência
+        const oldDate = new Date(editingPayment.created_at);
+        const [year, month, day] = values.date.split("-").map(Number);
+        oldDate.setFullYear(year, month - 1, day);
+        newDate = oldDate.toISOString();
+      }
+
       const { error } = await supabase
         .from("payments")
         .update({
           amount: Number(values.amount),
           notes: values.notes || null,
           status: values.status,
+          created_at: newDate,
         })
         .eq("id", editingPayment.id);
       if (error) throw error;
@@ -73,6 +86,7 @@ export default function Payments() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-data"] });
       toast({ title: "Pagamento atualizado!" });
       setEditingPayment(null);
     },
@@ -87,6 +101,7 @@ export default function Payments() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-data"] });
       toast({ title: "Pagamento excluído." });
       setEditingPayment(null);
     },
@@ -403,14 +418,20 @@ export default function Payments() {
             <DialogTitle>Gerenciar Pagamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label>Valor (R$)</Label>
-              <Input type="number" min="0.01" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input type="number" min="0.01" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Data (Competência)</Label>
+                <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
-            </div>
+            <p className="text-[10px] text-muted-foreground -mt-2">
+              A data define em qual ciclo o pagamento é contabilizado no sistema.
+            </p>
+
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={editStatus} onValueChange={setEditStatus}>
@@ -422,6 +443,12 @@ export default function Payments() {
                 </SelectContent>
               </Select>
             </div>
+            
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+            </div>
+
             <div className="flex justify-between pt-4 border-t">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -445,7 +472,7 @@ export default function Payments() {
               
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setEditingPayment(null)}>Cancelar</Button>
-                <Button onClick={() => updatePayment.mutate({ amount: editAmount, notes: editNotes, status: editStatus })} disabled={updatePayment.isPending}>
+                <Button onClick={() => updatePayment.mutate({ amount: editAmount, notes: editNotes, status: editStatus, date: editDate })} disabled={updatePayment.isPending}>
                   {updatePayment.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   Salvar
                 </Button>
