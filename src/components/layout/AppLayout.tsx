@@ -99,29 +99,30 @@ export function AppLayout() {
     </Link>
   );
 
+  const isExpanded = isMobileViewport || menuOpen;
+
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
-      <div className={cn("flex-1 overflow-y-auto py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", menuOpen ? "px-3" : "px-2")}>
+      <div className={cn("flex-1 overflow-y-auto py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", isExpanded ? "px-3" : "px-2")}>
         <nav className="space-y-1">
           {sidebarItems.map((item) => (
             <SidebarNavLink
               key={item.to}
               item={item}
               location={location}
-              onClick={() => setMenuOpen(false)} // Sempre fecha ao clicar num item
-              menuOpen={menuOpen}
+              onClick={() => setMenuOpen(false)}
+              menuOpen={isExpanded}
             />
           ))}
 
-          {/* Links de convivência aparecem na sidebar apenas em telas menores (mobile) */}
           <div className="md:hidden pt-4 mt-4 border-t border-sidebar-border space-y-1">
             {convenienceItems.map((item) => (
               <SidebarNavLink
                 key={item.to}
                 item={item}
                 location={location}
-                onClick={() => setMenuOpen(false)} // Sempre fecha ao clicar num item
-                menuOpen={menuOpen}
+                onClick={() => setMenuOpen(false)}
+                menuOpen={isExpanded}
               />
             ))}
           </div>
