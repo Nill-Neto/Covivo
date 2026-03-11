@@ -240,8 +240,9 @@ export function AppLayout() {
             <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
             <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
           </div>
-          {/* Aqui foi removido o min-h-[calc...] exagerado e deixado apenas pb-16 para compensar a retração do hero */}
-          <div className="max-w-7xl mx-auto w-full pb-16">
+          {/* O pb-32 é ~128px, garantindo que o cabeçalho sempre tenha espaço para encolher, 
+              mas SEM forçar a altura com min-h. Logo, telas curtas não terão barra de rolagem. */}
+          <div className="max-w-7xl mx-auto w-full pb-32">
             <Outlet />
           </div>
         </main>
