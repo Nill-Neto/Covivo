@@ -227,7 +227,7 @@ export default function Dashboard() {
         supabase.from("user_roles").select("user_id, role").eq("group_id", membership.group_id),
         supabase
           .from("expense_splits")
-          .select("id, user_id, amount, status, expenses!inner(id, title, category, group_id, expense_type, purchase_date)")
+          .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date)")
           .eq("status", "pending")
           .eq("expenses.group_id", membership.group_id)
           .eq("expenses.expense_type", "collective"),
@@ -634,6 +634,7 @@ export default function Dashboard() {
                 departuresCount={adminData.departuresCount}
                 redistributedCount={adminData.redistributedCount}
                 allPendingCollectiveSplits={adminData.allPendingCollectiveSplits}
+                closingDay={closingDay}
               />
             ) : (
               <div className="py-12 text-center text-muted-foreground">Carregando dados administrativos...</div>
