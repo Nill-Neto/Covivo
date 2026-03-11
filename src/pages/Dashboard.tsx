@@ -117,6 +117,24 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
+
+
+  const { data: mySubmittedPayments = [] } = useQuery({
+    queryKey: ["my-submitted-payments-dashboard", membership?.group_id, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("id, expense_split_id, amount, notes, status")
+        .eq("group_id", membership!.group_id)
+        .eq("paid_by", user!.id)
+        .in("status", ["pending", "confirmed"]);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!membership?.group_id && !!user?.id,
+  });
+
   const collectivePendingExpenseIds = useMemo(() => {
     return [...new Set(
       pendingSplits
@@ -326,8 +344,28 @@ export default function Dashboard() {
     return `${competenceYear}-${String(competenceMonth).padStart(2, "0")}`;
   };
 
+  const paidSplitIds = useMemo(() => {
+    return new Set(
+      mySubmittedPayments
+        .map((payment: any) => payment.expense_split_id)
+        .filter(Boolean)
+    );
+  }, [mySubmittedPayments]);
+
+  const totalRateioPaymentsPrevious = useMemo(() => {
+    return mySubmittedPayments
+      .filter((payment: any) => !payment.expense_split_id && payment.notes?.includes("competências anteriores"))
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+  }, [mySubmittedPayments]);
+
+  const totalRateioPaymentsCurrent = useMemo(() => {
+    return mySubmittedPayments
+      .filter((payment: any) => !payment.expense_split_id && payment.notes?.includes("competência atual"))
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+  }, [mySubmittedPayments]);
+
   const collectivePending = pendingSplits
-    .filter((s: any) => s.expenses?.expense_type === "collective")
+    .filter((s: any) => s.expenses?.expense_type === "collective" && !paidSplitIds.has(s.id))
     .map((split: any) => ({
       ...split,
       competenceKey: getCompetenceKeyFromPurchaseDate(split.expenses?.purchase_date),
@@ -335,8 +373,10 @@ export default function Dashboard() {
 
   const collectivePendingCurrent = collectivePending.filter((s: any) => s.competenceKey === currentCompetenceKey);
   const collectivePendingPrevious = collectivePending.filter((s: any) => !s.competenceKey || s.competenceKey < currentCompetenceKey);
-  const totalCollectivePendingPrevious = collectivePendingPrevious.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
-  const totalCollectivePendingCurrent = collectivePendingCurrent.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const rawTotalCollectivePendingPrevious = collectivePendingPrevious.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const rawTotalCollectivePendingCurrent = collectivePendingCurrent.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const totalCollectivePendingPrevious = Math.max(0, rawTotalCollectivePendingPrevious - totalRateioPaymentsPrevious);
+  const totalCollectivePendingCurrent = Math.max(0, rawTotalCollectivePendingCurrent - totalRateioPaymentsCurrent);
   const collectivePendingPreviousByCompetence = useMemo(() => {
     const grouped = collectivePendingPrevious.reduce((acc: Record<string, any[]>, item: any) => {
       const purchaseDate = item.expenses?.purchase_date ? parseLocalDate(item.expenses.purchase_date) : null;
@@ -369,7 +409,8 @@ export default function Dashboard() {
   // A. Manual pending splits (Cash/Pix/Debit that are pending) - EXCLUDE credit card splits here as they are parcelled
   const manualIndividualPending = pendingSplits.filter((s: any) => 
     s.expenses?.expense_type === "individual" && 
-    s.expenses?.payment_method !== "credit_card"
+    s.expenses?.payment_method !== "credit_card" &&
+    !paidSplitIds.has(s.id)
   );
 
   // B. Installments for the CURRENT MONTH (Credit Card)
@@ -438,6 +479,7 @@ export default function Dashboard() {
 
       toast({ title: "Pagamento enviado!" });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
+      queryClient.invalidateQueries({ queryKey: ["my-submitted-payments-dashboard"] });
       setPayRateioOpen(false);
       setReceiptFile(null);
     } catch (err: any) {
@@ -467,6 +509,7 @@ export default function Dashboard() {
 
       toast({ title: "Pagamento individual enviado!" });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
+      queryClient.invalidateQueries({ queryKey: ["my-submitted-payments-dashboard"] });
       setPayIndividualOpen(false);
       setSelectedIndividualSplit(null);
       setReceiptFile(null);
