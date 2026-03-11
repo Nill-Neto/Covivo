@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,8 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Plus, Check, X, Upload, Image, ChevronLeft, ChevronRight, ChevronsUpDown, CreditCard } from "lucide-react";
+import { Loader2, Plus, Check, X, Upload, Image as ImageIcon, ChevronLeft, ChevronRight, ChevronsUpDown, CreditCard, Settings, Trash2 } from "lucide-react";
 import { format, addMonths, subMonths, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -27,12 +39,59 @@ export default function Payments() {
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [heroCompact, setHeroCompact] = useState(false);
   
-  // Alterado para array de IDs
   const [selectedSplitIds, setSelectedSplitIds] = useState<string[]>([]);
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Manage Payment State
+  const [editingPayment, setEditingPayment] = useState<any>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+
+  const openManage = (payment: any) => {
+    setEditingPayment(payment);
+    setEditAmount(String(payment.amount));
+    setEditNotes(payment.notes || "");
+    setEditStatus(payment.status);
+  };
+
+  const updatePayment = useMutation({
+    mutationFn: async (values: { amount: string; notes: string; status: string }) => {
+      const { error } = await supabase
+        .from("payments")
+        .update({
+          amount: Number(values.amount),
+          notes: values.notes || null,
+          status: values.status,
+        })
+        .eq("id", editingPayment.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
+      toast({ title: "Pagamento atualizado!" });
+      setEditingPayment(null);
+    },
+    onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
+
+  const deletePayment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("payments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
+      toast({ title: "Pagamento excluído." });
+      setEditingPayment(null);
+    },
+    onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
+  });
 
   // --- Date Cycle Logic ---
   const { data: groupSettings } = useQuery({
@@ -112,8 +171,6 @@ export default function Payments() {
       .filter((s) => selectedSplitIds.includes(s.id))
       .reduce((sum, s) => sum + Number(s.amount), 0);
     
-    // Only update if greater than 0 to avoid clearing manual edits unnecessarily 
-    // (though manual edits are discouraged in multi-select mode)
     if (selectedSplitIds.length > 0) {
       setAmount(total.toFixed(2));
     } else {
@@ -149,7 +206,6 @@ export default function Payments() {
       // 2. Insert payment records (one per split)
       const paymentsToInsert = selectedSplitIds.map((splitId) => {
         const split = pendingSplits?.find(s => s.id === splitId);
-        // We use the exact split amount for the record to ensure accounting consistency
         const splitAmount = split ? Number(split.amount) : 0;
         
         return {
@@ -169,7 +225,6 @@ export default function Payments() {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
       
-      // Reset form
       setOpen(false);
       setSelectedSplitIds([]);
       setAmount("");
@@ -327,7 +382,7 @@ export default function Payments() {
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento pendente nesta competência.</CardContent></Card>
           )}
           {payments?.filter((p) => p.status === "pending").map((p: any) => (
-            <PaymentCard key={p.id} payment={p} isAdmin onConfirm={handleConfirm} />
+            <PaymentCard key={p.id} payment={p} isAdmin onConfirm={handleConfirm} onManage={openManage} />
           ))}
         </TabsContent>
       )}
@@ -337,15 +392,75 @@ export default function Payments() {
           <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum pagamento registrado nesta competência.</CardContent></Card>
         )}
         {payments?.map((p: any) => (
-          <PaymentCard key={p.id} payment={p} isAdmin={isAdmin} onConfirm={handleConfirm} />
+          <PaymentCard key={p.id} payment={p} isAdmin={isAdmin} onConfirm={handleConfirm} onManage={openManage} />
         ))}
       </TabsContent>
+
+      {/* Modal de Gerenciamento de Pagamentos (Admin) */}
+      <Dialog open={!!editingPayment} onOpenChange={(open) => !open && setEditingPayment(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Valor (R$)</Label>
+              <Input type="number" min="0.01" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="confirmed">Confirmado</SelectItem>
+                  <SelectItem value="rejected">Recusado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-between pt-4 border-t">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir pagamento?</AlertDialogTitle>
+                    <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => editingPayment && deletePayment.mutate(editingPayment.id)} className="bg-destructive text-destructive-foreground">
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setEditingPayment(null)}>Cancelar</Button>
+                <Button onClick={() => updatePayment.mutate({ amount: editAmount, notes: editNotes, status: editStatus })} disabled={updatePayment.isPending}>
+                  {updatePayment.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
     </Tabs>
   );
 }
 
-function PaymentCard({ payment, isAdmin, onConfirm }: { payment: any; isAdmin: boolean; onConfirm: (id: string, status: "confirmed" | "rejected") => void }) {
+function PaymentCard({ payment, isAdmin, onConfirm, onManage }: { payment: any; isAdmin: boolean; onConfirm: (id: string, status: "confirmed" | "rejected") => void; onManage?: (payment: any) => void }) {
   const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
     pending: { label: "Pendente", variant: "secondary" },
     confirmed: { label: "Confirmado", variant: "default" },
@@ -366,12 +481,19 @@ function PaymentCard({ payment, isAdmin, onConfirm }: { payment: any; isAdmin: b
             {payment.receipt_url && (
               <a href={payment.receipt_url} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1">
-                <Image className="h-3 w-3" /> Ver comprovante
+                <ImageIcon className="h-3 w-3" /> Ver comprovante
               </a>
             )}
           </div>
           <div className="text-right shrink-0 flex flex-col items-end gap-2">
-            <p className="text-lg font-bold">R$ {Number(payment.amount).toFixed(2)}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-lg font-bold">R$ {Number(payment.amount).toFixed(2)}</p>
+              {isAdmin && onManage && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onManage(payment)}>
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <Badge variant={s.variant}>{s.label}</Badge>
             {isAdmin && payment.status === "pending" && (
               <div className="flex gap-1 mt-1">
