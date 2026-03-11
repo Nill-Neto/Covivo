@@ -117,8 +117,6 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
-
-
   const { data: mySubmittedPayments = [] } = useQuery({
     queryKey: ["my-submitted-payments-dashboard", membership?.group_id, user?.id],
     queryFn: async () => {
@@ -208,102 +206,7 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  const { data: adminData } = useQuery({
-    queryKey: ["admin-dashboard-data", membership?.group_id],
-    queryFn: async () => {
-      if (!isAdmin || !membership?.group_id) return null;
-
-      const [membersRes, balancesRes, pendingPaymentsRes, collectiveSubmittedPaymentsRes, rolesRes, pendingCollectiveSplitsRes, departuresRes] = await Promise.all([
-        supabase.from("group_members").select("user_id, active").eq("group_id", membership.group_id).eq("active", true),
-        supabase.rpc("get_member_balances", { _group_id: membership.group_id }),
-        supabase.from("payments")
-          .select("id, expense_split_id, expense_splits(expenses(expense_type))")
-          .eq("group_id", membership.group_id)
-          .eq("status", "pending"),
-        supabase.from("payments")
-          .select("id, paid_by, amount, expense_split_id, status, expense_splits(expenses(expense_type))")
-          .eq("group_id", membership.group_id)
-          .in("status", ["pending", "confirmed"]),
-        supabase.from("user_roles").select("user_id, role").eq("group_id", membership.group_id),
-        supabase
-          .from("expense_splits")
-          .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date)")
-          .eq("status", "pending")
-          .eq("expenses.group_id", membership.group_id)
-          .eq("expenses.expense_type", "collective"),
-        supabase
-          .from("audit_log")
-          .select("created_at, details")
-          .eq("group_id", membership.group_id)
-          .eq("action", "remove_member")
-          .gte("created_at", cycleStart.toISOString())
-          .lt("created_at", cycleEnd.toISOString())
-      ]);
-
-      const userIds = membersRes.data?.map(m => m.user_id) ?? [];
-      const { data: profiles } = await supabase.from("group_member_profiles").select("id, full_name, avatar_url").eq("group_id", membership.group_id).in("id", userIds);
-
-      const members = membersRes.data?.map(m => ({
-        ...m,
-        profile: profiles?.find(p => p.id === m.user_id),
-        role: rolesRes.data?.find(r => r.user_id === m.user_id)?.role ?? 'morador'
-      })) ?? [];
-
-      const pendingCollectiveCount = (pendingPaymentsRes.data || []).filter((p: any) => {
-        if (!p.expense_split_id) return true;
-        const type = p.expense_splits?.expenses?.expense_type;
-        return type === 'collective';
-      }).length;
-
-      const submittedCollectiveByUser = (collectiveSubmittedPaymentsRes.data || []).reduce((acc: Record<string, number>, payment: any) => {
-        const isCollectivePayment = !payment.expense_split_id || payment.expense_splits?.expenses?.expense_type === 'collective';
-        if (!isCollectivePayment) return acc;
-
-        const payerId = payment.paid_by;
-        if (!payerId) return acc;
-
-        acc[payerId] = (acc[payerId] || 0) + Number(payment.amount || 0);
-        return acc;
-      }, {});
-
-      const adjustedBalances = (balancesRes.data ?? []).map((balance: any) => {
-        const submittedAmount = Number(submittedCollectiveByUser[balance.user_id] || 0);
-        const currentBalance = Number(balance.balance || 0);
-
-        if (submittedAmount <= 0 || currentBalance >= 0) return balance;
-
-        const adjustment = Math.min(Math.abs(currentBalance), submittedAmount);
-        return {
-          ...balance,
-          balance: currentBalance + adjustment,
-        };
-      });
-
-      const activeUserIds = new Set(members.map((m) => m.user_id));
-      const exMembersDebt = (pendingCollectiveSplitsRes.data || [])
-        .filter((s: any) => !activeUserIds.has(s.user_id))
-        .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
-
-      const departuresCount = (departuresRes.data || []).length;
-      const redistributedCount = (departuresRes.data || []).reduce((sum: number, log: any) => {
-        const value = Number(log?.details?.redistributed_pending_splits || 0);
-        return sum + (Number.isFinite(value) ? value : 0);
-      }, 0);
-
-      return {
-        members,
-        balances: adjustedBalances,
-        pendingPaymentsCount: pendingCollectiveCount,
-        exMembersDebt,
-        departuresCount,
-        redistributedCount,
-        allPendingCollectiveSplits: pendingCollectiveSplitsRes.data || [],
-      };
-    },
-    enabled: !!membership?.group_id && isAdmin
-  });
-
-  // --- Data Processing ---
+  // --- Data Processing moved UP so `adminData` query can use it ---
 
   const collectiveExpenses = expensesInCycle.filter(e => e.expense_type === "collective");
   const totalMonthExpenses = collectiveExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -343,6 +246,130 @@ export default function Dashboard() {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [myPersonalExpenses]);
+
+  // --- Admin Query ---
+
+  const { data: adminData } = useQuery({
+    queryKey: ["admin-dashboard-data", membership?.group_id, cycleStart.toISOString(), cycleEnd.toISOString()],
+    queryFn: async () => {
+      if (!isAdmin || !membership?.group_id) return null;
+
+      const dbStart = format(cycleStart, "yyyy-MM-dd");
+      const dbEnd = format(cycleEnd, "yyyy-MM-dd");
+
+      const [membersRes, rolesRes, cycleSplitsRes, allPaymentsRes, departuresRes] = await Promise.all([
+        supabase.from("group_members").select("user_id, active").eq("group_id", membership.group_id).eq("active", true),
+        supabase.from("user_roles").select("user_id, role").eq("group_id", membership.group_id),
+        // Busca apenas as despesas que caem NESTA competência exata
+        supabase
+          .from("expense_splits")
+          .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date)")
+          .eq("expenses.group_id", membership.group_id)
+          .eq("expenses.expense_type", "collective")
+          .gte("expenses.purchase_date", dbStart)
+          .lt("expenses.purchase_date", dbEnd),
+        supabase.from("payments")
+          .select("id, paid_by, amount, expense_split_id, status, notes, created_at, expense_splits(expenses(expense_type))")
+          .eq("group_id", membership.group_id)
+          .in("status", ["pending", "confirmed"]),
+        supabase
+          .from("audit_log")
+          .select("created_at, details")
+          .eq("group_id", membership.group_id)
+          .eq("action", "remove_member")
+          .gte("created_at", cycleStart.toISOString())
+          .lt("created_at", cycleEnd.toISOString())
+      ]);
+
+      const cycleSplits = cycleSplitsRes.data || [];
+      const allPayments = allPaymentsRes.data || [];
+      const cycleLabel = format(currentDate, "MMMM/yyyy", { locale: ptBR });
+      const cycleStartMs = cycleStart.getTime();
+      const cycleEndMs = cycleEnd.getTime();
+
+      // Calcula o saldo considerando SOMENTE o que pertence a este ciclo
+      const cycleBalances = (membersRes.data || []).map(m => {
+        const userSplits = cycleSplits.filter(s => s.user_id === m.user_id);
+        const totalOwed = userSplits.reduce((acc, s) => acc + Number(s.amount), 0);
+        
+        // Pagamentos linkados diretamente aos splits deste ciclo
+        const linkedPayments = allPayments.filter(p => 
+          p.paid_by === m.user_id && 
+          p.expense_split_id && 
+          userSplits.some(s => s.id === p.expense_split_id)
+        );
+        
+        // Pagamentos em lote (Rateio) que identificamos como sendo deste ciclo
+        const bulkPayments = allPayments.filter(p => 
+          p.paid_by === m.user_id && 
+          !p.expense_split_id &&
+          (
+            (p.notes && p.notes.includes(cycleLabel)) || 
+            (!p.notes && new Date(p.created_at).getTime() >= cycleStartMs && new Date(p.created_at).getTime() <= cycleEndMs + (10 * 86400000))
+          )
+        );
+        
+        const totalPaid = [...linkedPayments, ...bulkPayments].reduce((acc, p) => acc + Number(p.amount), 0);
+        const paidSplitsTotal = userSplits.reduce((acc, s) => acc + (s.status === 'paid' ? Number(s.amount) : 0), 0);
+        const finalPaid = Math.max(totalPaid, paidSplitsTotal);
+
+        return {
+           ...m,
+           total_owed: totalOwed,
+           total_paid: finalPaid,
+           balance: finalPaid - totalOwed
+        };
+      });
+
+      const userIds = membersRes.data?.map(m => m.user_id) ?? [];
+      const { data: profiles } = await supabase.from("group_member_profiles").select("id, full_name, avatar_url").eq("group_id", membership.group_id).in("id", userIds);
+
+      const members = cycleBalances.map(m => ({
+        ...m,
+        profile: profiles?.find(p => p.id === m.user_id),
+        role: rolesRes.data?.find(r => r.user_id === m.user_id)?.role ?? 'morador'
+      }));
+
+      const pendingPaymentsCount = allPayments.filter(p => {
+         if (p.status !== 'pending') return false;
+         if (!p.expense_split_id) return true;
+         return p.expense_splits?.expenses?.expense_type === 'collective';
+      }).length;
+
+      const departuresCount = (departuresRes.data || []).length;
+      const redistributedCount = (departuresRes.data || []).reduce((sum: number, log: any) => {
+        const value = Number(log?.details?.redistributed_pending_splits || 0);
+        return sum + (Number.isFinite(value) ? value : 0);
+      }, 0);
+
+      // Precisamos verificar o débito de ex-membros (isso pode continuar sendo global ou do ciclo)
+      // Para manter a coerência, vamos buscar globalmente apenas os débitos não pagos de quem saiu
+      let exMembersDebt = 0;
+      if (collectiveExpenses.length > 0) {
+        const { data: exMembersSplits } = await supabase
+          .from("expense_splits")
+          .select("id, user_id, amount")
+          .eq("status", "pending")
+          .in("expense_id", collectiveExpenses.map(e => e.id));
+          
+        const activeUserIds = new Set(members.map(m => m.user_id));
+        exMembersDebt = (exMembersSplits || [])
+          .filter((s: any) => !activeUserIds.has(s.user_id))
+          .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
+      }
+
+      return {
+        members,
+        pendingPaymentsCount,
+        exMembersDebt,
+        departuresCount,
+        redistributedCount,
+        cycleSplits,
+      };
+    },
+    enabled: !!membership?.group_id && !!collectiveExpenses && isAdmin
+  });
+
 
   // Filtering Logic for Pending Splits (Debts)
   
@@ -435,15 +462,12 @@ export default function Dashboard() {
   }, [collectivePendingPrevious]);
 
   // 2. Individual Pending (Manual + Installments)
-  // A. Manual pending splits (Cash/Pix/Debit that are pending) - EXCLUDE credit card splits here as they are parcelled
   const manualIndividualPending = pendingSplits.filter((s: any) => 
     s.expenses?.expense_type === "individual" && 
     s.expenses?.payment_method !== "credit_card" &&
     !paidSplitIds.has(s.id)
   );
 
-  // B. Installments for the CURRENT MONTH (Credit Card)
-  // These represent what I need to pay "now" (in this month's bill) for my individual credit card expenses
   const installmentIndividualPending = billInstallments.filter((i: any) => 
     i.expenses?.expense_type === "individual"
   ).map((i: any) => ({
@@ -452,11 +476,9 @@ export default function Dashboard() {
     expenses: i.expenses // { title, category, purchase_date }
   }));
 
-  // Combine them for the list
   const individualPending = [...manualIndividualPending, ...installmentIndividualPending];
   const totalIndividualPending = individualPending.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
 
-  // Total User Expenses (Comprometido) = Share + Individual Pending (Cash/Installments)
   const totalUserExpenses = myCollectiveShare + totalIndividualPending;
 
   const cardsBreakdown = useMemo(() => {
@@ -482,7 +504,6 @@ export default function Dashboard() {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [billInstallments]);
-
 
   const handlePayRateio = async (scope: RateioScope) => {
     if (!receiptFile) return;
@@ -621,8 +642,7 @@ export default function Dashboard() {
         {!isPersonalFinancePage && isAdmin && (
           <TabsContent value="admin" className="space-y-6">
             {adminData ? (
-           <AdminTab 
-                memberBalances={adminData.balances} 
+              <AdminTab 
                 members={adminData.members} 
                 pendingPaymentsCount={adminData.pendingPaymentsCount}
                 collectiveExpenses={collectiveExpenses}
@@ -633,7 +653,7 @@ export default function Dashboard() {
                 exMembersDebt={adminData.exMembersDebt}
                 departuresCount={adminData.departuresCount}
                 redistributedCount={adminData.redistributedCount}
-                allPendingCollectiveSplits={adminData.allPendingCollectiveSplits}
+                cycleSplits={adminData.cycleSplits}
                 closingDay={closingDay}
               />
             ) : (

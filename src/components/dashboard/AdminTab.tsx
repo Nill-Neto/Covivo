@@ -11,14 +11,12 @@ import {
   Receipt, Settings, ClipboardList, BarChart3,
   CheckCircle2, Clock, UserPlus, Scale, UserMinus,
 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getCategoryLabel } from "@/constants/categories";
 import { useMemo, useState } from "react";
 
 interface AdminTabProps {
-  memberBalances: any[];
   members: any[];
   pendingPaymentsCount: number;
   collectiveExpenses: any[];
@@ -29,12 +27,11 @@ interface AdminTabProps {
   exMembersDebt: number;
   departuresCount: number;
   redistributedCount: number;
-  allPendingCollectiveSplits?: any[];
+  cycleSplits: any[];
   closingDay: number;
 }
 
 export function AdminTab({
-  memberBalances,
   members,
   pendingPaymentsCount,
   collectiveExpenses,
@@ -45,36 +42,28 @@ export function AdminTab({
   exMembersDebt,
   departuresCount,
   redistributedCount,
-  allPendingCollectiveSplits,
+  cycleSplits,
   closingDay,
 }: AdminTabProps) {
-  const queryClient = useQueryClient();
-
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
-  const membersWithBalance = useMemo(() =>
-    members.map(m => {
-      const bal = memberBalances.find(b => b.user_id === m.user_id);
-      return {
-        ...m,
-        balance: bal ? Number(bal.balance) : 0,
-        total_owed: bal ? Number(bal.total_owed) : 0,
-        total_paid: bal ? Number(bal.total_paid) : 0,
-      };
-    }).sort((a, b) => a.balance - b.balance),
-    [members, memberBalances]
+  // Ordena os membros pelo saldo da competência (negativos primeiro)
+  const sortedMembers = useMemo(() =>
+    [...members].sort((a, b) => a.balance - b.balance),
+    [members]
   );
 
   const selectedMember = useMemo(() => 
-    membersWithBalance.find(m => m.user_id === selectedMemberId), 
-  [membersWithBalance, selectedMemberId]);
+    sortedMembers.find(m => m.user_id === selectedMemberId), 
+  [sortedMembers, selectedMemberId]);
 
+  // Pega apenas as despesas desta competência para este morador
   const selectedMemberSplits = useMemo(() => {
-    if (!selectedMemberId || !allPendingCollectiveSplits) return [];
-    return allPendingCollectiveSplits
+    if (!selectedMemberId || !cycleSplits) return [];
+    return cycleSplits
       .filter(s => s.user_id === selectedMemberId)
       .sort((a, b) => new Date(b.expenses?.purchase_date || 0).getTime() - new Date(a.expenses?.purchase_date || 0).getTime());
-  }, [selectedMemberId, allPendingCollectiveSplits]);
+  }, [selectedMemberId, cycleSplits]);
 
   // Agrupa os splits do usuário por competência (Mês/Ano calculado)
   const groupedSplits = useMemo(() => {
@@ -114,11 +103,11 @@ export function AdminTab({
     return Object.values(groups).sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [selectedMemberSplits, closingDay]);
 
-  const totalReceivable = membersWithBalance.reduce(
+  const totalReceivable = sortedMembers.reduce(
     (acc, m) => acc + (m.balance < -0.01 ? Math.abs(m.balance) : 0), 0
   );
 
-  const membersInDebt = membersWithBalance.filter(m => m.balance < -0.05);
+  const membersInDebt = sortedMembers.filter(m => m.balance < -0.05);
   const collectRate = members.length > 0
     ? Math.round(((members.length - membersInDebt.length) / members.length) * 100)
     : 100;
@@ -222,7 +211,7 @@ export function AdminTab({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Adimplência
+              Adimplência (Ciclo)
             </CardTitle>
             <Scale className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -287,19 +276,19 @@ export function AdminTab({
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4" /> Saldo dos Moradores
+                <Users className="h-4 w-4" /> Resumo da Competência
               </CardTitle>
               <Badge variant="outline" className="text-xs font-normal">
                 {members.length} ativo{members.length !== 1 ? "s" : ""}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Saldo acumulado do rateio coletivo · Clique em um morador para ver os detalhes
+              Saldo restrito à competência atual ({format(currentDate, "MMM/yyyy", { locale: ptBR })}) · Clique no morador para detalhes
             </p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {membersWithBalance.map(member => {
+              {sortedMembers.map(member => {
                 const isDebt = member.balance < -0.05;
                 const isCredit = member.balance > 0.05;
 
@@ -347,13 +336,13 @@ export function AdminTab({
                         </span>
                       )}
                       <p className="text-[11px] text-muted-foreground tabular-nums">
-                        Rateio: R$ {member.total_owed.toFixed(2)}
+                        Rateio (Ciclo): R$ {member.total_owed.toFixed(2)}
                       </p>
                     </div>
                   </div>
                 );
               })}
-              {membersWithBalance.length === 0 && (
+              {sortedMembers.length === 0 && (
                 <p className="text-sm text-muted-foreground px-6 py-8 text-center">
                   Nenhum morador encontrado.
                 </p>
@@ -439,10 +428,10 @@ export function AdminTab({
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader className="px-5 pt-5 pb-4 shrink-0 border-b">
             <DialogTitle className="text-lg font-semibold text-foreground">
-              Detalhamento de Pendências
+              Detalhamento da Competência
             </DialogTitle>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Morador: {selectedMember?.profile?.full_name}
+            <p className="text-sm text-muted-foreground mt-0.5 capitalize">
+              {selectedMember?.profile?.full_name} • {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
             </p>
           </DialogHeader>
 
@@ -460,7 +449,7 @@ export function AdminTab({
           <div className="flex-1 overflow-y-auto bg-muted/5">
             {groupedSplits.length === 0 ? (
               <div className="py-10 text-center text-muted-foreground text-sm">
-                Nenhuma pendência em aberto para este morador.
+                Nenhuma despesa rateada nesta competência.
               </div>
             ) : (
               <div className="divide-y">
