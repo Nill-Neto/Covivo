@@ -40,19 +40,33 @@ import { ptBR } from "date-fns/locale";
 import { InfoCard, DetailItem } from "@/components/ui/insurance-card";
 import { PageHero } from "@/components/layout/PageHero";
 import { ScrollRevealGroup } from "@/components/ui/scroll-reveal";
+import type { PostgrestError } from "@supabase/supabase-js";
+import type { Tables } from "@/integrations/supabase/types";
+import type {
+  GetGroupMemberPublicProfilesRpcResponse,
+  RemoveGroupMemberRpcResponse,
+} from "@/integrations/supabase/rpc-types";
+
+type GroupMemberRow = Tables<"group_members">;
+type UserRoleRow = Tables<"user_roles">;
+
+type MemberWithProfile = GroupMemberRow & {
+  profile: (GetGroupMemberPublicProfilesRpcResponse[number] & { email: null; phone: null }) | null;
+  role: UserRoleRow["role"] | undefined;
+};
 
 export default function Members() {
   const { membership, isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
 
   // State for Edit Dialog
-  const [editingMember, setEditingMember] = useState<any>(null);
+  const [editingMember, setEditingMember] = useState<MemberWithProfile | null>(null);
   const [editRole, setEditRole] = useState("morador");
   const [editPercentage, setEditPercentage] = useState("0");
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   // State for Details Dialog
-  const [viewingMember, setViewingMember] = useState<any>(null);
+  const [viewingMember, setViewingMember] = useState<MemberWithProfile | null>(null);
   const [cpfValue, setCpfValue] = useState<string | null>(null);
   const [loadingCpf, setLoadingCpf] = useState(false);
   const [showCpf, setShowCpf] = useState(false);
@@ -88,9 +102,9 @@ export default function Members() {
       if (gmErr) throw gmErr;
 
       const [{ data: viewProfiles, error: viewErr }, { data: roles, error: roleErr }] = await Promise.all([
-        supabase.rpc("get_group_member_public_profiles" as any, {
+        supabase.rpc("get_group_member_public_profiles", {
           _group_id: membership!.group_id,
-        } as any),
+        }),
         supabase
           .from("user_roles")
           .select("user_id, role")
@@ -100,13 +114,9 @@ export default function Members() {
       if (viewErr) throw viewErr;
       if (roleErr) throw roleErr;
 
-      const publicProfiles = (viewProfiles ?? []) as Array<{
-        id: string;
-        full_name: string | null;
-        avatar_url: string | null;
-      }>;
+      const publicProfiles: GetGroupMemberPublicProfilesRpcResponse = viewProfiles ?? [];
 
-      return groupMembers.map((gm) => {
+      return groupMembers.map((gm): MemberWithProfile => {
         const profile = publicProfiles.find((p) => p.id === gm.user_id);
         const role = roles?.find((r) => r.user_id === gm.user_id);
         return {
@@ -204,24 +214,20 @@ export default function Members() {
       setIsEditOpen(false);
       toast({ title: "Membro atualizado com sucesso!" });
     },
-    onError: (err: any) => {
+    onError: (err: PostgrestError) => {
       toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
     },
   });
 
   const removeMember = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
-      const { data, error } = await supabase.rpc("remove_group_member" as any, {
+      const { data, error } = await supabase.rpc("remove_group_member", {
         _group_id: membership!.group_id,
         _target_user_id: userId,
         _reason: reason,
-      } as any);
+      });
       if (error) throw error;
-      return data as unknown as {
-        success: boolean;
-        preserved_pending_splits?: number;
-        redistributed_pending_splits?: number;
-      };
+      return data as RemoveGroupMemberRpcResponse;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
@@ -235,12 +241,12 @@ export default function Members() {
         description: `Pendências preservadas: ${result?.preserved_pending_splits ?? 0} | redistribuídas: ${result?.redistributed_pending_splits ?? 0}`,
       });
     },
-    onError: (err: any) => {
+    onError: (err: PostgrestError) => {
       toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
     },
   });
 
-  const openEditDialog = (member: any, e: React.MouseEvent) => {
+  const openEditDialog = (member: MemberWithProfile, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingMember(member);
     setEditRole(member.role || "morador");
