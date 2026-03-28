@@ -80,21 +80,24 @@ export function HomeTab() {
                     
                     <div className="flex items-center gap-2">
                       {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (m.group_id !== activeGroupId) {
-                            setActiveGroupId(m.group_id);
-                          }
-                          // Direciona para a aba do grupo caso seja um administrador, senão envia para a de conta.
-                          navigate("/settings", { state: { tab: m.role === 'admin' ? "group" : "account" } });
-                        }}
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
+                      
+                      {/* O botão de configurações só aparece se a pessoa for admin */}
+                      {m.role === 'admin' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (m.group_id !== activeGroupId) {
+                              setActiveGroupId(m.group_id);
+                            }
+                            navigate("/settings", { state: { tab: "group" } });
+                          }}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )
