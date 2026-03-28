@@ -281,24 +281,21 @@ export default function Dashboard() {
     }));
 
   // Deduct bulk payments (rateio payments without expense_split_id)
-  const totalBulkPaymentsPrevious = useMemo(() => {
-    return myBulkPayments
-      .filter((p: any) => p.notes?.includes("competências anteriores") || p.notes?.includes("Rateio"))
-      .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
-  }, [myBulkPayments]);
-
-  const totalBulkPaymentsCurrent = useMemo(() => {
-    return myBulkPayments
-      .filter((p: any) => p.notes?.includes("competência atual"))
-      .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+  // These are lump-sum payments that don't link to specific splits
+  const totalBulkPayments = useMemo(() => {
+    return myBulkPayments.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
   }, [myBulkPayments]);
 
   const collectivePendingCurrent = collectivePending.filter((s: any) => s.competenceKey === currentCompetenceKey);
   const collectivePendingPrevious = collectivePending.filter((s: any) => !s.competenceKey || s.competenceKey < currentCompetenceKey);
   const rawTotalCollectivePendingPrevious = collectivePendingPrevious.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
   const rawTotalCollectivePendingCurrent = collectivePendingCurrent.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
-  const totalCollectivePendingPrevious = Math.max(0, rawTotalCollectivePendingPrevious - totalBulkPaymentsPrevious);
-  const totalCollectivePendingCurrent = Math.max(0, rawTotalCollectivePendingCurrent - totalBulkPaymentsCurrent);
+  
+  // Apply bulk payments: first against previous, remainder against current
+  const bulkAppliedToPrevious = Math.min(totalBulkPayments, rawTotalCollectivePendingPrevious);
+  const bulkRemainder = totalBulkPayments - bulkAppliedToPrevious;
+  const totalCollectivePendingPrevious = Math.max(0, rawTotalCollectivePendingPrevious - bulkAppliedToPrevious);
+  const totalCollectivePendingCurrent = Math.max(0, rawTotalCollectivePendingCurrent - bulkRemainder);
   const collectivePendingPreviousByCompetence = useMemo(() => {
     const grouped = collectivePendingPrevious.reduce((acc: Record<string, any[]>, item: any) => {
       const purchaseDate = item.expenses?.purchase_date ? parseLocalDate(item.expenses.purchase_date) : null;
