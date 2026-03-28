@@ -95,11 +95,11 @@ export default function Dashboard() {
   });
 
   const { data: pendingSplits = [] } = useQuery({
-    queryKey: ["my-pending-splits", membership?.group_id, user?.id],
+    queryKey: ["my-pending-splits-dashboard", membership?.group_id, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_splits")
-        .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method, credit_card_id, credit_cards:credit_card_id(closing_day))")
+        .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method, credit_card_id, credit_cards:credit_card_id(closing_day)), payments(id, status)")
         .eq("user_id", user!.id)
         .eq("status", "pending");
       if (error) throw error;
