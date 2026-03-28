@@ -5,14 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, CreditCard, Wallet, LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react";
+import { User, Users, CreditCard, Home, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
 import { parseLocalDate } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { HomeTab } from "@/components/dashboard/HomeTab";
 import { RepublicTab } from "@/components/dashboard/RepublicTab";
 import { PersonalTab } from "@/components/dashboard/PersonalTab";
 import { CardsTab } from "@/components/dashboard/CardsTab";
@@ -32,7 +32,7 @@ export default function Dashboard() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [rateioScope, setRateioScope] = useState<RateioScope>("previous");
-  const [activeTab, setActiveTab] = useState("republic");
+  const [activeTab, setActiveTab] = useState("home");
   const [heroCompact, setHeroCompact] = useState(false);
 
   const {
@@ -398,6 +398,9 @@ export default function Dashboard() {
 
   const compactTabsList = (
     <TabsList className={tabListClass}>
+      <TabsTrigger value="home" className={tabTriggerClass}>
+        <Home className="h-3.5 w-3.5 mr-1.5" /> Início
+      </TabsTrigger>
       <TabsTrigger value="republic" className={tabTriggerClass}>
         <Users className="h-3.5 w-3.5 mr-1.5" /> Coletivo
       </TabsTrigger>
@@ -428,6 +431,9 @@ export default function Dashboard() {
       <div className="space-y-4">
         {!heroCompact && (
           <TabsList className={tabListClass}>
+            <TabsTrigger value="home" className={tabTriggerClass}>
+              <Home className="h-3.5 w-3.5 mr-1.5" /> Início
+            </TabsTrigger>
             <TabsTrigger value="republic" className={tabTriggerClass}>
               <Users className="h-3.5 w-3.5 mr-1.5" /> Coletivo
             </TabsTrigger>
@@ -439,6 +445,10 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
         )}
+
+        <TabsContent value="home" className="space-y-6">
+          <HomeTab />
+        </TabsContent>
 
         <TabsContent value="republic" className="space-y-6">
           <RepublicTab
