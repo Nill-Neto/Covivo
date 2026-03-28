@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -641,8 +642,25 @@ function GroupTab() {
 
 export default function GroupSettings() {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState("account");
+  const location = useLocation();
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return location.state?.tab === "group" && isAdmin ? "group" : "account";
+  });
+  
   const [heroCompact, setHeroCompact] = useState(false);
+
+  // Mantenha sincronizado caso o usuário altere a rota/state enquanto o componente já está montado.
+  // Ao trocar de grupo, se o usuário não for admin do novo, o state será revertido para account
+  useEffect(() => {
+    if (location.state?.tab) {
+      if (location.state.tab === "group" && !isAdmin) {
+        setActiveTab("account");
+      } else {
+        setActiveTab(location.state.tab);
+      }
+    }
+  }, [location.state, isAdmin]);
 
   const tabItems = (
     <>

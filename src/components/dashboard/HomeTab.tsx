@@ -89,7 +89,8 @@ export function HomeTab() {
                           if (m.group_id !== activeGroupId) {
                             setActiveGroupId(m.group_id);
                           }
-                          navigate("/settings");
+                          // Direciona para a aba do grupo caso seja um administrador, senão envia para a de conta.
+                          navigate("/settings", { state: { tab: m.role === 'admin' ? "group" : "account" } });
                         }}
                       >
                         <Settings className="h-4 w-4" />
