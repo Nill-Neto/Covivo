@@ -405,7 +405,7 @@ export default function Dashboard() {
         <Users className="h-3.5 w-3.5 mr-1.5" /> Coletivo
       </TabsTrigger>
       <TabsTrigger value="personal" className={tabTriggerClass}>
-        <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
+        <User className="h-3.5 w-3.5 mr-1.5" /> Geral
       </TabsTrigger>
       <TabsTrigger value="cards" className={tabTriggerClass}>
         <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
@@ -438,7 +438,7 @@ export default function Dashboard() {
               <Users className="h-3.5 w-3.5 mr-1.5" /> Coletivo
             </TabsTrigger>
             <TabsTrigger value="personal" className={tabTriggerClass}>
-              <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
+              <User className="h-3.5 w-3.5 mr-1.5" /> Geral
             </TabsTrigger>
             <TabsTrigger value="cards" className={tabTriggerClass}>
               <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
