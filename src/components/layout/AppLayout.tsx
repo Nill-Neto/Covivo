@@ -29,6 +29,7 @@ import {
   Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/config/brand";
 import { motion } from "framer-motion";
 import { Sidebar, SidebarBody } from "@/components/ui/animated-sidebar";
 
@@ -96,7 +97,7 @@ export function AppLayout() {
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
         R
       </div>
-      <span className="text-foreground">Republi-K</span>
+      <span className="text-foreground">{APP_NAME}</span>
     </Link>
   );
 
