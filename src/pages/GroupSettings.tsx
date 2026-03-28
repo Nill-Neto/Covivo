@@ -470,7 +470,7 @@ function GroupTab() {
           </div>
           <div className="space-y-2">
             <Label>Descrição</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ex: República masculina próxima à USP" />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ex: Moradia próxima à Av. Paulista" />
           </div>
           <div className="space-y-2">
             <Label>Regra de rateio</Label>

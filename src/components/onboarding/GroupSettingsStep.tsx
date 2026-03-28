@@ -97,7 +97,7 @@ export function GroupSettingsStep({
     >
       <div className="space-y-2">
         <Label htmlFor="groupName">Apelido do grupo</Label>
-        <Input id="groupName" value={groupName} onChange={(e) => onGroupNameChange(e.target.value)} placeholder='Ex: "República Central"' />
+        <Input id="groupName" value={groupName} onChange={(e) => onGroupNameChange(e.target.value)} placeholder='Ex: "Casa Aurora"' />
       </div>
 
       {/* Address */}

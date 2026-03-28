@@ -441,9 +441,9 @@ export default function Dashboard() {
   const tabListClass = "w-full justify-start overflow-x-auto bg-muted/50 rounded-lg p-1 h-auto gap-1";
 
   const compactTabsList = (
-    <TabsList className={tabListClass}>
-      <TabsTrigger value="republic" className={tabTriggerClass}>
-        <Users className="h-3.5 w-3.5 mr-1.5" /> República
+      <TabsList className={tabListClass}>
+        <TabsTrigger value="republic" className={tabTriggerClass}>
+        <Users className="h-3.5 w-3.5 mr-1.5" /> Moradia
       </TabsTrigger>
       <TabsTrigger value="personal" className={tabTriggerClass}>
         <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
@@ -473,7 +473,7 @@ export default function Dashboard() {
         {!heroCompact && (
           <TabsList className={tabListClass}>
             <TabsTrigger value="republic" className={tabTriggerClass}>
-              <Users className="h-3.5 w-3.5 mr-1.5" /> República
+              <Users className="h-3.5 w-3.5 mr-1.5" /> Moradia
             </TabsTrigger>
             <TabsTrigger value="personal" className={tabTriggerClass}>
               <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
