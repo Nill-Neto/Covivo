@@ -96,7 +96,7 @@ export function AppLayout() {
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
         R
       </div>
-      <span className="text-foreground">Republi-K</span>
+      <span className="text-foreground">Covivo</span>
     </Link>
   );
 
