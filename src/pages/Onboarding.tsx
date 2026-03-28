@@ -135,10 +135,33 @@ export default function Onboarding() {
     }
     setSaving(true);
     try {
-      const allFees = [
-        ...mandatoryFees.map(f => ({ ...f, fee_type: "mandatory" as const })),
-        ...optionalFees.map(f => ({ ...f, fee_type: "optional" as const })),
-      ];
+      // Filtra entradas vazias e converte valores financeiros para Float adequadamente
+      const validRecurring = recurringExpenses
+        .filter((e) => e.title.trim() !== "")
+        .map((e) => ({
+          ...e,
+          amount: parseFloat(e.amount.replace(",", ".")) || 0,
+        }));
+
+      const validMandatory = mandatoryFees
+        .filter((f) => f.title.trim() !== "")
+        .map((f) => ({
+          ...f,
+          amount: parseFloat(f.amount.replace(",", ".")) || 0,
+          fee_type: "mandatory" as const,
+        }));
+
+      const validOptional = optionalFees
+        .filter((f) => f.title.trim() !== "")
+        .map((f) => ({
+          ...f,
+          amount: parseFloat(f.amount.replace(",", ".")) || 0,
+          fee_type: "optional" as const,
+        }));
+
+      const allFees = [...validMandatory, ...validOptional];
+
+      const validHouseRules = houseRules.filter((r) => r.title.trim() !== "");
 
       const { error: rpcError } = await supabase.rpc("complete_onboarding_with_group_setup", {
         _operation_id: onboardingOperationId,
@@ -155,21 +178,21 @@ export default function Onboarding() {
         _state: address.state.trim() || null,
         _zip_code: address.zipCode.replace(/\D/g, "") || null,
         _admin_participates_in_splits: adminParticipatesInSplits,
-        _recurring_expenses: recurringExpenses as unknown as import("@/integrations/supabase/types").Json,
-        _fees: allFees,
-        _house_rules: houseRules as unknown as import("@/integrations/supabase/types").Json,
+        _recurring_expenses: validRecurring as unknown as import("@/integrations/supabase/types").Json,
+        _fees: allFees as unknown as import("@/integrations/supabase/types").Json,
+        _house_rules: validHouseRules as unknown as import("@/integrations/supabase/types").Json,
       });
 
       if (rpcError) {
         const details = `${rpcError.message ?? ""} ${rpcError.details ?? ""}`.toLowerCase();
-        let description = "Não foi possível concluir o onboarding. Tente novamente.";
+        let description = `Não foi possível concluir o onboarding: ${rpcError.message}`;
 
         if (rpcError.code === "22023" || details.includes("validation")) {
           description = "Alguns dados informados são inválidos. Revise os campos e tente novamente.";
         } else if (rpcError.code === "42501" || details.includes("permission")) {
           description = "Você não tem permissão para concluir este onboarding. Faça login novamente.";
         } else if (rpcError.code === "23505" || details.includes("conflict")) {
-          description = "Houve um conflito ao concluir o onboarding (possível retry já processado). Atualize a página.";
+          description = "Houve um conflito ao concluir o onboarding (possível tentativa já processada). Atualize a página.";
         }
 
         throw new Error(description);
