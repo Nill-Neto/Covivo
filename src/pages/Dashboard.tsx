@@ -108,16 +108,17 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
-  const { data: mySubmittedPayments = [] } = useQuery({
-    queryKey: ["my-submitted-payments-dashboard", membership?.group_id, user?.id],
+  // Bulk payments query - only needed for rateio bulk payment deduction
+  const { data: myBulkPayments = [] } = useQuery({
+    queryKey: ["my-bulk-payments-dashboard", membership?.group_id, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payments")
-        .select("id, expense_split_id, amount, notes, status")
+        .select("id, amount, notes, status")
         .eq("group_id", membership!.group_id)
         .eq("paid_by", user!.id)
+        .is("expense_split_id", null)
         .in("status", ["pending", "confirmed"]);
-
       if (error) throw error;
       return data ?? [];
     },
