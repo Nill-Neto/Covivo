@@ -5,15 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, CreditCard, Wallet, LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react";
+import { User, CreditCard, Home, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
 import { parseLocalDate } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { RepublicTab } from "@/components/dashboard/RepublicTab";
+import { HomeTab } from "@/components/dashboard/HomeTab";
 import { PersonalTab } from "@/components/dashboard/PersonalTab";
 import { CardsTab } from "@/components/dashboard/CardsTab";
 import { PaymentDialogs, type RateioScope } from "@/components/dashboard/PaymentDialogs";
@@ -22,7 +21,7 @@ import { useCycleDates } from "@/hooks/useCycleDates";
 import { getCompetenceKeyFromDate } from "@/lib/cycleDates";
 
 export default function Dashboard() {
-  const { profile, membership, user, isAdmin } = useAuth();
+  const { profile, membership, user } = useAuth();
   const queryClient = useQueryClient();
   
   // Payment State
@@ -32,7 +31,7 @@ export default function Dashboard() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [rateioScope, setRateioScope] = useState<RateioScope>("previous");
-  const [activeTab, setActiveTab] = useState("republic");
+  const [activeTab, setActiveTab] = useState("home");
   const [heroCompact, setHeroCompact] = useState(false);
 
   const {
@@ -40,7 +39,6 @@ export default function Dashboard() {
     cycleStart,
     cycleEnd,
     cycleLimitDate,
-    isLate,
     nextMonth,
     prevMonth,
     closingDay,
@@ -102,29 +100,6 @@ export default function Dashboard() {
       return data ?? [];
     },
     enabled: !!membership?.group_id && !!user?.id,
-  });
-
-  const collectivePendingExpenseIds = useMemo(() => {
-    return [...new Set(
-      pendingSplits
-        .filter((s: any) => s.expenses?.expense_type === "collective")
-        .map((s: any) => s.expense_id)
-        .filter(Boolean)
-    )];
-  }, [pendingSplits]);
-
-  const { data: collectiveInstallments = [] } = useQuery({
-    queryKey: ["collective-installments-dashboard", collectivePendingExpenseIds],
-    queryFn: async () => {
-      if (collectivePendingExpenseIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("expense_installments" as any)
-        .select("expense_id, installment_number, bill_month, bill_year")
-        .in("expense_id", collectivePendingExpenseIds);
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: collectivePendingExpenseIds.length > 0,
   });
 
   const { data: creditCards = [], isLoading: isLoadingCreditCards } = useQuery({
@@ -398,11 +373,11 @@ export default function Dashboard() {
 
   const compactTabsList = (
     <TabsList className={tabListClass}>
-      <TabsTrigger value="republic" className={tabTriggerClass}>
-        <Users className="h-3.5 w-3.5 mr-1.5" /> Coletivo
+      <TabsTrigger value="home" className={tabTriggerClass}>
+        <Home className="h-3.5 w-3.5 mr-1.5" /> Início
       </TabsTrigger>
       <TabsTrigger value="personal" className={tabTriggerClass}>
-        <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
+        <User className="h-3.5 w-3.5 mr-1.5" /> Geral
       </TabsTrigger>
       <TabsTrigger value="cards" className={tabTriggerClass}>
         <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
@@ -428,11 +403,11 @@ export default function Dashboard() {
       <div className="space-y-4">
         {!heroCompact && (
           <TabsList className={tabListClass}>
-            <TabsTrigger value="republic" className={tabTriggerClass}>
-              <Users className="h-3.5 w-3.5 mr-1.5" /> Coletivo
+            <TabsTrigger value="home" className={tabTriggerClass}>
+              <Home className="h-3.5 w-3.5 mr-1.5" /> Início
             </TabsTrigger>
             <TabsTrigger value="personal" className={tabTriggerClass}>
-              <User className="h-3.5 w-3.5 mr-1.5" /> Pessoal
+              <User className="h-3.5 w-3.5 mr-1.5" /> Geral
             </TabsTrigger>
             <TabsTrigger value="cards" className={tabTriggerClass}>
               <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
@@ -440,16 +415,8 @@ export default function Dashboard() {
           </TabsList>
         )}
 
-        <TabsContent value="republic" className="space-y-6">
-          <RepublicTab
-            collectiveExpenses={collectiveExpenses}
-            totalMonthExpenses={totalMonthExpenses}
-            republicChartData={republicChartData}
-            totalCollectivePendingPrevious={totalCollectivePendingPrevious}
-            totalCollectivePendingCurrent={totalCollectivePendingCurrent}
-            isLate={isLate}
-            onPayRateio={(scope) => { setRateioScope(scope); setPayRateioOpen(true); }}
-          />
+        <TabsContent value="home" className="space-y-6">
+          <HomeTab closingDay={closingDay} />
         </TabsContent>
 
         <TabsContent value="personal" className="space-y-6">
@@ -466,6 +433,10 @@ export default function Dashboard() {
             myCollectiveShare={myCollectiveShare}
             personalChartData={personalChartData}
             myPersonalExpenses={myPersonalExpenses}
+            collectiveExpenses={collectiveExpenses}
+            republicChartData={republicChartData}
+            totalMonthExpenses={totalMonthExpenses}
+            onPayRateio={(scope) => { setRateioScope(scope); setPayRateioOpen(true); }}
           />
         </TabsContent>
 

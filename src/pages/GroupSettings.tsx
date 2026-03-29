@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -320,6 +321,7 @@ function GroupTab() {
   const { data: group, isLoading } = useQuery({
     queryKey: ["group", membership?.group_id],
     queryFn: async () => {
+      // Usamos (*) para garantir que o avatar_url venha caso a coluna exista
       const { data, error } = await supabase
         .from("groups")
         .select("*")
@@ -354,6 +356,11 @@ function GroupTab() {
   const [dueDay, setDueDay] = useState<string>("10");
   const [participatesInSplits, setParticipatesInSplits] = useState(true);
 
+  // Avatar states
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const avatarRef = useRef<HTMLInputElement>(null);
+
   // Address fields
   const [street, setStreet] = useState("");
   const [streetNumber, setStreetNumber] = useState("");
@@ -378,6 +385,7 @@ function GroupTab() {
       setCity(group.city ?? "");
       setState(group.state ?? "");
       setZipCode(group.zip_code ?? "");
+      setAvatarUrl((group as any).avatar_url ?? null);
     }
   }, [group]);
 
@@ -411,24 +419,57 @@ function GroupTab() {
 
   const updateGroup = useMutation({
     mutationFn: async () => {
+      let newAvatarUrl = avatarUrl;
+
+      // Realiza o upload da imagem se o usuário selecionou uma nova
+      if (avatarFile) {
+        const ext = avatarFile.name.split(".").pop() || "jpg";
+        const path = `groups/${membership!.group_id}/avatar_${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("documents").upload(path, avatarFile, { upsert: true });
+        
+        if (!uploadError) {
+          const { data } = supabase.storage.from("documents").getPublicUrl(path);
+          newAvatarUrl = data.publicUrl;
+        } else {
+          throw new Error("Falha ao enviar a imagem de perfil do grupo.");
+        }
+      }
+
+      const payload: any = {
+        name: name.trim(),
+        description: description.trim() || null,
+        splitting_rule: splittingRule as any,
+        closing_day: parseInt(closingDay),
+        due_day: parseInt(dueDay),
+        street: street.trim() || null,
+        street_number: streetNumber.trim() || null,
+        complement: complement.trim() || null,
+        neighborhood: neighborhood.trim() || null,
+        city: city.trim() || null,
+        state: state.trim() || null,
+        zip_code: zipCode.replace(/\D/g, "") || null,
+        avatar_url: newAvatarUrl,
+      };
+
       const { error } = await supabase
         .from("groups")
-        .update({
-          name: name.trim(),
-          description: description.trim() || null,
-          splitting_rule: splittingRule as any,
-          closing_day: parseInt(closingDay),
-          due_day: parseInt(dueDay),
-          street: street.trim() || null,
-          street_number: streetNumber.trim() || null,
-          complement: complement.trim() || null,
-          neighborhood: neighborhood.trim() || null,
-          city: city.trim() || null,
-          state: state.trim() || null,
-          zip_code: zipCode.replace(/\D/g, "") || null,
-        })
+        .update(payload)
         .eq("id", membership!.group_id);
-      if (error) throw error;
+
+      if (error) {
+        // Se a coluna avatar_url não existir, ignoramos a atualização apenas dela
+        if (error.message?.includes("avatar_url")) {
+          delete payload.avatar_url;
+          const { error: fallbackError } = await supabase
+            .from("groups")
+            .update(payload)
+            .eq("id", membership!.group_id);
+          
+          if (fallbackError) throw fallbackError;
+        } else {
+          throw error;
+        }
+      }
 
       if (myMembership) {
         const { error: memberError } = await supabase
@@ -442,6 +483,7 @@ function GroupTab() {
       queryClient.invalidateQueries({ queryKey: ["group"] });
       queryClient.invalidateQueries({ queryKey: ["my-membership"] });
       refreshMembership();
+      setAvatarFile(null);
       toast({ title: "Salvo!", description: "Configurações atualizadas." });
     },
     onError: (err: any) => {
@@ -457,13 +499,40 @@ function GroupTab() {
     );
   }
 
+  const groupInitials = name.substring(0, 2).toUpperCase();
+
   return (
     <ScrollRevealGroup preset="blur-slide" className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Dados da moradia</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="relative group cursor-pointer" onClick={() => avatarRef.current?.click()}>
+              <Avatar className="h-16 w-16 border-2 border-border/50">
+                <AvatarImage src={avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl || ""} />
+                <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">
+                  {groupInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Upload className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Foto da moradia</Label>
+              <p className="text-xs text-muted-foreground">Clique na imagem para alterar</p>
+            </div>
+            <input 
+              type="file" 
+              ref={avatarRef} 
+              accept="image/*" 
+              className="hidden" 
+              onChange={(e) => setAvatarFile(e.target.files?.[0] || null)} 
+            />
+          </div>
+
           <div className="space-y-2">
             <Label>Nome</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -573,8 +642,25 @@ function GroupTab() {
 
 export default function GroupSettings() {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState("account");
+  const location = useLocation();
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return location.state?.tab === "group" && isAdmin ? "group" : "account";
+  });
+  
   const [heroCompact, setHeroCompact] = useState(false);
+
+  // Mantenha sincronizado caso o usuário altere a rota/state enquanto o componente já está montado.
+  // Ao trocar de grupo, se o usuário não for admin do novo, o state será revertido para account
+  useEffect(() => {
+    if (location.state?.tab) {
+      if (location.state.tab === "group" && !isAdmin) {
+        setActiveTab("account");
+      } else {
+        setActiveTab(location.state.tab);
+      }
+    }
+  }, [location.state, isAdmin]);
 
   const tabItems = (
     <>

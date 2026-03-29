@@ -25,6 +25,7 @@ export interface GroupMembership {
   group_id: string;
   role: "admin" | "morador";
   group_name: string;
+  avatar_url?: string | null;
 }
 
 interface AuthState {
@@ -51,7 +52,6 @@ const ACTIVE_GROUP_KEY = "covivo-active-group";
 const LEGACY_ACTIVE_GROUP_KEY = "republi-k-active-group";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 
 const withTimeout = <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
   return Promise.race([
@@ -90,17 +90,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchMemberships = async (userId: string): Promise<GroupMembership[]> => {
     const { data } = await supabase
       .from("user_roles")
-      .select("role, group_id, groups:group_id(name)")
+      // Selecionando todos os campos (*) em groups garante que não quebre mesmo que a coluna não exista ainda
+      .select("role, group_id, groups:group_id(*)")
       .eq("user_id", userId);
 
     if (!data || data.length === 0) return [];
 
     return data.map((row) => {
-      const groupData = row.groups as unknown as { name: string } | null;
+      const groupData = row.groups as unknown as { name: string; avatar_url?: string } | null;
       return {
         group_id: row.group_id,
         role: row.role as "admin" | "morador",
         group_name: groupData?.name ?? "",
+        avatar_url: groupData?.avatar_url ?? null,
       };
     });
   };
