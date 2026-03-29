@@ -486,6 +486,11 @@ function GroupTab() {
     }
   };
 
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarUrl(null);
+  };
+
   const updateGroup = useMutation({
     mutationFn: async () => {
       let newAvatarUrl = avatarUrl;
@@ -601,8 +606,8 @@ function GroupTab() {
           <CardTitle className="text-lg">Dados da moradia</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="relative group cursor-pointer" onClick={() => avatarRef.current?.click()}>
+          <div className="flex items-start sm:items-center gap-4">
+            <div className="relative group cursor-pointer shrink-0" onClick={() => avatarRef.current?.click()}>
               <Avatar className="h-16 w-16 border-2 border-border/50">
                 <AvatarImage src={avatarFile ? URL.createObjectURL(avatarFile) : avatarUrl || ""} />
                 <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">
@@ -613,9 +618,20 @@ function GroupTab() {
                 <Upload className="h-4 w-4 text-white" />
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 flex-1">
               <Label>Foto da moradia</Label>
               <p className="text-xs text-muted-foreground">Clique na imagem para alterar</p>
+              {(avatarUrl || avatarFile) && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={(e) => { e.stopPropagation(); handleRemoveAvatar(); }}
+                  className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 mt-1 -ml-2"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Remover foto
+                </Button>
+              )}
             </div>
             <input 
               type="file" 
