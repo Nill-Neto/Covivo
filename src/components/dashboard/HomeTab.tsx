@@ -40,13 +40,13 @@ export function HomeTab({ closingDay }: HomeTabProps) {
         key,
         label: format(dateObj, "MMM/yy", { locale: ptBR }),
         Coletivo: 0,
+        MeuRateio: 0,
         Individual: 0,
       });
     }
     return comps;
   }, [closingDay]);
 
-  // A data de início precisa ser um pouco antes da primeira competência para não perder lançamentos
   const startDateQuery = useMemo(() => {
     const firstComp = chartDataTemplate[0];
     const [y, m] = firstComp.key.split("-").map(Number);
@@ -59,27 +59,51 @@ export function HomeTab({ closingDay }: HomeTabProps) {
     return `${startY}-${String(startM).padStart(2, "0")}-01`;
   }, [chartDataTemplate]);
 
-  // Busca as despesas dos últimos 6 meses
-  const { data: expenses = [], isLoading } = useQuery({
-    queryKey: ["home-expenses-evolution", activeGroupId, startDateQuery],
+  // Busca despesas e parcelas com suporte correto a faturas de cartão e rateios
+  const { data: rawData, isLoading } = useQuery({
+    queryKey: ["home-expenses-evolution", activeGroupId, startDateQuery, user?.id],
     queryFn: async () => {
-      if (!activeGroupId) return [];
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("amount, expense_type, created_by, purchase_date")
-        .eq("group_id", activeGroupId)
-        .gte("purchase_date", startDateQuery);
-      if (error) throw error;
-      return data || [];
+      if (!activeGroupId || !user?.id) return { expenses: [], installments: [], personalInstallments: [] };
+      
+      const [expensesRes, installmentsRes, personalInstallmentsRes] = await Promise.all([
+        supabase
+          .from("expenses")
+          .select("id, amount, expense_type, created_by, purchase_date, payment_method, expense_splits(user_id, amount)")
+          .eq("group_id", activeGroupId)
+          .gte("purchase_date", startDateQuery),
+          
+        supabase
+          .from("expense_installments")
+          .select("amount, bill_month, bill_year, expenses!inner(group_id, expense_type)")
+          .eq("user_id", user.id)
+          .eq("expenses.group_id", activeGroupId)
+          .eq("expenses.expense_type", "individual"),
+          
+        supabase
+          .from("personal_expense_installments")
+          .select("amount, bill_month, bill_year")
+          .eq("user_id", user.id)
+      ]);
+
+      if (expensesRes.error) throw expensesRes.error;
+      if (installmentsRes.error) throw installmentsRes.error;
+      if (personalInstallmentsRes.error) throw personalInstallmentsRes.error;
+      
+      return { 
+        expenses: expensesRes.data || [], 
+        installments: installmentsRes.data || [], 
+        personalInstallments: personalInstallmentsRes.data || [] 
+      };
     },
-    enabled: !!activeGroupId,
+    enabled: !!activeGroupId && !!user?.id,
   });
 
-  // Preenche o template com os dados agrupados por competência
   const populatedData = useMemo(() => {
-    const dataCopy = chartDataTemplate.map((c) => ({ ...c }));
-    
-    expenses.forEach((e) => {
+    const dataCopy = chartDataTemplate.map((c) => ({ ...c, Coletivo: 0, MeuRateio: 0, Individual: 0 }));
+    if (!rawData) return dataCopy;
+
+    // 1. Processa Despesas base (Coletivas totais, Meu Rateio e Individuais em Dinheiro/Pix)
+    rawData.expenses.forEach((e) => {
       if (!e.purchase_date) return;
       const key = getCompetenceKeyFromDate(new Date(`${e.purchase_date}T12:00:00`), closingDay || 1);
       const bucket = dataCopy.find((c) => c.key === key);
@@ -87,14 +111,46 @@ export function HomeTab({ closingDay }: HomeTabProps) {
       if (bucket) {
         if (e.expense_type === "collective") {
           bucket.Coletivo += Number(e.amount || 0);
+          
+          // Separa a fatia do usuário
+          const mySplit = e.expense_splits?.find((s: any) => s.user_id === user?.id);
+          if (mySplit) {
+            bucket.MeuRateio += Number(mySplit.amount || 0);
+          }
         }
-        if (e.expense_type === "individual" && e.created_by === user?.id) {
+        // Despesas individuais entram aqui apenas se NÃO forem no cartão de crédito
+        // Se forem no cartão, o valor será contabilizado pelas parcelas (installments) abaixo
+        if (e.expense_type === "individual" && e.created_by === user?.id && e.payment_method !== "credit_card") {
           bucket.Individual += Number(e.amount || 0);
         }
       }
     });
-    return dataCopy;
-  }, [expenses, chartDataTemplate, closingDay, user?.id]);
+
+    // 2. Processa as Parcelas (Cartão de crédito individual do grupo)
+    rawData.installments.forEach((i) => {
+      const key = `${i.bill_year}-${String(i.bill_month).padStart(2, "0")}`;
+      const bucket = dataCopy.find((c) => c.key === key);
+      if (bucket) {
+        bucket.Individual += Number(i.amount || 0);
+      }
+    });
+
+    // 3. Processa as Parcelas (Cartão de crédito pessoal - fora do grupo)
+    rawData.personalInstallments.forEach((i) => {
+      const key = `${i.bill_year}-${String(i.bill_month).padStart(2, "0")}`;
+      const bucket = dataCopy.find((c) => c.key === key);
+      if (bucket) {
+        bucket.Individual += Number(i.amount || 0);
+      }
+    });
+
+    return dataCopy.map(b => ({
+      ...b,
+      Coletivo: Number(b.Coletivo.toFixed(2)),
+      MeuRateio: Number(b.MeuRateio.toFixed(2)),
+      Individual: Number(b.Individual.toFixed(2)),
+    }));
+  }, [rawData, chartDataTemplate, closingDay, user?.id]);
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -201,10 +257,10 @@ export function HomeTab({ closingDay }: HomeTabProps) {
             Evolução de Gastos (Últimos 6 meses)
           </CardTitle>
           <CardDescription>
-            Comparativo entre o total de gastos coletivos da casa e os seus gastos individuais.
+            Acompanhe o total da casa, a sua parte no rateio e seus gastos individuais, já considerando as parcelas futuras de cartões de crédito.
           </CardDescription>
         </CardHeader>
-        <CardContent className="h-[320px] w-full pt-4">
+        <CardContent className="h-[340px] w-full pt-4">
           {isLoading ? (
             <div className="h-full flex items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -239,10 +295,21 @@ export function HomeTab({ closingDay }: HomeTabProps) {
                   formatter={(val: number) => `R$ ${val.toFixed(2)}`}
                 />
                 <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }} />
+                
                 <Line 
                   type="monotone"
                   dataKey="Coletivo" 
-                  name="Coletivos (Casa)" 
+                  name="Total Casa (Referência)" 
+                  stroke="hsl(var(--muted-foreground))" 
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line 
+                  type="monotone"
+                  dataKey="MeuRateio" 
+                  name="Meu Rateio" 
                   stroke="hsl(var(--primary))" 
                   strokeWidth={3}
                   dot={{ r: 4, strokeWidth: 2 }}
@@ -251,8 +318,8 @@ export function HomeTab({ closingDay }: HomeTabProps) {
                 <Line 
                   type="monotone"
                   dataKey="Individual" 
-                  name="Individuais (Meus)" 
-                  stroke="#0ea5e9" /* Blue-sky contrastante para individual */
+                  name="Meus Gastos (Individuais)" 
+                  stroke="#0ea5e9" /* Blue sky */
                   strokeWidth={3}
                   dot={{ r: 4, strokeWidth: 2 }}
                   activeDot={{ r: 6 }}
