@@ -11,7 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { UserPlus, Home, Plus, Shield, ArrowRight, Check, Settings, BarChart3, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
 
 interface HomeTabProps {
   closingDay: number;
@@ -211,7 +211,7 @@ export function HomeTab({ closingDay }: HomeTabProps) {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={populatedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={populatedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis 
                   dataKey="label" 
@@ -227,7 +227,7 @@ export function HomeTab({ closingDay }: HomeTabProps) {
                   tickFormatter={(val) => `R$ ${val}`} 
                 />
                 <RechartsTooltip
-                  cursor={{ fill: "hsl(var(--muted)/0.4)" }}
+                  cursor={{ stroke: "hsl(var(--muted))", strokeWidth: 2, strokeDasharray: "3 3" }}
                   contentStyle={{ 
                     borderRadius: "8px", 
                     border: "1px solid hsl(var(--border))", 
@@ -239,21 +239,25 @@ export function HomeTab({ closingDay }: HomeTabProps) {
                   formatter={(val: number) => `R$ ${val.toFixed(2)}`}
                 />
                 <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }} />
-                <Bar 
+                <Line 
+                  type="monotone"
                   dataKey="Coletivo" 
                   name="Coletivos (Casa)" 
-                  fill="hsl(var(--primary))" 
-                  radius={[4, 4, 0, 0]} 
-                  maxBarSize={40} 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  dot={{ r: 4, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
                 />
-                <Bar 
+                <Line 
+                  type="monotone"
                   dataKey="Individual" 
                   name="Individuais (Meus)" 
-                  fill="#0ea5e9" /* Blue-sky contrastante para individual */
-                  radius={[4, 4, 0, 0]} 
-                  maxBarSize={40} 
+                  stroke="#0ea5e9" /* Blue-sky contrastante para individual */
+                  strokeWidth={3}
+                  dot={{ r: 4, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
                 />
-              </BarChart>
+              </LineChart>
             </ResponsiveContainer>
           )}
         </CardContent>
