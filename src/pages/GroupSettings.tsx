@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,10 +13,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, SlidersHorizontal, User, Mail, Phone, Shield, FileText, FileSpreadsheet, Upload, Check, MapPin } from "lucide-react";
+import { Loader2, Save, SlidersHorizontal, User, Mail, Phone, Shield, FileText, FileSpreadsheet, Upload, Check, MapPin, AlertTriangle, Trash2 } from "lucide-react";
 import { PageHero } from "@/components/layout/PageHero";
-import { ScrollReveal, ScrollRevealGroup } from "@/components/ui/scroll-reveal";
+import { ScrollRevealGroup } from "@/components/ui/scroll-reveal";
 import { formatCPF, isValidCPF } from "@/lib/cpf";
 
 const tabTriggerClass = "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-foreground/60 text-xs font-semibold px-3 py-1.5 rounded-md transition-all";
@@ -41,6 +52,9 @@ function AccountTab() {
   const frontRef = useRef<HTMLInputElement>(null);
   const backRef = useRef<HTMLInputElement>(null);
   const digitalRef = useRef<HTMLInputElement>(null);
+
+  // Danger Zone
+  const [isAccountDeleteOpen, setIsAccountDeleteOpen] = useState(false);
 
   // Load CPF
   useEffect(() => {
@@ -178,6 +192,15 @@ function AccountTab() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    toast({
+      title: "Exclusão de conta",
+      description: "Para garantir a segurança financeira dos grupos, solicite a exclusão pelo email suporte@covivo.app.",
+      duration: 8000,
+    });
+    setIsAccountDeleteOpen(false);
+  };
+
   const initials = (profile?.full_name || "U")
     .split(" ")
     .map((n) => n[0])
@@ -310,13 +333,55 @@ function AccountTab() {
           <p>Seus dados sensíveis (CPF) são protegidos por criptografia e validação server-side</p>
         </CardContent>
       </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="font-serif text-lg flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" /> Zona de Perigo
+          </CardTitle>
+          <CardDescription>Ações irreversíveis para a sua conta.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+            <div className="space-y-0.5">
+              <h4 className="text-sm font-medium text-foreground">Excluir minha conta</h4>
+              <p className="text-xs text-muted-foreground">
+                Remover permanentemente sua conta e dados pessoais do Covivo.
+              </p>
+            </div>
+            <AlertDialog open={isAccountDeleteOpen} onOpenChange={setIsAccountDeleteOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="shrink-0">
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir Conta
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não poderá ser desfeita. Você perderá o acesso a todas as moradias que participa e seu histórico financeiro será anonimizado.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Entendi, solicitar exclusão
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </CardContent>
+      </Card>
     </ScrollRevealGroup>
   );
 }
 
 function GroupTab() {
-  const { user, membership, refreshMembership } = useAuth();
+  const { user, membership, refreshMembership, setActiveGroupId } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: group, isLoading } = useQuery({
     queryKey: ["group", membership?.group_id],
@@ -370,6 +435,10 @@ function GroupTab() {
   const [state, setState] = useState("");
   const [zipCode, setZipCode] = useState("");
   const [fetchingCep, setFetchingCep] = useState(false);
+
+  // Danger Zone
+  const [isGroupDeleteOpen, setIsGroupDeleteOpen] = useState(false);
+  const [confirmGroupName, setConfirmGroupName] = useState("");
 
   useEffect(() => {
     if (group) {
@@ -490,6 +559,30 @@ function GroupTab() {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     },
   });
+
+  const deleteGroup = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("groups").delete().eq("id", membership!.group_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Moradia excluída com sucesso." });
+      setActiveGroupId("");
+      refreshMembership();
+      navigate("/dashboard", { replace: true });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    }
+  });
+
+  const handleDeleteGroup = () => {
+    if (confirmGroupName !== name) {
+      toast({ title: "Nome incorreto", description: "O nome digitado não confere com o nome da moradia.", variant: "destructive" });
+      return;
+    }
+    deleteGroup.mutate();
+  };
 
   if (isLoading) {
     return (
@@ -636,6 +729,62 @@ function GroupTab() {
         {updateGroup.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
         Salvar Alterações
       </Button>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="font-serif text-lg flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" /> Zona de Perigo
+          </CardTitle>
+          <CardDescription>Ações irreversíveis para esta moradia.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+            <div className="space-y-0.5">
+              <h4 className="text-sm font-medium text-foreground">Excluir Moradia</h4>
+              <p className="text-xs text-muted-foreground">
+                Apagar permanentemente a moradia, despesas, moradores e histórico.
+              </p>
+            </div>
+            <AlertDialog open={isGroupDeleteOpen} onOpenChange={(open) => { setIsGroupDeleteOpen(open); if(!open) setConfirmGroupName(""); }}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="shrink-0">
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir Moradia
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir a moradia absolutamente?</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>
+                      Esta ação <strong>não pode ser desfeita</strong>. Todos os lançamentos financeiros, pagamentos e regras serão permanentemente removidos.
+                    </p>
+                    <div className="space-y-2 pt-2">
+                      <Label>Digite <strong>{name}</strong> para confirmar:</Label>
+                      <Input 
+                        value={confirmGroupName} 
+                        onChange={(e) => setConfirmGroupName(e.target.value)} 
+                        placeholder={name} 
+                      />
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteGroup} 
+                    disabled={confirmGroupName !== name || deleteGroup.isPending}
+                  >
+                    {deleteGroup.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Excluir Permanentemente
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </CardContent>
+      </Card>
     </ScrollRevealGroup>
   );
 }
@@ -650,8 +799,6 @@ export default function GroupSettings() {
   
   const [heroCompact, setHeroCompact] = useState(false);
 
-  // Mantenha sincronizado caso o usuário altere a rota/state enquanto o componente já está montado.
-  // Ao trocar de grupo, se o usuário não for admin do novo, o state será revertido para account
   useEffect(() => {
     if (location.state?.tab) {
       if (location.state.tab === "group" && !isAdmin) {
