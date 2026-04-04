@@ -191,29 +191,11 @@ export function CardsTab({
     ? billInstallments.filter((i: any) => i.expenses?.credit_card_id === selectedCard.id)
     : [];
 
-  const getExpenseRegisteredAt = (installment: any) => {
-    const purchaseDate = installment.expenses?.purchase_date;
-    if (purchaseDate) {
-      return parseLocalDate(purchaseDate).getTime();
-    }
-
-    const createdAt = installment.expenses?.created_at;
-    if (createdAt) {
-      return new Date(createdAt).getTime();
-    }
-
-    return 0;
-  };
-
   const sortedSelectedCardInstallments = [...selectedCardInstallments].sort((a: any, b: any) => {
-    const registeredAtA = getExpenseRegisteredAt(a);
-    const registeredAtB = getExpenseRegisteredAt(b);
+    const createdAtA = a.expenses?.created_at || "";
+    const createdAtB = b.expenses?.created_at || "";
 
-    if (registeredAtA !== registeredAtB) {
-      return registeredAtB - registeredAtA;
-    }
-
-    return Number(b.installment_number || 0) - Number(a.installment_number || 0);
+    return createdAtB.localeCompare(createdAtA);
   });
 
   const selectedCardTotal = selectedCardInstallments.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
