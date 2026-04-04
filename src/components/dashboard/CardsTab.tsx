@@ -191,42 +191,11 @@ export function CardsTab({
     ? billInstallments.filter((i: any) => i.expenses?.credit_card_id === selectedCard.id)
     : [];
 
-  const getExpenseRegisteredAt = (installment: any) => {
-    const parseToTimestamp = (value?: string | null) => {
-      if (!value) return 0;
-
-      const raw = String(value).trim();
-      if (!raw) return 0;
-
-      // yyyy-MM-dd
-      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-        const timestamp = parseLocalDate(raw).getTime();
-        return Number.isNaN(timestamp) ? 0 : timestamp;
-      }
-
-      // dd/MM/yyyy
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
-        const [day, month, year] = raw.split("/");
-        const timestamp = new Date(`${year}-${month}-${day}T00:00:00`).getTime();
-        return Number.isNaN(timestamp) ? 0 : timestamp;
-      }
-
-      const timestamp = new Date(raw).getTime();
-      return Number.isNaN(timestamp) ? 0 : timestamp;
-    };
-
-    return parseToTimestamp(installment.expenses?.purchase_date) || parseToTimestamp(installment.expenses?.created_at);
-  };
-
   const sortedSelectedCardInstallments = [...selectedCardInstallments].sort((a: any, b: any) => {
-    const registeredAtA = getExpenseRegisteredAt(a);
-    const registeredAtB = getExpenseRegisteredAt(b);
+    const createdAtA = a.expenses?.created_at || "";
+    const createdAtB = b.expenses?.created_at || "";
 
-    if (registeredAtA !== registeredAtB) {
-      return registeredAtB - registeredAtA;
-    }
-
-    return Number(b.installment_number || 0) - Number(a.installment_number || 0);
+    return createdAtB.localeCompare(createdAtA);
   });
 
   const selectedCardTotal = selectedCardInstallments.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
