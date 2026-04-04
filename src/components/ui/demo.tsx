@@ -81,7 +81,20 @@ export const Logo = () => {
       to="/"
       className="relative z-20 flex items-center space-x-1 py-1 font-serif text-xl tracking-tight text-black dark:text-white"
     >
-      <img src="/logo.png" alt="Covivo Logo" className="h-6 w-auto object-contain" />
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="whitespace-pre font-medium"
+      >
+        Co
+      </motion.span>
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="whitespace-pre font-bold text-primary"
+      >
+        vivo
+      </motion.span>
     </Link>
   );
 };
@@ -92,7 +105,9 @@ export const LogoIcon = () => {
       to="/"
       className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
     >
-      <img src="/logo.png" alt="Covivo Logo" className="h-6 w-auto object-contain" />
+      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground font-serif font-bold text-sm">
+        C
+      </div>
     </Link>
   );
 };
