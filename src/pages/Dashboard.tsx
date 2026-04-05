@@ -285,11 +285,19 @@ export default function Dashboard() {
   }, [collectivePendingPrevious]);
 
   // 2. Individual Pending (Manual + Installments)
-  const manualIndividualPending = pendingSplits.filter((s: any) => 
-    s.expenses?.expense_type === "individual" && 
-    s.expenses?.payment_method !== "credit_card" &&
-    !(s.payments || []).some((p: any) => p.status === 'pending' || p.status === 'confirmed')
-  );
+  const dbStart = format(cycleStart, "yyyy-MM-dd");
+  const dbEnd = format(cycleEnd, "yyyy-MM-dd");
+
+  const manualIndividualPending = pendingSplits.filter((s: any) => {
+    const isIndividual = s.expenses?.expense_type === "individual";
+    const isNotCreditCard = s.expenses?.payment_method !== "credit_card";
+    const hasNoPayment = !(s.payments || []).some((p: any) => p.status === 'pending' || p.status === 'confirmed');
+    
+    const pd = s.expenses?.purchase_date;
+    const isInCycle = pd ? (pd >= dbStart && pd < dbEnd) : false;
+
+    return isIndividual && isNotCreditCard && hasNoPayment && isInCycle;
+  });
 
   const installmentIndividualPending = billInstallments.filter((i: any) => 
     i.expenses?.expense_type === "individual" || i.expenses?.expense_type === "personal"
