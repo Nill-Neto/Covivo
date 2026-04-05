@@ -75,17 +75,29 @@ export function PersonalTab({
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Total Comprometido (Mês) */}
-        <Card className="border-l-4 border-l-primary bg-card shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Comprometido</CardTitle>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-              <Wallet className="h-4 w-4 text-primary" />
+        {/* Total Comprometido (Mês) - DESTAQUE */}
+        <Card className="relative overflow-hidden bg-primary text-primary-foreground shadow-lg shadow-primary/20 border-0 sm:col-span-2 lg:col-span-1">
+          {/* Efeitos decorativos de fundo */}
+          <div className="absolute -right-4 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-4 h-32 w-32 rounded-full bg-black/10 blur-2xl pointer-events-none" />
+          
+          <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+            <CardTitle className="text-xs sm:text-sm font-semibold text-primary-foreground/80 uppercase tracking-wider">
+              Total Comprometido
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background/20 backdrop-blur-sm">
+              <Wallet className="h-4 w-4 text-primary-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">R$ {totalUserExpenses.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Meu Rateio + Gastos Pessoais.</p>
+          <CardContent className="relative z-10">
+            <div className="text-3xl lg:text-4xl font-bold tracking-tight mb-3">
+              R$ {totalUserExpenses.toFixed(2)}
+            </div>
+            <div className="flex items-center">
+              <span className="text-[10px] sm:text-xs font-medium bg-background/20 text-primary-foreground px-2 py-1 rounded-md backdrop-blur-sm">
+                Meu Rateio + Gastos Pessoais
+              </span>
+            </div>
           </CardContent>
         </Card>
 
