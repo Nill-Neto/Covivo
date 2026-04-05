@@ -501,8 +501,15 @@ export function PersonalTab({
                           <Receipt className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
+                            {expense.installments > 1 && (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1 py-0 text-primary border-primary/30 font-normal leading-none shrink-0">
+                                Parc. {expense.installment_number || 1}/{expense.installments}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
                             {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM", { locale: ptBR })}
                           </p>
                         </div>
@@ -608,8 +615,15 @@ export function PersonalTab({
                           <Receipt className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
+                            {expense.installments > 1 && (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1 py-0 text-primary border-primary/30 font-normal leading-none shrink-0">
+                                Parc. 1/{expense.installments}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
                             {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM", { locale: ptBR })}
                           </p>
                         </div>

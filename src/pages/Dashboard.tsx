@@ -191,6 +191,8 @@ export default function Dashboard() {
       payment_method: "credit_card",
       expense_type: i.expenses?.expense_type,
       created_by: user?.id,
+      installment_number: i.installment_number,
+      installments: i.expenses?.installments || 1,
     }));
 
   const myPersonalExpenses = [
@@ -326,6 +328,7 @@ export default function Dashboard() {
     return map;
   }, [creditCards, billInstallments]);
 
+  // Chart data that was missing
   const cardsChartData = useMemo(() => {
     const categories: Record<string, number> = {};
     billInstallments.forEach((i: any) => {
