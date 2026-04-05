@@ -503,7 +503,7 @@ export function PersonalTab({
                         <div className="min-w-0">
                           <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
                           <p className="text-xs text-muted-foreground mt-1 truncate">
-                            {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM")}
+                            {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
@@ -598,7 +598,10 @@ export function PersonalTab({
                 {collectiveExpenses.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa coletiva registrada.</p>
                 ) : (
-                  collectiveExpenses.slice(0, 10).map(expense => (
+                  [...collectiveExpenses]
+                    .sort((a, b) => parseLocalDate(b.purchase_date).getTime() - parseLocalDate(a.purchase_date).getTime())
+                    .slice(0, 10)
+                    .map(expense => (
                     <div key={expense.id} className="flex items-center justify-between py-2.5 px-3 group hover:bg-muted/50 rounded-md transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
@@ -607,7 +610,7 @@ export function PersonalTab({
                         <div className="min-w-0">
                           <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
                           <p className="text-xs text-muted-foreground mt-1 truncate">
-                            {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM")}
+                            {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
