@@ -504,7 +504,7 @@ export function PersonalTab({
                           <div className="flex items-center gap-2 mb-1">
                             <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
                             {expense.installments > 1 && (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1 py-0 text-primary border-primary/30 font-normal leading-none shrink-0">
+                              <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
                                 Parc. {expense.installment_number || 1}/{expense.installments}
                               </Badge>
                             )}
@@ -618,7 +618,7 @@ export function PersonalTab({
                           <div className="flex items-center gap-2 mb-1">
                             <p className="text-sm font-medium leading-none truncate max-w-[120px] sm:max-w-[200px]">{expense.title}</p>
                             {expense.installments > 1 && (
-                              <Badge variant="outline" className="text-[9px] h-4 px-1 py-0 text-primary border-primary/30 font-normal leading-none shrink-0">
+                              <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
                                 Parc. 1/{expense.installments}
                               </Badge>
                             )}
