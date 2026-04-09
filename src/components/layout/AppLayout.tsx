@@ -137,9 +137,8 @@ export function AppLayout() {
   };
 
   const Logo = () => (
-    <Link to="/dashboard" onClick={handleNavItemClick} className="flex items-center gap-2">
-      <img src="/logo.png?v=3" alt="Covivo" className="h-9 md:h-10 w-auto object-contain dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
-      <span className="font-serif text-xl font-bold tracking-tight text-foreground md:text-2xl hidden sm:inline-block">Covivo</span>
+    <Link to="/dashboard" onClick={handleNavItemClick} className="flex items-center">
+      <img src="/logo.png?v=2" alt="Covivo" className="h-9 md:h-10 w-auto object-contain dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
     </Link>
   );
 
