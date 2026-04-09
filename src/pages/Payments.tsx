@@ -348,9 +348,9 @@ export default function Payments() {
                         <PopoverContent className="w-[350px] p-0" align="start">
                           <Command>
                             <CommandInput placeholder="Buscar despesa..." />
-                            <CommandList>
+                            <CommandList className="max-h-[200px] overflow-y-auto">
                               <CommandEmpty>Nenhuma despesa pendente.</CommandEmpty>
-                              <CommandGroup className="max-h-[200px] overflow-auto">
+                              <CommandGroup>
                                 {pendingSplits?.map((split: any) => (
                                   <CommandItem key={split.id} value={split.id + split.expenses?.title} onSelect={() => toggleSplitSelection(split.id)} className="cursor-pointer">
                                     <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", selectedSplitIds.includes(split.id) ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible")}>
@@ -395,6 +395,7 @@ export default function Payments() {
                       {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                       Enviar Pagamento
                     </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
