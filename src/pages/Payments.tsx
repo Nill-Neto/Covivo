@@ -395,7 +395,6 @@ export default function Payments() {
                       {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                       Enviar Pagamento
                     </Button>
-                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
