@@ -136,7 +136,7 @@ export function PersonalTab({
                   Pagar competências anteriores
                 </Button>
               )}
-              {collectivePendingPreviousByCompetence.length > 0 && (
+              {totalCollectivePendingPrevious > 0 && collectivePendingPreviousByCompetence.length > 0 && (
                 <Dialog open={isPreviousCollectiveOpen} onOpenChange={setIsPreviousCollectiveOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
@@ -235,7 +235,7 @@ export function PersonalTab({
                   Pagar competência atual
                 </Button>
               )}
-              {collectivePendingCurrent.length > 0 && (
+              {totalCollectivePendingCurrent > 0 && collectivePendingCurrent.length > 0 && (
                 <Dialog open={isCurrentCollectiveOpen} onOpenChange={setIsCurrentCollectiveOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
