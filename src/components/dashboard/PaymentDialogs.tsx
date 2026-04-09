@@ -1,8 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -117,7 +116,7 @@ export function PaymentDialogs({
                 <div className="px-4 py-2.5 bg-muted/40 border-b shrink-0">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Detalhamento</p>
                 </div>
-                <ScrollArea className="max-h-[30vh]">
+                <div className="max-h-[220px] overflow-y-auto overscroll-contain bg-background">
                   <div className="divide-y">
                     {rateioScope === "previous"
                       ? groupedPreviousEntries.map(([competence, items]) => (
@@ -138,7 +137,7 @@ export function PaymentDialogs({
                           </div>
                         ))}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
             )}
 
