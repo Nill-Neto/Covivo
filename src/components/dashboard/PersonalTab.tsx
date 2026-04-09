@@ -130,86 +130,86 @@ export function PersonalTab({
               </p>
             )}
             
-            {totalCollectivePendingPrevious > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
+              {totalCollectivePendingPrevious > 0 && (
                 <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => onPayRateio("previous")}>
                   Pagar competências anteriores
                 </Button>
-                {collectivePendingPreviousByCompetence.length > 0 && (
-                  <Dialog open={isPreviousCollectiveOpen} onOpenChange={setIsPreviousCollectiveOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
-                        <List className="h-3 w-3" /> Ver itens ({collectivePendingPreviousByCompetence.reduce((s, g) => s + g.items.length, 0)})
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
-                      <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
-                        <DialogTitle className="text-lg font-semibold text-foreground">
-                          Rateio Pendente
-                        </DialogTitle>
-                        <p className="text-sm text-muted-foreground mt-0.5">Competências anteriores ao ciclo vigente</p>
-                      </DialogHeader>
+              )}
+              {collectivePendingPreviousByCompetence.length > 0 && (
+                <Dialog open={isPreviousCollectiveOpen} onOpenChange={setIsPreviousCollectiveOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                      <List className="h-3 w-3" /> Ver itens ({collectivePendingPreviousByCompetence.reduce((s, g) => s + g.items.length, 0)})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                    <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+                      <DialogTitle className="text-lg font-semibold text-foreground">
+                        Rateio Pendente
+                      </DialogTitle>
+                      <p className="text-sm text-muted-foreground mt-0.5">Competências anteriores ao ciclo vigente</p>
+                    </DialogHeader>
 
-                      <div className="mx-5 mb-4 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 flex items-center justify-between">
-                        <span className="text-sm font-medium text-foreground">Total pendente</span>
-                        <span className="text-lg font-bold text-destructive tabular-nums">
-                          R$ {totalCollectivePendingPrevious.toFixed(2)}
-                        </span>
-                      </div>
+                    <div className="mx-5 mb-4 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Total pendente</span>
+                      <span className="text-lg font-bold text-destructive tabular-nums">
+                        R$ {totalCollectivePendingPrevious.toFixed(2)}
+                      </span>
+                    </div>
 
-                      <div className="border-t">
-                        <div className="overflow-y-auto max-h-[50vh]">
-                          <div className="divide-y">
-                            {collectivePendingPreviousByCompetence.map((group) => (
-                              <div key={group.competence} className="px-5 py-4 space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                  <p className="text-sm font-semibold text-foreground">
-                                    Competência {group.competence}
-                                  </p>
-                                  <Badge variant="secondary" className="font-semibold text-xs">
-                                    R$ {group.total.toFixed(2)}
-                                  </Badge>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                  {group.items.map((item) => (
-                                    <div key={item.id} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
-                                      <div className="min-w-0 pr-4">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <p className="text-sm font-medium truncate text-foreground">
-                                            {item.expenses?.title || "Despesa sem título"}
-                                          </p>
-                                          {item.expenses?.installments > 1 && (
-                                            <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
-                                              Parc. {item.installment_number || 1}/{item.expenses.installments}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal">
-                                            {getCategoryLabel(item.expenses?.category)}
-                                          </Badge>
-                                          <span className="text-xs text-muted-foreground">
-                                            {item.expenses?.purchase_date ? format(parseLocalDate(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-foreground">
-                                        R$ {Number(item.amount).toFixed(2)}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
+                    <div className="border-t">
+                      <div className="overflow-y-auto max-h-[50vh]">
+                        <div className="divide-y">
+                          {collectivePendingPreviousByCompetence.map((group) => (
+                            <div key={group.competence} className="px-5 py-4 space-y-2.5">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-semibold text-foreground">
+                                  Competência {group.competence}
+                                </p>
+                                <Badge variant="secondary" className="font-semibold text-xs">
+                                  R$ {group.total.toFixed(2)}
+                                </Badge>
                               </div>
-                            ))}
-                          </div>
+
+                              <div className="space-y-1.5">
+                                {group.items.map((item) => (
+                                  <div key={item.id} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
+                                    <div className="min-w-0 pr-4">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <p className="text-sm font-medium truncate text-foreground">
+                                          {item.expenses?.title || "Despesa sem título"}
+                                        </p>
+                                        {item.expenses?.installments > 1 && (
+                                          <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
+                                            Parc. {item.installment_number || 1}/{item.expenses.installments}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal">
+                                          {getCategoryLabel(item.expenses?.category)}
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {item.expenses?.purchase_date ? format(parseLocalDate(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-foreground">
+                                      R$ {Number(item.amount).toFixed(2)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
-            )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -229,71 +229,71 @@ export function PersonalTab({
             </div>
             <p className="text-xs text-muted-foreground mt-1">Somente itens da competência vigente.</p>
             
-            {totalCollectivePendingCurrent > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
+              {totalCollectivePendingCurrent > 0 && (
                 <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => onPayRateio("current")}>
                   Pagar competência atual
                 </Button>
-                {collectivePendingCurrent.length > 0 && (
-                  <Dialog open={isCurrentCollectiveOpen} onOpenChange={setIsCurrentCollectiveOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
-                        <List className="h-3 w-3" /> Ver itens ({collectivePendingCurrent.length})
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
-                      <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
-                        <DialogTitle className="text-lg font-semibold text-foreground">
-                          Rateio em Aberto
-                        </DialogTitle>
-                        <p className="text-sm text-muted-foreground mt-0.5">Competência vigente</p>
-                      </DialogHeader>
+              )}
+              {collectivePendingCurrent.length > 0 && (
+                <Dialog open={isCurrentCollectiveOpen} onOpenChange={setIsCurrentCollectiveOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                      <List className="h-3 w-3" /> Ver itens ({collectivePendingCurrent.length})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+                    <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+                      <DialogTitle className="text-lg font-semibold text-foreground">
+                        Rateio em Aberto
+                      </DialogTitle>
+                      <p className="text-sm text-muted-foreground mt-0.5">Competência vigente</p>
+                    </DialogHeader>
 
-                      <div className="mx-5 mb-4 rounded-lg bg-warning/10 border border-warning/20 px-4 py-3 flex items-center justify-between">
-                        <span className="text-sm font-medium text-foreground">Total em aberto</span>
-                        <span className="text-lg font-bold text-warning tabular-nums">
-                          R$ {totalCollectivePendingCurrent.toFixed(2)}
-                        </span>
-                      </div>
+                    <div className="mx-5 mb-4 rounded-lg bg-warning/10 border border-warning/20 px-4 py-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Total em aberto</span>
+                      <span className="text-lg font-bold text-warning tabular-nums">
+                        R$ {totalCollectivePendingCurrent.toFixed(2)}
+                      </span>
+                    </div>
 
-                      <div className="border-t">
-                        <div className="overflow-y-auto max-h-[50vh]">
-                          <div className="divide-y">
-                            {collectivePendingCurrent.map((item) => (
-                              <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                                <div className="min-w-0 pr-4">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-sm font-medium truncate text-foreground">
-                                      {item.expenses?.title || "Despesa sem título"}
-                                    </p>
-                                    {item.expenses?.installments > 1 && (
-                                      <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
-                                        Parc. {item.installment_number || 1}/{item.expenses.installments}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal">
-                                      {getCategoryLabel(item.expenses?.category)}
+                    <div className="border-t">
+                      <div className="overflow-y-auto max-h-[50vh]">
+                        <div className="divide-y">
+                          {collectivePendingCurrent.map((item) => (
+                            <div key={item.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                              <div className="min-w-0 pr-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-sm font-medium truncate text-foreground">
+                                    {item.expenses?.title || "Despesa sem título"}
+                                  </p>
+                                  {item.expenses?.installments > 1 && (
+                                    <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
+                                      Parc. {item.installment_number || 1}/{item.expenses.installments}
                                     </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {item.expenses?.purchase_date ? format(parseLocalDate(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
-                                    </span>
-                                  </div>
+                                  )}
                                 </div>
-                                <span className="font-semibold text-sm tabular-nums whitespace-nowrap text-foreground">
-                                  R$ {Number(item.amount).toFixed(2)}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal">
+                                    {getCategoryLabel(item.expenses?.category)}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {item.expenses?.purchase_date ? format(parseLocalDate(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
+                                  </span>
+                                </div>
                               </div>
-                            ))}
-                          </div>
+                              <span className="font-semibold text-sm tabular-nums whitespace-nowrap text-foreground">
+                                R$ {Number(item.amount).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
-            )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </CardContent>
         </Card>
 
