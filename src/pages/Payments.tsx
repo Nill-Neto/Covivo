@@ -42,6 +42,7 @@ export default function Payments() {
   
   const [selectedSplitIds, setSelectedSplitIds] = useState<string[]>([]);
   const [amount, setAmount] = useState("");
+  const [amountTouched, setAmountTouched] = useState(false);
   const [notes, setNotes] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -166,19 +167,20 @@ export default function Payments() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
-  // Effect: Update total amount when selection changes
+  // Effect: Prefill amount with selected total until user manually edits it
   useEffect(() => {
     if (!pendingSplits) return;
     const total = pendingSplits
       .filter((s) => selectedSplitIds.includes(s.id))
       .reduce((sum, s) => sum + Number(s.amount), 0);
     
-    if (selectedSplitIds.length > 0) {
+    if (selectedSplitIds.length > 0 && !amountTouched) {
       setAmount(total.toFixed(2));
-    } else {
+    } else if (selectedSplitIds.length === 0) {
       setAmount("");
+      setAmountTouched(false);
     }
-  }, [selectedSplitIds, pendingSplits]);
+  }, [selectedSplitIds, pendingSplits, amountTouched]);
 
   const toggleSplitSelection = (id: string) => {
     setSelectedSplitIds((prev) =>
@@ -198,6 +200,19 @@ export default function Payments() {
 
     setSaving(true);
     try {
+      const paidAmount = Number(amount);
+      const selectedSplits = (pendingSplits ?? []).filter((s) => selectedSplitIds.includes(s.id));
+      const selectedTotal = selectedSplits.reduce((sum, s) => sum + Number(s.amount), 0);
+
+      if (paidAmount < selectedTotal) {
+        toast({
+          title: "Valor insuficiente",
+          description: `O valor informado deve cobrir o total selecionado (R$ ${selectedTotal.toFixed(2)}).`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // 1. Upload receipt once
       const ext = receiptFile.name.split(".").pop();
       const path = `${user!.id}/${Date.now()}.${ext}`;
@@ -206,30 +221,43 @@ export default function Payments() {
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
 
       // 2. Insert payment records (one per split)
-      const paymentsToInsert = selectedSplitIds.map((splitId) => {
-        const split = pendingSplits?.find(s => s.id === splitId);
-        const splitAmount = split ? Number(split.amount) : 0;
-        
-        return {
+      const paymentsToInsert = selectedSplits.map((split) => ({
           group_id: membership!.group_id,
-          expense_split_id: splitId,
+          expense_split_id: split.id,
           paid_by: user!.id,
-          amount: splitAmount,
+          amount: Number(split.amount),
           receipt_url: urlData.publicUrl,
           notes: notes.trim() || (selectedSplitIds.length > 1 ? "Pagamento em lote" : null),
-        };
-      });
+        }));
+
+      const creditAmount = paidAmount - selectedTotal;
+      if (creditAmount > 0) {
+        paymentsToInsert.push({
+          group_id: membership!.group_id,
+          expense_split_id: null,
+          paid_by: user!.id,
+          amount: Number(creditAmount.toFixed(2)),
+          receipt_url: urlData.publicUrl,
+          notes: notes.trim() || "Crédito por pagamento acima do total devido",
+        });
+      }
 
       const { error } = await supabase.from("payments").insert(paymentsToInsert);
       if (error) throw error;
 
-      toast({ title: "Pagamento enviado!", description: "Aguardando confirmação do administrador." });
+      toast({
+        title: "Pagamento enviado!",
+        description: creditAmount > 0
+          ? `Aguardando confirmação. Excedente de R$ ${creditAmount.toFixed(2)} será lançado como crédito.`
+          : "Aguardando confirmação do administrador.",
+      });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["my-pending-splits"] });
       
       setOpen(false);
       setSelectedSplitIds([]);
       setAmount("");
+      setAmountTouched(false);
       setNotes("");
       setReceiptFile(null);
     } catch (err: any) {
@@ -286,65 +314,94 @@ export default function Payments() {
             </div>
 
             {!isAdmin && (pendingSplits?.length ?? 0) > 0 && (
-              <Dialog open={open} onOpenChange={setOpen}>
+              <Dialog
+                open={open}
+                onOpenChange={(nextOpen) => {
+                  setOpen(nextOpen);
+                  if (!nextOpen) {
+                    setSelectedSplitIds([]);
+                    setAmount("");
+                    setAmountTouched(false);
+                    setNotes("");
+                    setReceiptFile(null);
+                    setComboboxOpen(false);
+                  }
+                }}
+              >
                 <DialogTrigger asChild>
                   <Button className="h-10 w-full gap-2 sm:w-auto"><Plus className="h-4 w-4" /> Enviar Pagamento</Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md overflow-visible">
-                  <DialogHeader>
-                    <DialogTitle className="font-serif">Enviar Comprovante</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-2">
-                    <div className="space-y-2">
-                      <Label>Despesas ({selectedSplitIds.length})</Label>
-                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between font-normal">
-                            {selectedSplitIds.length > 0 ? `${selectedSplitIds.length} item(ns) selecionado(s)` : "Selecione as despesas..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[350px] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Buscar despesa..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhuma despesa pendente.</CommandEmpty>
-                              <CommandGroup className="max-h-[200px] overflow-auto">
-                                {pendingSplits?.map((split: any) => (
-                                  <CommandItem key={split.id} value={split.id + split.expenses?.title} onSelect={() => toggleSplitSelection(split.id)} className="cursor-pointer">
-                                    <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", selectedSplitIds.includes(split.id) ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible")}>
-                                      <Check className={cn("h-4 w-4")} />
-                                    </div>
-                                    <div className="flex flex-1 justify-between items-center gap-2 overflow-hidden">
-                                      <span className="truncate">{split.expenses?.title}</span>
-                                      <span className="text-muted-foreground whitespace-nowrap">R$ {Number(split.amount).toFixed(2)}</span>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                <DialogContent className="max-w-md p-0 overflow-hidden">
+                  <div className="max-h-[85vh] overflow-y-auto p-6">
+                    <DialogHeader>
+                      <DialogTitle className="font-serif">Enviar Comprovante</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-2">
+                        <Label>Despesas ({selectedSplitIds.length})</Label>
+                        <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between font-normal">
+                              {selectedSplitIds.length > 0 ? `${selectedSplitIds.length} item(ns) selecionado(s)` : "Selecione as despesas..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[350px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Buscar despesa..." />
+                              <CommandList className="max-h-[200px] overflow-y-auto">
+                                <CommandEmpty>Nenhuma despesa pendente.</CommandEmpty>
+                                <CommandGroup>
+                                  {pendingSplits?.map((split: any) => (
+                                    <CommandItem key={split.id} value={split.id + split.expenses?.title} onSelect={() => toggleSplitSelection(split.id)} className="cursor-pointer">
+                                      <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", selectedSplitIds.includes(split.id) ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible")}>
+                                        <Check className={cn("h-4 w-4")} />
+                                      </div>
+                                      <div className="flex flex-1 justify-between items-center gap-2 overflow-hidden">
+                                        <span className="truncate">{split.expenses?.title}</span>
+                                        <span className="text-muted-foreground whitespace-nowrap">R$ {Number(split.amount).toFixed(2)}</span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Valor Total (R$)</Label>
+                        <Input
+                          type="number"
+                          value={amount}
+                          onChange={(e) => {
+                            setAmountTouched(true);
+                            setAmount(e.target.value);
+                          }}
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Valor livre. Se exceder o total das despesas selecionadas, o excedente vira crédito.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Comprovante *</Label>
+                        <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
+                        <p className="text-xs text-muted-foreground">Foto ou PDF do comprovante de pagamento</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Observações (opcional)</Label>
+                        <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: Pix enviado às 14h" />
+                      </div>
+
+                      <Button onClick={handleSubmitPayment} disabled={saving} className="w-full">
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                        Enviar Pagamento
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Valor Total (R$)</Label>
-                      <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={selectedSplitIds.length > 1} className={selectedSplitIds.length > 1 ? "bg-muted font-bold" : ""} />
-                      {selectedSplitIds.length > 1 && <p className="text-[10px] text-muted-foreground">Soma automática das despesas selecionadas.</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Comprovante *</Label>
-                      <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} />
-                      <p className="text-xs text-muted-foreground">Foto ou PDF do comprovante de pagamento</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Observações (opcional)</Label>
-                      <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: Pix enviado às 14h" />
-                    </div>
-                    <Button onClick={handleSubmitPayment} disabled={saving} className="w-full">
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                      Enviar Pagamento
-                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
