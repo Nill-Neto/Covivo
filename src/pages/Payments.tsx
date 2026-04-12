@@ -613,17 +613,17 @@ export default function Payments() {
                         accept="image/*,.pdf"
                         capture={isMobile ? "environment" : undefined}
                         onChange={(e) => handleReceiptInputChange(e.target.files?.[0] ?? null)}
-                        className={isNativeRuntime ? "hidden" : undefined}
-                        tabIndex={isNativeRuntime ? -1 : undefined}
-                        aria-hidden={isNativeRuntime}
                       />
                       {isNativeRuntime && (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <Button type="button" variant="outline" onClick={() => pickReceiptNative("camera")}>
                             Tirar foto
                           </Button>
                           <Button type="button" variant="outline" onClick={() => pickReceiptNative("photos")}>
                             Galeria/Arquivos
+                          </Button>
+                          <Button type="button" variant="outline" onClick={fallbackToWebFilePicker}>
+                            Selecionar arquivo
                           </Button>
                         </div>
                       )}

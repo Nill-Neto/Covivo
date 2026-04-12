@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +35,8 @@ export default function Dashboard() {
   const [rateioCurrentAmount, setRateioCurrentAmount] = useState("");
   const [activeTab, setActiveTab] = useState("home");
   const [heroCompact, setHeroCompact] = useState(false);
+  const restoredDraftKeyRef = useRef<string | null>(null);
+  const restoredSelectedSplitIdRef = useRef<string | null>(null);
   const dashboardDraftKey = user?.id && membership?.group_id
     ? `dashboard-payment-draft:${membership.group_id}:${user.id}`
     : null;
@@ -431,7 +433,9 @@ export default function Dashboard() {
   const tabListClass = "w-full justify-start overflow-x-auto bg-muted/50 rounded-lg p-1 h-auto gap-1";
 
   useEffect(() => {
-    if (!dashboardDraftKey) return;
+    if (!dashboardDraftKey || restoredDraftKeyRef.current === dashboardDraftKey) return;
+    restoredDraftKeyRef.current = dashboardDraftKey;
+
     const raw = window.sessionStorage.getItem(dashboardDraftKey);
     if (!raw) return;
 
@@ -454,8 +458,7 @@ export default function Dashboard() {
         setRateioCurrentAmount(parsed.rateioCurrentAmount);
       }
       if (parsed.selectedIndividualSplitId) {
-        const split = individualPending.find((item: any) => item.id === parsed.selectedIndividualSplitId) ?? null;
-        setSelectedIndividualSplit(split);
+        restoredSelectedSplitIdRef.current = parsed.selectedIndividualSplitId;
       }
       if (parsed.receiptMetadata && typeof parsed.receiptMetadata.name === "string") {
         setReceiptMetadata(parsed.receiptMetadata);
@@ -463,7 +466,18 @@ export default function Dashboard() {
     } catch {
       window.sessionStorage.removeItem(dashboardDraftKey);
     }
-  }, [dashboardDraftKey, individualPending]);
+  }, [dashboardDraftKey]);
+
+  useEffect(() => {
+    const restoredSplitId = restoredSelectedSplitIdRef.current;
+    if (!restoredSplitId || selectedIndividualSplit) return;
+
+    const restoredSplit = individualPending.find((item: any) => item.id === restoredSplitId) ?? null;
+    if (!restoredSplit) return;
+
+    setSelectedIndividualSplit(restoredSplit);
+    restoredSelectedSplitIdRef.current = null;
+  }, [individualPending, selectedIndividualSplit]);
 
   useEffect(() => {
     if (!dashboardDraftKey) return;
