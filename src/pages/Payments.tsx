@@ -612,6 +612,7 @@ export default function Payments() {
                         type="file"
                         accept="image/*,.pdf"
                         capture={isMobile ? "environment" : undefined}
+                        className={isNativeRuntime ? "hidden" : undefined}
                         onChange={(e) => handleReceiptInputChange(e.target.files?.[0] ?? null)}
                       />
                       {isNativeRuntime && (
