@@ -62,9 +62,7 @@ export default function Admin() {
           .from("expense_splits")
           .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date)")
           .eq("expenses.group_id", membership.group_id)
-          .eq("expenses.expense_type", "collective")
-          .gte("expenses.purchase_date", dbStart)
-          .lt("expenses.purchase_date", dbEnd),
+          .eq("expenses.expense_type", "collective"),
         supabase.from("payments")
           .select("id, paid_by, amount, expense_split_id, status, notes, created_at, expense_splits(expenses(expense_type))")
           .eq("group_id", membership.group_id)
@@ -82,40 +80,34 @@ export default function Admin() {
           .eq("group_id", membership.group_id)
       ]);
 
-      const cycleSplits = cycleSplitsRes.data || [];
-      const allPayments = allPaymentsRes.data || [];
-      const cycleLabel = format(currentDate, "MMMM/yyyy", { locale: ptBR });
+      const allSplits = cycleSplitsRes.data || [];
       const cycleStartMs = cycleStart.getTime();
       const cycleEndMs = cycleEnd.getTime();
+      
+      const cycleSplits = allSplits.filter(s => {
+        const pd = new Date(s.expenses?.purchase_date || 0).getTime();
+        return pd >= cycleStartMs && pd < cycleEndMs;
+      });
+      const allPayments = allPaymentsRes.data || [];
+      const cycleLabel = format(currentDate, "MMMM/yyyy", { locale: ptBR });
 
       const cycleBalances = (membersRes.data || []).map(m => {
-        const userSplits = cycleSplits.filter(s => s.user_id === m.user_id);
-        const totalOwed = userSplits.reduce((acc, s) => acc + Number(s.amount), 0);
+        // Calculate Global Balance
+        const userAllSplits = allSplits.filter(s => s.user_id === m.user_id);
+        const globalOwed = userAllSplits.reduce((acc, s) => acc + Number(s.amount), 0);
         
-        const linkedPayments = allPayments.filter(p => 
-          p.paid_by === m.user_id && 
-          p.expense_split_id && 
-          userSplits.some(s => s.id === p.expense_split_id)
-        );
-        
-        const bulkPayments = allPayments.filter(p => 
-          p.paid_by === m.user_id && 
-          !p.expense_split_id &&
-          (
-            (p.notes && p.notes.includes(cycleLabel)) || 
-            (!p.notes && new Date(p.created_at).getTime() >= cycleStartMs && new Date(p.created_at).getTime() <= cycleEndMs + (10 * 86400000))
-          )
-        );
-        
-        const totalPaid = [...linkedPayments, ...bulkPayments].reduce((acc, p) => acc + Number(p.amount), 0);
-        const paidSplitsTotal = userSplits.reduce((acc, s) => acc + (s.status === 'paid' ? Number(s.amount) : 0), 0);
-        const finalPaid = Math.max(totalPaid, paidSplitsTotal);
+        const globalPaid = allPayments
+          .filter(p => p.paid_by === m.user_id)
+          .reduce((acc, p) => acc + Number(p.amount), 0);
+          
+        const paidSplitsTotalGlobal = userAllSplits.reduce((acc, s) => acc + (s.status === 'paid' ? Number(s.amount) : 0), 0);
+        const finalGlobalPaid = Math.max(globalPaid, paidSplitsTotalGlobal);
 
         return {
            ...m,
-           total_owed: totalOwed,
-           total_paid: finalPaid,
-           balance: finalPaid - totalOwed
+           total_owed: globalOwed,
+           total_paid: finalGlobalPaid,
+           balance: finalGlobalPaid - globalOwed
         };
       });
 

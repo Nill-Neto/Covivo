@@ -299,14 +299,14 @@ export function AdminTab({
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4" /> Resumo da Competência
+                <Users className="h-4 w-4" /> Resumo Financeiro (Global)
               </CardTitle>
               <Badge variant="outline" className="text-xs font-normal">
                 {members.length} ativo{members.length !== 1 ? "s" : ""}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Saldo restrito à competência atual ({format(currentDate, "MMM/yyyy", { locale: ptBR })}) · Clique no morador para detalhes
+              Saldo acumulado de todas as competências · Clique no morador para ver os rateios deste ciclo
             </p>
           </CardHeader>
           <CardContent className="p-0">
@@ -359,7 +359,7 @@ export function AdminTab({
                         </span>
                       )}
                       <p className="text-[11px] text-muted-foreground tabular-nums">
-                        Rateio (Ciclo): R$ {member.total_owed.toFixed(2)}
+                        Dívida Total: R$ {member.total_owed.toFixed(2)}
                       </p>
                     </div>
                   </div>
