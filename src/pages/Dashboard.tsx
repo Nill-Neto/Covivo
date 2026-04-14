@@ -399,10 +399,15 @@ export default function Dashboard() {
     setSaving(true);
     try {
       const parsedCurrentAmount = Number(rateioCurrentAmount.replace(",", "."));
-      const amount = scope === "previous" ? totalCollectivePendingPrevious : parsedCurrentAmount;
+      const amount = parsedCurrentAmount;
 
       if (!Number.isFinite(amount) || amount <= 0) {
         toast({ title: "Valor inválido", description: "Informe um valor maior que zero.", variant: "destructive" });
+        return;
+      }
+      
+      if (scope === "previous" && amount > totalCollectivePendingPrevious + 0.01) {
+        toast({ title: "Valor inválido", description: `O valor não pode ser maior que o total pendente (R$ ${totalCollectivePendingPrevious.toFixed(2)}).`, variant: "destructive" });
         return;
       }
 
@@ -411,12 +416,21 @@ export default function Dashboard() {
       await supabase.storage.from("receipts").upload(path, receiptFile);
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
 
+      let paymentDate = new Date().toISOString();
+      if (scope === "previous") {
+        // Backdate the payment so it falls into the previous competence
+        // Using cycleStart minus 1 hour ensures it falls in the preceding cycle
+        const previousCycleDate = new Date(cycleStart.getTime() - 60 * 60 * 1000);
+        paymentDate = previousCycleDate.toISOString();
+      }
+
       await supabase.from("payments").insert({
         group_id: membership!.group_id,
         expense_split_id: null,
         paid_by: user!.id,
         amount,
         receipt_url: urlData.publicUrl,
+        created_at: paymentDate,
         notes: scope === "previous"
           ? `Pagamento de Rateio - competências anteriores (${format(currentDate, "MMMM/yyyy", { locale: ptBR })})`
           : `Pagamento de Rateio - competência atual (${format(currentDate, "MMMM/yyyy", { locale: ptBR })})`
@@ -539,7 +553,7 @@ export default function Dashboard() {
               if (scope === "current") {
                 setRateioCurrentAmount(totalCollectivePendingCurrent.toFixed(2));
               } else {
-                setRateioCurrentAmount("");
+                setRateioCurrentAmount(totalCollectivePendingPrevious.toFixed(2));
               }
               setPayRateioOpen(true);
             }}

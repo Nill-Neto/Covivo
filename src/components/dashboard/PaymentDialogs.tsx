@@ -152,24 +152,26 @@ export function PaymentDialogs({
               </div>
             )}
 
-            {rateioScope === "current" && (
-              <div className="space-y-2 shrink-0">
-                <Label htmlFor="current-rateio-amount" className="text-sm font-medium">Valor pago (R$) *</Label>
-                <Input
-                  id="current-rateio-amount"
-                  type="number"
-                  min={0.01}
-                  step="0.01"
-                  inputMode="decimal"
-                  value={rateioCurrentAmount}
-                  onChange={(e) => setRateioCurrentAmount(e.target.value)}
-                  placeholder="0,00"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Você pode informar qualquer valor acima de zero. Se pagar a mais, o excedente vira crédito.
-                </p>
-              </div>
-            )}
+            <div className="space-y-2 shrink-0">
+              <Label htmlFor="rateio-amount" className="text-sm font-medium">Valor pago (R$) *</Label>
+              <Input
+                id="rateio-amount"
+                type="number"
+                min={0.01}
+                step="0.01"
+                max={rateioScope === "previous" ? selectedScopeData.total : undefined}
+                inputMode="decimal"
+                value={rateioCurrentAmount}
+                onChange={(e) => setRateioCurrentAmount(e.target.value)}
+                placeholder="0,00"
+              />
+              <p className="text-xs text-muted-foreground">
+                {rateioScope === "previous"
+                  ? "Você pode fazer um pagamento parcial ou integral das pendências anteriores."
+                  : "Você pode informar qualquer valor acima de zero. Se pagar a mais, o excedente vira crédito."}
+              </p>
+            </div>
+
             <div className="space-y-2 shrink-0">
               <Label className="text-sm font-medium">Comprovante *</Label>
               <Input type="file" accept="image/*,.pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)} className="cursor-pointer" />
@@ -181,7 +183,7 @@ export function PaymentDialogs({
               <Button variant="outline" onClick={() => setPayRateioOpen(false)}>Cancelar</Button>
               <Button
                 onClick={() => onPayRateio(rateioScope)}
-                disabled={saving || !receiptFile || (rateioScope === "current" && !rateioCurrentAmount)}
+                disabled={saving || !receiptFile || !rateioCurrentAmount}
               >
                 {saving && <CustomLoader className="h-4 w-4 mr-2" />} Enviar Comprovante
               </Button>
