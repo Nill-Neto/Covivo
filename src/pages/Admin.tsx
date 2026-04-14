@@ -62,7 +62,9 @@ export default function Admin() {
           .from("expense_splits")
           .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date)")
           .eq("expenses.group_id", membership.group_id)
-          .eq("expenses.expense_type", "collective"),
+          .eq("expenses.expense_type", "collective")
+          .gte("expenses.purchase_date", dbStart)
+          .lt("expenses.purchase_date", dbEnd),
         supabase.from("payments")
           .select("id, paid_by, amount, expense_split_id, status, notes, created_at, expense_splits(expenses(expense_type))")
           .eq("group_id", membership.group_id)
@@ -80,14 +82,9 @@ export default function Admin() {
           .eq("group_id", membership.group_id)
       ]);
 
-      const allSplits = cycleSplitsRes.data || [];
+      const cycleSplits = cycleSplitsRes.data || [];
       const cycleStartMs = cycleStart.getTime();
       const cycleEndMs = cycleEnd.getTime();
-      
-      const cycleSplits = allSplits.filter(s => {
-        const pd = new Date(s.expenses?.purchase_date || 0).getTime();
-        return pd >= cycleStartMs && pd < cycleEndMs;
-      });
       const allPayments = allPaymentsRes.data || [];
       const cycleLabel = format(currentDate, "MMMM/yyyy", { locale: ptBR });
 
