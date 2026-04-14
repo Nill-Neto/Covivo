@@ -486,22 +486,41 @@ export function AdminTab({
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader className="px-5 pt-5 pb-4 shrink-0 border-b">
             <DialogTitle className="text-lg font-semibold text-foreground">
-              Detalhamento da Competência
+              Resumo Financeiro
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-0.5 capitalize">
-              {selectedMember?.profile?.full_name} • {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
+              {selectedMember?.profile?.full_name}
             </p>
           </DialogHeader>
 
-          <div className="px-5 py-3 bg-muted/10 grid grid-cols-2 gap-4 border-b shrink-0">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Rateado</p>
-              <p className="text-sm font-semibold tabular-nums">R$ {selectedMember?.total_owed?.toFixed(2) || "0.00"}</p>
+          <div className="px-5 py-4 space-y-4 shrink-0 border-b bg-muted/5">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Balanço Geral (Todas as competências)
+            </h4>
+            <div className="grid grid-cols-2 gap-4 bg-background p-3 rounded-md border border-border/50">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Total Rateado</p>
+                <p className="font-semibold text-foreground tabular-nums">R$ {selectedMember?.total_owed?.toFixed(2) || "0.00"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Total Pago</p>
+                <p className="font-semibold text-success tabular-nums">R$ {selectedMember?.total_paid?.toFixed(2) || "0.00"}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Pago</p>
-              <p className="text-sm font-semibold tabular-nums text-success">R$ {selectedMember?.total_paid?.toFixed(2) || "0.00"}</p>
+            
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-md border border-border/50">
+              <span className="text-sm font-medium text-foreground">Saldo Pendente Atual</span>
+              <span className={`text-base font-bold ${(selectedMember?.balance || 0) < 0 ? "text-destructive" : "text-success"}`}>
+                R$ {Math.abs(selectedMember?.balance || 0).toFixed(2)}
+                {(selectedMember?.balance || 0) >= 0 ? " (Crédito)" : ""}
+              </span>
             </div>
+          </div>
+
+          <div className="px-5 py-3 border-b bg-background shrink-0">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Despesas do Ciclo Atual ({format(currentDate, "MMM/yyyy", { locale: ptBR })})
+            </h4>
           </div>
 
           <div className="flex-1 overflow-y-auto bg-muted/5">
@@ -553,7 +572,7 @@ export function AdminTab({
           
           <div className="px-5 py-4 bg-muted/20 border-t shrink-0 flex justify-between items-center shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
             <span className="text-sm font-medium text-muted-foreground">Saldo Pendente Atual</span>
-            <span className="text-lg font-bold text-destructive tabular-nums">
+            <span className={`text-lg font-bold ${(selectedMember?.balance || 0) < 0 ? "text-destructive" : "text-success"}`}>
               R$ {Math.abs(selectedMember?.balance || 0).toFixed(2)}
             </span>
           </div>
