@@ -399,6 +399,9 @@ export default function Payments() {
       });
 
       const paidAmount = Number(amount);
+      const competenceYear = currentDate.getFullYear();
+      const competenceMonth = currentDate.getMonth() + 1;
+      const competenceKey = `${competenceYear}-${String(competenceMonth).padStart(2, "0")}`;
       const selectedSplits = (pendingSplits ?? []).filter((s) => selectedSplitIds.includes(s.id));
       const selectedTotal = selectedSplits.reduce((sum, s) => sum + Number(s.amount), 0);
 
@@ -427,6 +430,9 @@ export default function Payments() {
           amount: Number(split.amount),
           receipt_url: urlData.publicUrl,
           notes: notes.trim() || (selectedSplitIds.length > 1 ? "Pagamento em lote" : null),
+          competence_year: competenceYear,
+          competence_month: competenceMonth,
+          competence_key: competenceKey,
         }));
 
       const creditAmount = paidAmount - selectedTotal;
@@ -439,6 +445,9 @@ export default function Payments() {
           amount: Number(creditAmount.toFixed(2)),
           receipt_url: urlData.publicUrl,
           notes: notes.trim() || "Crédito por pagamento acima do total devido",
+          competence_year: competenceYear,
+          competence_month: competenceMonth,
+          competence_key: competenceKey,
         });
       }
 

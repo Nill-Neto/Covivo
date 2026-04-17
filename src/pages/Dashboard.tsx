@@ -410,6 +410,9 @@ export default function Dashboard() {
       const path = `${user!.id}/${Date.now()}_rateio.${ext}`;
       await supabase.storage.from("receipts").upload(path, receiptFile);
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
+      const competenceYear = currentDate.getFullYear();
+      const competenceMonth = currentDate.getMonth() + 1;
+      const competenceKey = `${competenceYear}-${String(competenceMonth).padStart(2, "0")}`;
 
       await supabase.from("payments").insert({
         group_id: membership!.group_id,
@@ -418,6 +421,9 @@ export default function Dashboard() {
         competence_key: getCompetenceKeyFromDate(new Date(), closingDay),
         amount,
         receipt_url: urlData.publicUrl,
+        competence_year: competenceYear,
+        competence_month: competenceMonth,
+        competence_key: competenceKey,
         notes: scope === "previous"
           ? `Pagamento de Rateio - competências anteriores (${format(currentDate, "MMMM/yyyy", { locale: ptBR })})`
           : `Pagamento de Rateio - competência atual (${format(currentDate, "MMMM/yyyy", { locale: ptBR })})`
@@ -444,6 +450,9 @@ export default function Dashboard() {
       const path = `${user!.id}/${Date.now()}_indiv.${ext}`;
       await supabase.storage.from("receipts").upload(path, receiptFile);
       const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
+      const competenceYear = currentDate.getFullYear();
+      const competenceMonth = currentDate.getMonth() + 1;
+      const competenceKey = `${competenceYear}-${String(competenceMonth).padStart(2, "0")}`;
 
       await supabase.from("payments").insert({
         group_id: membership!.group_id,
@@ -452,6 +461,9 @@ export default function Dashboard() {
         competence_key: getCompetenceKeyFromDate(new Date(), closingDay),
         amount: Number(selectedIndividualSplit.amount),
         receipt_url: urlData.publicUrl,
+        competence_year: competenceYear,
+        competence_month: competenceMonth,
+        competence_key: competenceKey,
         notes: `Pagamento individual: ${selectedIndividualSplit.expenses?.title}`
       });
 
