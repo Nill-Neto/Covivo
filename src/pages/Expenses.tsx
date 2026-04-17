@@ -997,15 +997,11 @@ export default function Expenses() {
                     {editingType === "expense" && editingId && (
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground">Competência</Label>
-                        <div className="relative">
-                          <Input
-                            type="month"
-                            value={editCompetence}
-                            onChange={(e) => setEditCompetence(e.target.value)}
-                            className="pr-10 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                          />
-                          <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        </div>
+                        <Input
+                          type="month"
+                          value={editCompetence}
+                          onChange={(e) => setEditCompetence(e.target.value)}
+                        />
                       </div>
                     )}
 
