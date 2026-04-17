@@ -61,9 +61,11 @@ export default function Admin() {
           .eq("expenses.competence_year", selectedCompetenceYear)
           .eq("expenses.competence_month", selectedCompetenceMonth),
         supabase.from("payments")
-          .select("id, paid_by, amount, expense_split_id, status, notes, created_at, competence_year, competence_month, competence_key, expense_splits(expenses(expense_type))")
+          .select("id, paid_by, amount, expense_split_id, status, notes, created_at, competence_date, expense_splits(expenses(expense_type))")
           .eq("group_id", membership.group_id)
-          .in("status", ["pending", "confirmed"]),
+          .in("status", ["pending", "confirmed"])
+          .gte("competence_date", dbStart)
+          .lt("competence_date", dbEnd),
         supabase
           .from("audit_log")
           .select("created_at, details")
@@ -79,6 +81,7 @@ export default function Admin() {
 
       const cycleSplits = cycleSplitsRes.data || [];
       const allPayments = allPaymentsRes.data || [];
+      const cycleLabel = format(currentDate, "MMMM/yyyy", { locale: ptBR });
 
       const cycleBalances = (membersRes.data || []).map(m => {
         const userSplits = cycleSplits.filter(s => s.user_id === m.user_id);
@@ -90,13 +93,10 @@ export default function Admin() {
           userSplits.some(s => s.id === p.expense_split_id)
         );
         
-        const bulkPayments = allPayments.filter(p => 
-          p.paid_by === m.user_id && 
+        const bulkPayments = allPayments.filter(p =>
+          p.paid_by === m.user_id &&
           !p.expense_split_id &&
-          (
-            (p.competence_year === selectedCompetenceYear && p.competence_month === selectedCompetenceMonth) ||
-            p.competence_key === `${selectedCompetenceYear}-${String(selectedCompetenceMonth).padStart(2, "0")}`
-          )
+          (!p.notes || p.notes.includes(cycleLabel))
         );
         
         const totalPaid = [...linkedPayments, ...bulkPayments].reduce((acc, p) => acc + Number(p.amount), 0);

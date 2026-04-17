@@ -31,7 +31,6 @@ import { cn } from "@/lib/utils";
 import { PageHero } from "@/components/layout/PageHero";
 import { ScrollRevealGroup } from "@/components/ui/scroll-reveal";
 import { useCycleDates } from "@/hooks/useCycleDates";
-import { getCompetenceKeyFromDate } from "@/lib/cycleDates";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Capacitor } from "@capacitor/core";
 
@@ -71,7 +70,7 @@ export default function Payments() {
   const isMobile = useIsMobile();
   const isNativeRuntime = Capacitor.isNativePlatform();
 
-  const { currentDate, cycleStart, cycleEnd, nextMonth, prevMonth, closingDay } = useCycleDates(membership?.group_id);
+  const { currentDate, cycleStart, cycleEnd, nextMonth, prevMonth } = useCycleDates(membership?.group_id);
   const platformLabel = useMemo(() => {
     if (isNativeRuntime) return `capacitor-${Capacitor.getPlatform()}`;
     if (isMobile) return "mobile-web";
@@ -95,26 +94,34 @@ export default function Payments() {
     setEditNotes(payment.notes || "");
     setEditStatus(payment.status);
 
-    const competence =
-      payment.competence_key ||
-      (payment.competence_year && payment.competence_month
-        ? `${payment.competence_year}-${String(payment.competence_month).padStart(2, "0")}`
-        : getCompetenceKeyFromDate(new Date(payment.created_at), closingDay));
+    const base = payment.competence_date
+      ? new Date(`${payment.competence_date}T12:00:00`)
+      : new Date(payment.created_at);
+    const competence = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
     setEditCompetence(competence);
   };
 
   const updatePayment = useMutation({
     mutationFn: async (values: { amount: string; notes: string; status: string; competence: string }) => {
-      const [competenceYear, competenceMonth] = values.competence.split("-").map(Number);
+      let newCompetenceDate: string | null = null;
+
+      if (values.competence) {
+        const [yStr, mStr] = values.competence.split("-");
+        const y = parseInt(yStr, 10);
+        const m = parseInt(mStr, 10);
+
+        if (!Number.isNaN(y) && !Number.isNaN(m)) {
+          newCompetenceDate = `${y}-${String(m).padStart(2, "0")}-01`;
+        }
+      }
+
       const { error } = await supabase
         .from("payments")
         .update({
           amount: Number(values.amount),
           notes: values.notes || null,
           status: values.status,
-          competence_year: Number.isFinite(competenceYear) ? competenceYear : undefined,
-          competence_month: Number.isFinite(competenceMonth) ? competenceMonth : undefined,
-          competence_key: values.competence,
+          competence_date: newCompetenceDate,
         })
         .eq("id", editingPayment.id);
       if (error) throw error;
@@ -166,9 +173,9 @@ export default function Payments() {
         .from("payments")
         .select("*")
         .eq("group_id", membership!.group_id)
-        .or(
-          `and(competence_year.eq.${competenceYear},competence_month.eq.${competenceMonth}),competence_key.eq.${competenceKey}`
-        )
+        .gte("competence_date", dbStart)
+        .lt("competence_date", dbEnd)
+        .order("competence_date", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -800,7 +807,7 @@ function PaymentItem({ payment, isAdmin, onConfirm, onManage }: { payment: any; 
         <div className="min-w-0 flex-1">
           <p className="font-medium text-sm">{payment.payer_name}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {format(new Date(payment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            Competência: {format(new Date(`${payment.competence_date}T12:00:00`), "MM/yyyy", { locale: ptBR })} · Enviado em {format(new Date(payment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </p>
           {payment.notes && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{payment.notes}</p>}
           {payment.receipt_url && (
