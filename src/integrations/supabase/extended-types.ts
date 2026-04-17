@@ -9,6 +9,8 @@ type ExpenseInstallmentsTable = {
     amount: number;
     bill_month: number;
     bill_year: number;
+    competence_month: number;
+    competence_year: number;
     created_at: string;
   };
   Insert: {
@@ -19,6 +21,8 @@ type ExpenseInstallmentsTable = {
     amount: number;
     bill_month: number;
     bill_year: number;
+    competence_month?: number;
+    competence_year?: number;
     created_at?: string;
   };
   Update: {
@@ -29,6 +33,8 @@ type ExpenseInstallmentsTable = {
     amount?: number;
     bill_month?: number;
     bill_year?: number;
+    competence_month?: number;
+    competence_year?: number;
     created_at?: string;
   };
   Relationships: [
