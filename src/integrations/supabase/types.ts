@@ -134,6 +134,8 @@ export type Database = {
           amount: number
           bill_month: number
           bill_year: number
+          competence_month: number
+          competence_year: number
           created_at: string
           expense_id: string
           id: string
@@ -144,6 +146,8 @@ export type Database = {
           amount: number
           bill_month: number
           bill_year: number
+          competence_month?: number
+          competence_year?: number
           created_at?: string
           expense_id: string
           id?: string
@@ -154,6 +158,8 @@ export type Database = {
           amount?: number
           bill_month?: number
           bill_year?: number
+          competence_month?: number
+          competence_year?: number
           created_at?: string
           expense_id?: string
           id?: string
@@ -693,6 +699,8 @@ export type Database = {
           amount: number
           bill_month: number
           bill_year: number
+          competence_month: number
+          competence_year: number
           created_at: string
           id: string
           installment_number: number
@@ -703,6 +711,8 @@ export type Database = {
           amount: number
           bill_month: number
           bill_year: number
+          competence_month?: number
+          competence_year?: number
           created_at?: string
           id?: string
           installment_number: number
@@ -713,6 +723,8 @@ export type Database = {
           amount?: number
           bill_month?: number
           bill_year?: number
+          competence_month?: number
+          competence_year?: number
           created_at?: string
           id?: string
           installment_number?: number
