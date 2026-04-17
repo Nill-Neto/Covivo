@@ -76,6 +76,9 @@ export default function Admin() {
           .eq("group_id", membership.group_id)
       ]);
 
+      const cycleSplits = cycleSplitsRes.data || [];
+      const cycleSplitIds = cycleSplits.map(s => s.id);
+
       // Fetch all payments for this group. Filtering in JS is safer for complex OR conditions.
       const { data: allPayments, error: paymentsError } = await supabase.from("payments")
         .select("id, paid_by, amount, expense_split_id, status, notes, created_at, competence_key, expense_splits(expenses(expense_type))")
