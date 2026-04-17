@@ -17,16 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import type { PendingByCompetenceGroup } from "@/lib/collectivePending";
 
 interface PersonalTabProps {
   totalIndividualPending: number;
   totalCollectivePendingPrevious: number;
   totalCollectivePendingCurrent: number;
-  collectivePendingPreviousByCompetence: {
-    competence: string;
-    total: number;
-    items: any[];
-  }[];
+  collectivePendingPreviousByCompetence: PendingByCompetenceGroup[];
   collectivePendingCurrent: any[];
   individualPending: any[];
   totalPersonalCash: number;
@@ -164,10 +161,10 @@ export function PersonalTab({
                       <div className="overflow-y-auto max-h-[50vh]">
                         <div className="divide-y">
                           {collectivePendingPreviousByCompetence.map((group) => (
-                            <div key={group.competence} className="px-5 py-4 space-y-2.5">
+                            <div key={group.competenceKey ?? "missing-competence"} className="px-5 py-4 space-y-2.5">
                               <div className="flex items-center justify-between">
                                 <p className="text-sm font-semibold text-foreground">
-                                  Competência {group.competence}
+                                  Competência {group.competenceLabel}
                                 </p>
                                 <Badge variant="secondary" className="font-semibold text-xs">
                                   R$ {group.total.toFixed(2)}
