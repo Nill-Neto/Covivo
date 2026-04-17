@@ -195,10 +195,10 @@ export default function Expenses() {
         .eq("bill_year", targetYear);
 
       if (error) {
-        console.error("[Expenses] Error fetching month installments:", error);
         return [] as InstallmentRow[];
       }
-      return (data ?? []) as InstallmentRow[];
+      return (data ?? []) as unknown as InstallmentRow[];
+
     },
     enabled: !!membership?.group_id,
   });

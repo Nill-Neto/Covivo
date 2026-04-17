@@ -151,19 +151,10 @@ export default function Dashboard() {
     enabled: !!user && !!membership?.group_id,
   });
 
-  // Debugging logs
-  useEffect(() => {
-    if (membership?.group_id) {
-      console.log("[Dashboard] Active Group:", membership.group_name, membership.group_id);
-      console.log("[Dashboard] Competence Key:", currentCompetenceKey);
-      console.log("[Dashboard] Expenses in cycle count:", expensesInCycle.length);
-      console.log("[Dashboard] Collective expenses count:", collectiveExpenses.length);
-    }
-  }, [membership, currentCompetenceKey, expensesInCycle.length, collectiveExpenses.length]);
-
   const collectiveExpenses = expensesInCycle.filter(e => e.expense_type === "collective");
+
   const totalMonthExpenses = collectiveExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  
+
   const myCollectiveShare = collectiveExpenses.reduce((sum, e) => {
     const splits = (e.expense_splits as unknown as { user_id: string; amount: number }[]) || [];
     const mySplit = splits.find((s) => s.user_id === user?.id);
