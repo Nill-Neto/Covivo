@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { CustomLoader } from "@/components/ui/custom-loader";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import type { PendingByCompetenceGroup } from "@/lib/collectivePending";
 
 export type RateioScope = "previous" | "current";
 
@@ -29,6 +30,7 @@ interface PaymentDialogsProps {
     previous: { total: number; items: PendingSplit[] };
     current: { total: number; items: PendingSplit[] };
   };
+  collectivePendingPreviousByCompetence: PendingByCompetenceGroup[];
   rateioScope: RateioScope;
   individualPending: any[];
   currentDate: Date;
@@ -49,6 +51,7 @@ export function PaymentDialogs({
   selectedIndividualSplit,
   setSelectedIndividualSplit,
   collectivePendingByScope,
+  collectivePendingPreviousByCompetence,
   rateioScope,
   individualPending,
   currentDate,
@@ -64,29 +67,6 @@ export function PaymentDialogs({
   const selectedScopeLabel = rateioScope === "previous"
     ? "Rateio pendente de competências anteriores"
     : "Rateio da competência atual";
-
-  const groupedPreviousPending = collectivePendingByScope.previous.items.reduce((acc: Record<string, PendingSplit[]>, item) => {
-    const key = item.competenceKey;
-    if (!key) {
-      if (!acc["Sem competência"]) acc["Sem competência"] = [];
-      acc["Sem competência"].push(item);
-      return acc;
-    }
-
-    const [year, month] = key.split("-");
-    const formattedKey = `${month}/${year}`;
-    if (!acc[formattedKey]) acc[formattedKey] = [];
-    acc[formattedKey].push(item);
-    return acc;
-  }, {});
-
-  const groupedPreviousEntries = Object.entries(groupedPreviousPending).sort(([a], [b]) => {
-    if (a === "Sem competência") return 1;
-    if (b === "Sem competência") return -1;
-    const [monthA, yearA] = a.split("/").map(Number);
-    const [monthB, yearB] = b.split("/").map(Number);
-    return new Date(yearB, monthB - 1, 1).getTime() - new Date(yearA, monthA - 1, 1).getTime();
-  });
 
   return (
     <>
@@ -135,10 +115,10 @@ export function PaymentDialogs({
                 >
                   <div className="divide-y">
                     {rateioScope === "previous"
-                      ? groupedPreviousEntries.map(([competence, items]) => (
-                          <div key={competence} className="px-4 py-2.5 space-y-1.5">
-                            <p className="text-xs font-semibold text-muted-foreground">{competence}</p>
-                            {items.map((s) => (
+                      ? collectivePendingPreviousByCompetence.map((group) => (
+                          <div key={group.competenceKey ?? "missing-competence"} className="px-4 py-2.5 space-y-1.5">
+                            <p className="text-xs font-semibold text-muted-foreground">{group.competenceLabel}</p>
+                            {group.items.map((s) => (
                               <div key={s.id} className="flex justify-between text-sm py-0.5 items-center">
                                 <div className="truncate pr-3 flex-1 flex flex-col">
                                   <span className="truncate text-foreground">{s.expenses?.title}</span>

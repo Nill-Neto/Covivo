@@ -9,7 +9,6 @@ import { User, CreditCard, Home, ChevronLeft, ChevronRight } from "lucide-react"
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
-import { parseLocalDate } from "@/lib/utils";
 
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { HomeTab } from "@/components/dashboard/HomeTab";
@@ -19,6 +18,7 @@ import { PaymentDialogs, type RateioScope } from "@/components/dashboard/Payment
 import { getCategoryLabel } from "@/constants/categories";
 import { useCycleDates } from "@/hooks/useCycleDates";
 import { getCompetenceKeyFromDate, formatCompetenceKey } from "@/lib/cycleDates";
+import { groupPendingByCompetence } from "@/lib/collectivePending";
 
 export default function Dashboard() {
   const { profile, membership, user } = useAuth();
@@ -292,28 +292,7 @@ export default function Dashboard() {
 
   const collectivePendingPreviousByCompetence = useMemo(() => {
     if (totalCollectivePendingPrevious <= 0.01) return [];
-
-    const grouped = displayCollectivePendingPrevious.reduce((acc: Record<string, any[]>, item: any) => {
-      const purchaseDate = item.expenses?.purchase_date ? parseLocalDate(item.expenses.purchase_date) : null;
-      const competence = purchaseDate ? format(purchaseDate, "MM/yyyy") : "Sem competência";
-      if (!acc[competence]) acc[competence] = [];
-      acc[competence].push(item);
-      return acc;
-    }, {} as Record<string, any[]>);
-
-    return Object.entries(grouped)
-      .map(([competence, items]: [string, any[]]) => ({
-        competence,
-        items: items.sort((a: any, b: any) => (b.expenses?.purchase_date || "").localeCompare(a.expenses?.purchase_date || "")),
-        total: items.reduce((sum: number, split: any) => sum + Number(split.amount), 0),
-      }))
-      .sort((a, b) => {
-        const [monthA, yearA] = a.competence.split("/").map(Number);
-        const [monthB, yearB] = b.competence.split("/").map(Number);
-        if (!monthA || !yearA) return 1;
-        if (!monthB || !yearB) return -1;
-        return new Date(yearB, monthB - 1, 1).getTime() - new Date(yearA, monthA - 1, 1).getTime();
-      });
+    return groupPendingByCompetence(displayCollectivePendingPrevious);
   }, [displayCollectivePendingPrevious, totalCollectivePendingPrevious]);
 
   const manualIndividualPending = pendingSplits.filter((s: any) => {
@@ -570,6 +549,7 @@ export default function Dashboard() {
           previous: { total: totalCollectivePendingPrevious, items: displayCollectivePendingPrevious },
           current: { total: totalCollectivePendingCurrent, items: displayCollectivePendingCurrent },
         }}
+        collectivePendingPreviousByCompetence={collectivePendingPreviousByCompetence}
         rateioScope={rateioScope}
         individualPending={individualPending}
         currentDate={currentDate}
