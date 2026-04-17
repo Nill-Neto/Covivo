@@ -30,7 +30,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PageHero } from "@/components/layout/PageHero";
 import { useCycleDates } from "@/hooks/useCycleDates";
-import { getCompetenceKeyFromDate } from "@/lib/cycleDates";
+import { getCompetenceKeyFromDate, formatCompetenceKey } from "@/lib/cycleDates";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Capacitor } from "@capacitor/core";
 
@@ -93,28 +93,39 @@ export default function Payments() {
     setEditNotes(payment.notes || "");
     setEditStatus(payment.status);
 
-    const competence = payment.competence || getCompetenceKeyFromDate(new Date(payment.created_at), closingDay);
+    const competence = payment.competence_key || getCompetenceKeyFromDate(new Date(payment.created_at), closingDay);
     setEditCompetence(competence);
   };
 
   const updatePayment = useMutation({
     mutationFn: async (values: { amount: string; notes: string; status: string; competence: string }) => {
-      let newDate = editingPayment.created_at;
       const [y, m] = values.competence.split("-").map(Number);
+      const cleanAmount = values.amount.replace(",", ".");
+      const amountNum = Number(cleanAmount);
       
-      if (values.competence && values.competence !== editingPayment.competence) {
-        const safeDate = new Date(y, m - 1, 15, 12, 0, 0);
+      if (isNaN(amountNum)) throw new Error("Valor numérico inválido");
+
+      let newDate = editingPayment.created_at;
+      let newCompDate = editingPayment.competence_date;
+      
+      if (values.competence && values.competence !== editingPayment.competence_key) {
+        // Use the 1st of the month as a base.
+        // We'll set BOTH created_at and competence_date to be safe,
+        // but the trigger Priority 1 will handle it via competence_key.
+        const safeDate = new Date(y, m - 1, 1, 12, 0, 0);
         newDate = safeDate.toISOString();
+        newCompDate = format(safeDate, "yyyy-MM-dd");
       }
 
       const { error } = await supabase
         .from("payments")
         .update({
-          amount: Number(values.amount),
+          amount: amountNum,
           notes: values.notes || null,
           status: values.status,
           created_at: newDate,
-          competence: values.competence || editingPayment.competence,
+          competence_date: newCompDate,
+          competence_key: values.competence || editingPayment.competence_key,
           competence_year: y,
           competence_month: m,
         } as any)
@@ -150,7 +161,7 @@ export default function Payments() {
     onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
-  const currentCompetenceKey = getCompetenceKeyFromDate(currentDate, closingDay);
+  const currentCompetenceKey = formatCompetenceKey(currentDate);
 
   const { data: payments, isLoading } = useQuery({
     queryKey: ["payments", membership?.group_id, currentCompetenceKey],
@@ -159,7 +170,7 @@ export default function Payments() {
         .from("payments")
         .select("*")
         .eq("group_id", membership!.group_id)
-        .or(`status.eq.pending,competence.eq.${currentCompetenceKey}`)
+        .or(`status.eq.pending,competence_key.eq.${currentCompetenceKey}`)
         .order("created_at", { ascending: false });
       if (error) throw error;
 
@@ -329,7 +340,6 @@ export default function Payments() {
         amount: Number(split.amount),
         receipt_url: urlData.publicUrl,
         notes: notes.trim() || (selectedSplitIds.length > 1 ? "Pagamento em lote" : null),
-        competence: compKey,
       }));
 
       const creditAmount = paidAmount - selectedTotal;
@@ -344,7 +354,6 @@ export default function Payments() {
           amount: Number(creditAmount.toFixed(2)),
           receipt_url: urlData.publicUrl,
           notes: notes.trim() || "Crédito por pagamento acima do total devido",
-          competence: compKey,
         });
       }
 

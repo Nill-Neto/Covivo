@@ -44,7 +44,7 @@ import {
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCycleDates } from "@/hooks/useCycleDates";
-import { getCompetenceKeyFromDate } from "@/lib/cycleDates";
+import { getCompetenceKeyFromDate, formatCompetenceKey } from "@/lib/cycleDates";
 import { PageHero } from "@/components/layout/PageHero";
 
 const CATEGORIES = [
@@ -83,7 +83,7 @@ type ExpenseRow = {
   credit_card_id: string | null;
   installments: number;
   purchase_date: string;
-  competence: string | null;
+  competence_key: string | null;
   expense_splits?: Array<{
     id: string;
     user_id: string;
@@ -163,7 +163,7 @@ export default function Expenses() {
     }
   }, [category]);
 
-  const currentCompetenceKey = getCompetenceKeyFromDate(currentDate, closingDay);
+  const currentCompetenceKey = formatCompetenceKey(currentDate);
 
   const { data: cycleExpenses = [], isLoading: loadingExpenses } = useQuery({
     queryKey: ["expenses", membership?.group_id, currentCompetenceKey],
@@ -172,7 +172,7 @@ export default function Expenses() {
         .from("expenses")
         .select("*, expense_splits(id, user_id, amount, status, paid_at)")
         .eq("group_id", membership!.group_id)
-        .eq("competence", currentCompetenceKey)
+        .eq("competence_key", currentCompetenceKey)
         .order("purchase_date", { ascending: false });
 
       if (error) throw error;
@@ -188,13 +188,17 @@ export default function Expenses() {
       const targetYear = currentDate.getFullYear();
 
       const { data, error } = await supabase
-        .from("expense_installments")
-        .select("id, expense_id, installment_number, amount, bill_month, bill_year")
+        .from("expense_installments" as any)
+        .select("id, expense_id, installment_number, amount, bill_month, bill_year, expenses!inner(group_id)")
+        .eq("expenses.group_id", membership!.group_id)
         .eq("bill_month", targetMonth)
         .eq("bill_year", targetYear);
 
-      if (error) return [] as InstallmentRow[];
-      return (data ?? []) as InstallmentRow[];
+      if (error) {
+        return [] as InstallmentRow[];
+      }
+      return (data ?? []) as unknown as InstallmentRow[];
+
     },
     enabled: !!membership?.group_id,
   });
@@ -469,7 +473,7 @@ export default function Expenses() {
             paid_to_provider: providerPaid,
             due_date: paymentDate || null,
             receipt_url: uploadedReceiptUrl,
-            competence: compKey,
+            competence_key: compKey,
           })
           .eq("id", editingId);
         if (error) throw error;

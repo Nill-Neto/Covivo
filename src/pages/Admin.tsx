@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminTab } from "@/components/dashboard/AdminTab";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { useCycleDates } from "@/hooks/useCycleDates";
-import { getCompetenceKeyFromDate } from "@/lib/cycleDates";
+import { getCompetenceKeyFromDate, formatCompetenceKey } from "@/lib/cycleDates";
 
 export default function Admin() {
   const { membership, isAdmin, profile } = useAuth();
@@ -23,7 +23,7 @@ export default function Admin() {
     closingDay,
   } = useCycleDates(membership?.group_id);
 
-  const currentCompetenceKey = getCompetenceKeyFromDate(currentDate, closingDay);
+  const currentCompetenceKey = formatCompetenceKey(currentDate);
 
   const { data: expensesInCycle = [] } = useQuery({
     queryKey: ["expenses-dashboard", membership?.group_id, currentCompetenceKey],
@@ -35,7 +35,7 @@ export default function Admin() {
           expense_splits ( user_id, amount )
         `)
         .eq("group_id", membership!.group_id)
-        .eq("competence", currentCompetenceKey);
+        .eq("competence_key", currentCompetenceKey);
       
       if (error) throw error;
       return data ?? [];
@@ -54,21 +54,15 @@ export default function Admin() {
       const dbStart = format(cycleStart, "yyyy-MM-dd");
       const dbEnd = format(cycleEnd, "yyyy-MM-dd");
 
-      const [membersRes, rolesRes, cycleSplitsRes, allPaymentsRes, departuresRes, inventoryRes] = await Promise.all([
+      const [membersRes, rolesRes, cycleSplitsRes, departuresRes, inventoryRes] = await Promise.all([
         supabase.from("group_members").select("user_id, active").eq("group_id", membership.group_id).eq("active", true),
         supabase.from("user_roles").select("user_id, role").eq("group_id", membership.group_id),
         supabase
           .from("expense_splits")
-          .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date, competence)")
+          .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date, competence_key)")
           .eq("expenses.group_id", membership.group_id)
           .eq("expenses.expense_type", "collective")
-          .eq("expenses.competence", currentCompetenceKey),
-        supabase.from("payments")
-          .select("id, paid_by, amount, expense_split_id, status, notes, created_at, competence, expense_splits(expenses(expense_type))")
-          .eq("group_id", membership.group_id)
-          .in("status", ["pending", "confirmed"])
-          .gte("competence_date", dbStart)
-          .lt("competence_date", dbEnd),
+          .eq("expenses.competence_key", currentCompetenceKey),
         supabase
           .from("audit_log")
           .select("created_at, details")
@@ -83,26 +77,39 @@ export default function Admin() {
       ]);
 
       const cycleSplits = cycleSplitsRes.data || [];
-      const allPayments = allPaymentsRes.data || [];
+      const cycleSplitIds = cycleSplits.map(s => s.id);
+
+      // Fetch all payments for this group. Filtering in JS is safer for complex OR conditions.
+      const { data: allPayments, error: paymentsError } = await supabase.from("payments")
+        .select("id, paid_by, amount, expense_split_id, status, notes, created_at, competence_key, expense_splits(expenses(expense_type))")
+        .eq("group_id", membership.group_id)
+        .in("status", ["pending", "confirmed"]);
+      
+      if (paymentsError) console.error("[Admin] Payments fetch error:", paymentsError);
+      
+      const payments = allPayments || [];
 
       const cycleBalances = (membersRes.data || []).map(m => {
         const userCycleSplits = cycleSplits.filter(s => s.user_id === m.user_id);
-        const cycleOwed = userCycleSplits.reduce((acc, s) => acc + Number(s.amount), 0);
+        const cycleOwed = userCycleSplits.reduce((acc, s) => acc + Number(s.amount || 0), 0);
         
-        const linkedPayments = allPayments.filter(p =>
+        // Linked payments: paid for a split that belongs to THIS competence
+        const linkedPayments = payments.filter(p =>
           p.paid_by === m.user_id &&
           p.expense_split_id &&
-          userCycleSplits.some(s => s.id === p.expense_split_id)
+          cycleSplitIds.includes(p.expense_split_id)
         );
         
-        const bulkPayments = allPayments.filter(p => {
+        // Bulk payments: no split link, but tagged with THIS competence
+        const bulkPayments = payments.filter(p => {
           if (p.paid_by !== m.user_id || p.expense_split_id) return false;
-          const pCompKey = p.competence || getCompetenceKeyFromDate(new Date(p.created_at), closingDay);
-          return pCompKey === currentCompetenceKey;
+          return p.competence_key === currentCompetenceKey;
         });
         
-        const totalCyclePaid = [...linkedPayments, ...bulkPayments].reduce((acc, p) => acc + Number(p.amount), 0);
-        const paidSplitsTotalCycle = userCycleSplits.reduce((acc, s) => acc + (s.status === 'paid' ? Number(s.amount) : 0), 0);
+        const totalCyclePaid = [...linkedPayments, ...bulkPayments].reduce((acc, p) => acc + Number(p.amount || 0), 0);
+        
+        // Fallback to split status if no payment record found (legacy or edge case)
+        const paidSplitsTotalCycle = userCycleSplits.reduce((acc, s) => acc + (s.status === 'paid' ? Number(s.amount || 0) : 0), 0);
         const finalCyclePaid = Math.max(totalCyclePaid, paidSplitsTotalCycle);
 
         return {
@@ -122,10 +129,15 @@ export default function Admin() {
         role: rolesRes.data?.find(r => r.user_id === m.user_id)?.role ?? 'morador'
       }));
 
-      const pendingPaymentsCount = allPayments.filter(p => {
+      const pendingPaymentsCount = payments.filter(p => {
          if (p.status !== 'pending') return false;
          if (!p.expense_split_id) return true;
-         return p.expense_splits?.expenses?.expense_type === 'collective';
+         // p.expense_splits might be an array or object depending on schema
+         const split: any = p.expense_splits;
+         const expenseType = Array.isArray(split)
+           ? split[0]?.expenses?.expense_type
+           : split?.expenses?.expense_type;
+         return expenseType === 'collective';
       }).length;
 
       const departuresCount = (departuresRes.data || []).length;
