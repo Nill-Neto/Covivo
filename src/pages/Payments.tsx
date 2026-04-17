@@ -106,10 +106,15 @@ export default function Payments() {
       if (isNaN(amountNum)) throw new Error("Valor numérico inválido");
 
       let newDate = editingPayment.created_at;
+      let newCompDate = editingPayment.competence_date;
+      
       if (values.competence && values.competence !== editingPayment.competence_key) {
-        // Use the 1st of the month as a base. The trigger will now respect competence_key override.
+        // Use the 1st of the month as a base.
+        // We'll set BOTH created_at and competence_date to be safe,
+        // but the trigger Priority 1 will handle it via competence_key.
         const safeDate = new Date(y, m - 1, 1, 12, 0, 0);
         newDate = safeDate.toISOString();
+        newCompDate = format(safeDate, "yyyy-MM-dd");
       }
 
       const { error } = await supabase
@@ -119,6 +124,7 @@ export default function Payments() {
           notes: values.notes || null,
           status: values.status,
           created_at: newDate,
+          competence_date: newCompDate,
           competence_key: values.competence || editingPayment.competence_key,
           competence_year: y,
           competence_month: m,
