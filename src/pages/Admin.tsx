@@ -46,7 +46,12 @@ export default function Admin() {
   const collectiveExpenses = expensesInCycle.filter(e => e.expense_type === "collective");
   const totalMonthExpenses = collectiveExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
-  const { data: adminData, isLoading, isError, error } = useQuery({
+  const {
+    data: adminData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-dashboard-data", membership?.group_id, currentCompetenceKey],
     queryFn: async () => {
       if (!isAdmin || !membership?.group_id) return null;
@@ -86,6 +91,29 @@ export default function Admin() {
         })
       ]);
 
+      const queryErrors = [
+        { label: "group_members", error: membersRes.error },
+        { label: "user_roles", error: rolesRes.error },
+        { label: "expense_splits", error: cycleSplitsRes.error },
+        { label: "audit_log", error: departuresRes.error },
+        { label: "inventory_items", error: inventoryRes.error },
+        { label: "get_admin_member_competence_balances", error: balancesRes.error },
+      ].filter((entry) => Boolean(entry.error));
+
+      if (queryErrors.length > 0) {
+        const groupedErrors = Object.fromEntries(
+          queryErrors.map((entry) => [entry.label, entry.error])
+        );
+
+        console.error("[Admin] Falha ao carregar dados administrativos", {
+          group_id: membership.group_id,
+          competence_key: currentCompetenceKey,
+          queryErrors: groupedErrors,
+        });
+
+        throw new Error("Falha ao carregar dados administrativos");
+      }
+
       const cycleSplits = cycleSplitsRes.data || [];
       const pendingSplits = pendingSplitsRes.data || [];
 
@@ -95,7 +123,13 @@ export default function Admin() {
         .eq("group_id", membership.group_id)
         .in("status", ["pending", "confirmed"]);
       
-      if (paymentsError) console.error("[Admin] Payments fetch error:", paymentsError);
+      if (paymentsError) {
+        console.error("[Admin] Payments fetch error", {
+          group_id: membership.group_id,
+          competence_key: currentCompetenceKey,
+          error: paymentsError,
+        });
+      }
       
       const payments = allPayments || [];
 
@@ -126,7 +160,20 @@ export default function Admin() {
       });
 
       const userIds = membersRes.data?.map(m => m.user_id) ?? [];
-      const { data: profiles } = await supabase.from("group_member_profiles").select("id, full_name, avatar_url").eq("group_id", membership.group_id).in("id", userIds);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("group_member_profiles")
+        .select("id, full_name, avatar_url")
+        .eq("group_id", membership.group_id)
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.error("[Admin] Profiles fetch error", {
+          group_id: membership.group_id,
+          competence_key: currentCompetenceKey,
+          error: profilesError,
+        });
+        throw profilesError;
+      }
 
       const members = cycleBalances.map(m => ({
         ...m,
@@ -155,11 +202,20 @@ export default function Admin() {
 
       let exMembersDebt = 0;
       if (collectiveExpenses.length > 0) {
-        const { data: exMembersSplits } = await supabase
+        const { data: exMembersSplits, error: exMembersSplitsError } = await supabase
           .from("expense_splits")
           .select("id, user_id, amount")
           .eq("status", "pending")
           .in("expense_id", collectiveExpenses.map(e => e.id));
+
+        if (exMembersSplitsError) {
+          console.error("[Admin] Ex-members splits fetch error", {
+            group_id: membership.group_id,
+            competence_key: currentCompetenceKey,
+            error: exMembersSplitsError,
+          });
+          throw exMembersSplitsError;
+        }
           
         const activeUserIds = new Set(members.map(m => m.user_id));
         exMembersDebt = (exMembersSplits || [])
@@ -209,12 +265,17 @@ export default function Admin() {
 
       {isLoading ? (
         <div className="py-12 text-center text-muted-foreground">Carregando dados administrativos...</div>
-      ) : isError ? (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Não foi possível carregar os dados administrativos. Tente novamente em instantes.
-          {error instanceof Error && error.message ? (
-            <p className="mt-1 text-xs opacity-90">Detalhes: {error.message}</p>
-          ) : null}
+      ) : error ? (
+        <div className="space-y-3 rounded-lg border border-destructive/20 bg-destructive/5 p-6 text-center">
+          <p className="font-medium text-destructive">Não foi possível carregar os dados administrativos.</p>
+          <p className="text-sm text-muted-foreground">Tente novamente em alguns instantes.</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : adminData ? (
         <AdminTab 
@@ -233,7 +294,19 @@ export default function Admin() {
           pendingSplits={adminData.pendingSplits}
           closingDay={closingDay}
         />
-      ) : null}
+      ) : (
+        <div className="space-y-3 rounded-lg border p-6 text-center">
+          <p className="font-medium text-foreground">Dados administrativos indisponíveis para este ciclo.</p>
+          <p className="text-sm text-muted-foreground">Nenhum dado foi retornado no momento. Atualize para tentar novamente.</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Atualizar dados
+          </button>
+        </div>
+      )}
     </div>
   );
 }
