@@ -78,6 +78,17 @@ export default function Admin() {
 
       const cycleSplits = cycleSplitsRes.data || [];
       const cycleSplitIds = cycleSplits.map(s => s.id);
+      const memberIds = (membersRes.data || []).map(m => m.user_id);
+
+      const { data: pendingSplitsRes } = await supabase
+        .from("expense_splits")
+        .select("id, user_id, amount, status, expenses!inner(id, title, description, amount, category, group_id, expense_type, purchase_date, competence_key)")
+        .eq("status", "pending")
+        .eq("expenses.group_id", membership.group_id)
+        .eq("expenses.expense_type", "collective")
+        .in("user_id", memberIds);
+
+      const pendingSplits = pendingSplitsRes || [];
 
       // Fetch all payments for this group. Filtering in JS is safer for complex OR conditions.
       const { data: allPayments, error: paymentsError } = await supabase.from("payments")
@@ -92,6 +103,9 @@ export default function Admin() {
       const cycleBalances = (membersRes.data || []).map(m => {
         const userCycleSplits = cycleSplits.filter(s => s.user_id === m.user_id);
         const cycleOwed = userCycleSplits.reduce((acc, s) => acc + Number(s.amount || 0), 0);
+        const previousDebt = pendingSplits
+          .filter((s: any) => s.user_id === m.user_id && s.expenses?.competence_key !== currentCompetenceKey)
+          .reduce((acc: number, s: any) => acc + Number(s.amount || 0), 0);
         
         // Linked payments: paid for a split that belongs to THIS competence
         const linkedPayments = payments.filter(p =>
@@ -116,7 +130,9 @@ export default function Admin() {
            ...m,
            total_owed: cycleOwed,
            total_paid: finalCyclePaid,
-           balance: finalCyclePaid - cycleOwed
+           balance: finalCyclePaid - cycleOwed,
+           previous_debt: previousDebt,
+           accumulated_balance: finalCyclePaid - cycleOwed - previousDebt
         };
       });
 
@@ -170,6 +186,7 @@ export default function Admin() {
         redistributedCount,
         lowStockCount,
         cycleSplits,
+        pendingSplits,
       };
     },
     enabled: !!membership?.group_id && !!collectiveExpenses && isAdmin
@@ -217,6 +234,7 @@ export default function Admin() {
           redistributedCount={adminData.redistributedCount}
           lowStockCount={adminData.lowStockCount}
           cycleSplits={adminData.cycleSplits}
+          pendingSplits={adminData.pendingSplits}
           closingDay={closingDay}
         />
       ) : null}
