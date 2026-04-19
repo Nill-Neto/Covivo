@@ -55,6 +55,7 @@ export function AdminTab({
   closingDay,
 }: AdminTabProps) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [isReceivablesOpen, setIsReceivablesOpen] = useState(false);
   const currentCompetenceKey = format(currentDate, "yyyy-MM");
 
   // Ordena os membros pelo saldo acumulado (negativos primeiro)
@@ -251,6 +252,13 @@ export function AdminTab({
             <p className="text-xs text-muted-foreground mt-1">
               {membersInDebt.length} pendência{membersInDebt.length !== 1 ? "s" : ""}
             </p>
+            <Button 
+              variant="link" 
+              className={`p-0 h-auto text-xs mt-1 ${totalReceivable > 0 ? "text-destructive" : "text-primary"}`} 
+              onClick={() => setIsReceivablesOpen(true)}
+            >
+              Ver detalhes <ArrowRight className="h-3 w-3 ml-1" />
+            </Button>
           </CardContent>
         </Card>
 
@@ -358,195 +366,180 @@ export function AdminTab({
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Saldo dos Moradores - 2 cols */}
-        <Card className="lg:col-span-2">
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Distribuição por Categoria */}
+        <Card>
           <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" /> Distribuição por Categoria
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-[250px] relative">
+            {categoryBreakdown.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={categoryBreakdown} 
+                      dataKey="value" 
+                      nameKey="name" 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={50} 
+                      outerRadius={70} 
+                      paddingAngle={5}
+                      stroke="none"
+                      cornerRadius={5}
+                    >
+                      {categoryBreakdown.map((entry, i) => (
+                        <Cell 
+                          key={i} 
+                          fill={CATEGORY_COLORS[entry.name] || CHART_COLORS[i % CHART_COLORS.length]} 
+                        />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      formatter={(v: number) => `R$ ${v.toFixed(2)}`} 
+                      contentStyle={{ 
+                        borderRadius: "8px", 
+                        border: "none", 
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                        fontSize: "12px"
+                      }}
+                      itemStyle={{ color: "#1e293b" }}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36} 
+                      iconType="circle"
+                      formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center Label */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60%] text-center pointer-events-none">
+                  <span className="text-[10px] text-muted-foreground block">Total</span>
+                  <span className="text-sm font-bold">R$ {totalMonthExpenses.toFixed(0)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
+                <span className="opacity-50">Sem dados no período</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Últimas Despesas Coletivas */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Receipt className="h-4 w-4" /> Últimas Despesas
+            </CardTitle>
+            <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+              <Link to="/expenses">Ver todas</Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[250px] pr-2 px-2">
+              <div className="space-y-1">
+                {recentExpenses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa registrada.</p>
+                ) : (
+                  recentExpenses.map(expense => (
+                    <div key={expense.id} className="flex items-center justify-between py-2.5 px-3 group hover:bg-muted/50 rounded-md transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                          <Receipt className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium leading-none truncate max-w-[120px]">{expense.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums flex-shrink-0 ml-3">
+                        R$ {Number(expense.amount).toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Resumo da Competência Modal */}
+      <Dialog open={isReceivablesOpen} onOpenChange={setIsReceivablesOpen}>
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <DialogHeader className="px-5 pt-5 pb-3 shrink-0 border-b">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4" /> Resumo da Competência
-              </CardTitle>
+              <DialogTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Users className="h-5 w-5" /> Resumo da Competência
+              </DialogTitle>
               <Badge variant="outline" className="text-xs font-normal">
                 {members.length} ativo{members.length !== 1 ? "s" : ""}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               {`Competência atual: ${format(currentDate, "MMM/yyyy", { locale: ptBR })} · Valores sem acumular pendências anteriores`} · Clique no morador para detalhes
             </p>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {sortedMembers.map(member => {
-                const currentBalance = Number(member.balance ?? 0);
-                const previousDebt = Number(member.previous_debt ?? 0);
-                const competenceTotal = Number(member.total_owed ?? 0);
-                const competencePaidFallback = Number(memberPaymentsByCompetence[member.user_id]?.[currentCompetenceKey] || 0);
-                const competencePaid = Math.max(Number(member.total_paid ?? 0), competencePaidFallback);
-                const competencePending = Math.max(competenceTotal - competencePaid, 0);
-                const status = getBalanceStyle(currentBalance);
-                const isDebt = currentBalance < -0.05;
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto bg-background divide-y">
+            {sortedMembers.map(member => {
+              const currentBalance = Number(member.balance ?? 0);
+              const previousDebt = Number(member.previous_debt ?? 0);
+              const competenceTotal = Number(member.total_owed ?? 0);
+              const competencePaidFallback = Number(memberPaymentsByCompetence[member.user_id]?.[currentCompetenceKey] || 0);
+              const competencePaid = Math.max(Number(member.total_paid ?? 0), competencePaidFallback);
+              const competencePending = Math.max(competenceTotal - competencePaid, 0);
+              const status = getBalanceStyle(currentBalance);
+              const isDebt = currentBalance < -0.05;
 
-                return (
-                  <div
-                    key={member.user_id}
-                    onClick={() => setSelectedMemberId(member.user_id)}
-                    className={`flex items-center justify-between px-6 py-3 transition-colors hover:bg-muted/50 cursor-pointer ${isDebt ? "bg-destructive/5" : ""}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="h-9 w-9 border border-border">
-                          <AvatarImage src={member.profile?.avatar_url} />
-                          <AvatarFallback className="text-xs font-medium bg-muted">
-                          {member.profile?.full_name?.substring(0, 2)?.toUpperCase() || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{member.profile?.full_name}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground capitalize">
-                          {member.role === "admin" ? "Admin" : "Morador"}
-                          </span>
-                          <Badge variant={status.badgeClass} className="text-[10px] h-4 px-1.5">
-                            {status.label}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-right flex-shrink-0 ml-4">
-                      <span className={`font-semibold text-sm tabular-nums ${status.className}`}>
-                        {currentBalance > 0.05 ? "+" : currentBalance < -0.05 ? "-" : ""}R$ {Math.abs(currentBalance).toFixed(2)}
-                      </span>
-                      <p className="text-[11px] text-muted-foreground tabular-nums mt-1">
-                        Total competência: R$ {competenceTotal.toFixed(2)}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground tabular-nums">
-                        Total pago: R$ {competencePaid.toFixed(2)}
-                      </p>
-                      <p className="text-[11px] font-medium tabular-nums">
-                        Total pendente: R$ {competencePending.toFixed(2)}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground tabular-nums">
-                        Pendências anteriores: R$ {previousDebt.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-              {sortedMembers.length === 0 && (
-                <p className="text-sm text-muted-foreground px-6 py-8 text-center">
-                  Nenhum morador encontrado.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Distribuição por Categoria */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" /> Distribuição por Categoria
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-[250px] relative">
-              {categoryBreakdown.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie 
-                        data={categoryBreakdown} 
-                        dataKey="value" 
-                        nameKey="name" 
-                        cx="50%" 
-                        cy="50%" 
-                        innerRadius={50} 
-                        outerRadius={70} 
-                        paddingAngle={5}
-                        stroke="none"
-                        cornerRadius={5}
-                      >
-                        {categoryBreakdown.map((entry, i) => (
-                          <Cell 
-                            key={i} 
-                            fill={CATEGORY_COLORS[entry.name] || CHART_COLORS[i % CHART_COLORS.length]} 
-                          />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip 
-                        formatter={(v: number) => `R$ ${v.toFixed(2)}`} 
-                        contentStyle={{ 
-                          borderRadius: "8px", 
-                          border: "none", 
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                          fontSize: "12px"
-                        }}
-                        itemStyle={{ color: "#1e293b" }}
-                      />
-                      <Legend 
-                        verticalAlign="bottom" 
-                        height={36} 
-                        iconType="circle"
-                        formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Center Label */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60%] text-center pointer-events-none">
-                    <span className="text-[10px] text-muted-foreground block">Total</span>
-                    <span className="text-sm font-bold">R$ {totalMonthExpenses.toFixed(0)}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
-                  <span className="opacity-50">Sem dados no período</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Últimas Despesas Coletivas */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Receipt className="h-4 w-4" /> Últimas Despesas
-              </CardTitle>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
-                <Link to="/expenses">Ver todas</Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[250px] pr-2 px-2">
-                <div className="space-y-1">
-                  {recentExpenses.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa registrada.</p>
-                  ) : (
-                    recentExpenses.map(expense => (
-                      <div key={expense.id} className="flex items-center justify-between py-2.5 px-3 group hover:bg-muted/50 rounded-md transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
-                            <Receipt className="h-3.5 w-3.5" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium leading-none truncate max-w-[120px]">{expense.title}</p>
-                            <p className="text-xs text-muted-foreground mt-1 truncate">
-                              {getCategoryLabel(expense.category)} • {format(parseLocalDate(expense.purchase_date), "dd MMM", { locale: ptBR })}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-sm font-semibold tabular-nums flex-shrink-0 ml-3">
-                          R$ {Number(expense.amount).toFixed(2)}
+              return (
+                <div
+                  key={member.user_id}
+                  onClick={() => setSelectedMemberId(member.user_id)}
+                  className={`flex items-center justify-between px-6 py-3 transition-colors hover:bg-muted/50 cursor-pointer ${isDebt ? "bg-destructive/5" : ""}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                      <Avatar className="h-9 w-9 border border-border">
+                        <AvatarImage src={member.profile?.avatar_url} />
+                        <AvatarFallback className="text-xs font-medium bg-muted">
+                        {member.profile?.full_name?.substring(0, 2)?.toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{member.profile?.full_name}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground capitalize">
+                        {member.role === "admin" ? "Admin" : "Morador"}
                         </span>
+                        <Badge variant={status.badgeClass} className="text-[10px] h-4 px-1.5">
+                          {status.label}
+                        </Badge>
                       </div>
-                    ))
-                  )}
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <span className={`font-semibold text-sm tabular-nums ${status.className}`}>
+                      {currentBalance > 0.05 ? "+" : currentBalance < -0.05 ? "-" : ""}R$ {Math.abs(currentBalance).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              );
+            })}
+            {sortedMembers.length === 0 && (
+              <p className="text-sm text-muted-foreground px-6 py-8 text-center">
+                Nenhum morador encontrado.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Detalhamento do Morador */}
       <Dialog open={!!selectedMemberId} onOpenChange={(open) => !open && setSelectedMemberId(null)}>
@@ -574,8 +567,10 @@ export function AdminTab({
               <p className="text-sm font-semibold tabular-nums text-success">R$ {selectedHeaderTotals.currentCompetencePaid.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total consolidado</p>
-              <p className="text-sm font-semibold tabular-nums">R$ {selectedHeaderTotals.totalConsolidated.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total acumulado</p>
+              <p className={`text-sm font-semibold tabular-nums ${getBalanceStyle(selectedMember?.accumulated_balance ?? selectedMember?.balance ?? 0).className}`}>
+                R$ {Math.abs(selectedMember?.accumulated_balance ?? selectedMember?.balance ?? 0).toFixed(2)}
+              </p>
             </div>
           </div>
 
@@ -683,13 +678,6 @@ export function AdminTab({
                 </Accordion>
               )}
             </div>
-          </div>
-          
-          <div className="px-5 py-4 bg-muted/20 border-t shrink-0 flex justify-between items-center shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
-            <span className="text-sm font-medium text-muted-foreground">Total acumulado</span>
-            <span className={`text-lg font-bold ${getBalanceStyle(selectedMember?.accumulated_balance ?? selectedMember?.balance ?? 0).className}`}>
-              R$ {Math.abs(selectedMember?.accumulated_balance ?? selectedMember?.balance ?? 0).toFixed(2)}
-            </span>
           </div>
         </DialogContent>
       </Dialog>

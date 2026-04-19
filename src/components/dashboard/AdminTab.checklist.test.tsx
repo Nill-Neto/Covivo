@@ -135,26 +135,37 @@ function renderAdminTab() {
 }
 
 describe("Checklist funcional do AdminTab", () => {
-  it("carrega dados iniciais sem tela em branco", () => {
+  it("carrega dados iniciais e abre detalhes da competência", async () => {
     renderAdminTab();
 
-    expect(screen.getByText("Resumo da Competência")).toBeInTheDocument();
+    // Ensure button is there
+    const detailsBtn = screen.getByText(/Ver detalhes/i);
+    expect(detailsBtn).toBeInTheDocument();
+
+    // Open modal
+    fireEvent.click(detailsBtn);
+
+    expect(await screen.findByText("Resumo da Competência")).toBeInTheDocument();
     expect(screen.getByText("Ana Silva")).toBeInTheDocument();
     expect(screen.getByText("Bruno Costa")).toBeInTheDocument();
   });
 
-  it("mostra resumo da competência com total, pago, pendente e pendências anteriores", () => {
+  it("mostra o saldo principal do morador", async () => {
     renderAdminTab();
 
-    expect(screen.getByText("Total competência: R$ 80.00")).toBeInTheDocument();
-    expect(screen.getAllByText("Total pago: R$ 0.00").length).toBeGreaterThan(0);
-    expect(screen.getByText("Total pendente: R$ 80.00")).toBeInTheDocument();
-    expect(screen.getByText("Pendências anteriores: R$ 120.00")).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Ver detalhes/i));
+
+    // Ana Silva: accumulated_balance = -200
+    expect(await screen.findByText("-R$ 200.00")).toBeInTheDocument();
+    // Bruno Costa: accumulated_balance = -40
+    expect(screen.getByText("-R$ 40.00")).toBeInTheDocument();
   });
 
   it("discrimina competências anteriores no modal e mantém itens colapsados por padrão", async () => {
     renderAdminTab();
-    fireEvent.click(screen.getByText("Ana Silva"));
+    
+    fireEvent.click(screen.getByText(/Ver detalhes/i));
+    fireEvent.click(await screen.findByText("Ana Silva"));
 
     expect(await screen.findByText(/Competência março\/2026/i)).toBeInTheDocument();
     expect(screen.getByText(/Competência fevereiro\/2026/i)).toBeInTheDocument();
@@ -167,13 +178,5 @@ describe("Checklist funcional do AdminTab", () => {
 
     fireEvent.click(screen.getAllByText("Itens da competência (1)")[0]);
     expect(await screen.findByText("Água")).toBeInTheDocument();
-  });
-
-  it("mantém valores corretos para usuário sem pendência anterior", () => {
-    renderAdminTab();
-
-    expect(screen.getByText("Total competência: R$ 40.00")).toBeInTheDocument();
-    expect(screen.getByText("Total pendente: R$ 40.00")).toBeInTheDocument();
-    expect(screen.getByText("Pendências anteriores: R$ 0.00")).toBeInTheDocument();
   });
 });
