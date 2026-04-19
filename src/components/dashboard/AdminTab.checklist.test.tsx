@@ -150,13 +150,8 @@ describe("Checklist funcional do AdminTab", () => {
     renderAdminTab();
     fireEvent.click(screen.getByText("Ana Silva"));
 
-    expect(await screen.findByText("Total competência atual")).toBeInTheDocument();
-    expect(screen.getAllByText("Pendências anteriores").length).toBeGreaterThan(0);
-    expect(screen.getByText("Total pago (comp. atual)")).toBeInTheDocument();
-    expect(screen.getByText("Total consolidado")).toBeInTheDocument();
-
-    expect(await screen.findByText(/Competência fevereiro\/2026/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Competência março\/2026/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/Competência março\/2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/Competência fevereiro\/2026/i)).toBeInTheDocument();
     expect(screen.getAllByText("Total competência").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Total pago").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Total pendente").length).toBeGreaterThan(0);
@@ -164,11 +159,8 @@ describe("Checklist funcional do AdminTab", () => {
     expect(screen.queryByText("Luz")).not.toBeInTheDocument();
     expect(screen.queryByText("Competência abril/2026")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Itens pendentes da competência (1)"));
-    expect(await screen.findByText("Luz")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("Itens da competência atual (1)"));
-    expect((await screen.findAllByText("Mercado")).length).toBeGreaterThan(1);
+    fireEvent.click(screen.getAllByText("Itens da competência (1)")[0]);
+    expect(await screen.findByText("Água")).toBeInTheDocument();
   });
 
   it("mantém valores corretos para usuário sem pendência anterior", () => {
