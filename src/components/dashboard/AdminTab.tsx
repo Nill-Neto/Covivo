@@ -370,8 +370,8 @@ export function AdminTab({
           <CardContent className="p-0">
             <div className="divide-y">
               {sortedMembers.map(member => {
-                const currentBalance = member.balance || 0;
-                const previousDebt = member.previous_debt || 0;
+                const currentBalance = Number(member.balance ?? 0);
+                const previousDebt = Number(member.previous_debt ?? 0);
                 const competenceTotal = Number(member.total_owed ?? 0);
                 const competencePaidFallback = Number(memberPaymentsByCompetence[member.user_id]?.[currentCompetenceKey] || 0);
                 const competencePaid = Math.max(Number(member.total_paid ?? 0), competencePaidFallback);
