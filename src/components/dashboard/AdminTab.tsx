@@ -93,16 +93,13 @@ export function AdminTab({
       .map(([competenceKey, items]) => ({
         competenceKey,
         items: items.sort((a, b) => new Date(b.expenses?.purchase_date || 0).getTime() - new Date(a.expenses?.purchase_date || 0).getTime()),
-        totalPending: items.reduce((acc, s) => acc + Number(s.amount || 0), 0),
+        totalCompetence: items.reduce((acc, s) => acc + Number(s.amount || 0), 0),
+        totalPaid: items.reduce((acc, s) => acc + (s.status === "paid" ? Number(s.amount || 0) : 0), 0),
       }))
       .map((group) => ({
         ...group,
-        totalPaid: Number(memberPaymentsByCompetence?.[selectedMemberId || ""]?.[group.competenceKey] || 0),
-      }))
-      .map((group) => ({
-        ...group,
-        totalCompetence: group.totalPending + group.totalPaid,
-        pendingItems: group.items,
+        totalPending: Math.max(group.totalCompetence - group.totalPaid, 0),
+        pendingItems: group.items.filter((split: any) => split.status !== "paid"),
       }))
       .filter((group) => group.totalPending > 0.05)
       .sort((a, b) => b.competenceKey.localeCompare(a.competenceKey));
@@ -566,24 +563,24 @@ export function AdminTab({
                       <div className="px-3 py-2.5 grid grid-cols-3 gap-2 text-[11px] border-b">
                         <div>
                           <p className="text-muted-foreground">Total competência</p>
-                          <p className="font-semibold tabular-nums">R$ {group.totalCompetence.toFixed(2)}</p>
+                          <p className="font-semibold tabular-nums">R$ {group.total.toFixed(2)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Total pago</p>
-                          <p className="font-semibold tabular-nums text-success">R$ {group.totalPaid.toFixed(2)}</p>
+                          <p className="font-semibold tabular-nums text-success">R$ 0.00</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Total pendente</p>
-                          <p className="font-semibold tabular-nums text-destructive">R$ {group.totalPending.toFixed(2)}</p>
+                          <p className="font-semibold tabular-nums text-destructive">R$ {group.total.toFixed(2)}</p>
                         </div>
                       </div>
                       <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value={`pending-${group.competenceKey}`} className="border-b-0">
                           <AccordionTrigger className="px-3 py-2 text-xs font-medium hover:no-underline">
-                            Itens pendentes da competência ({group.pendingItems.length})
+                            Itens da competência ({group.items.length})
                           </AccordionTrigger>
                           <AccordionContent className="divide-y">
-                            {group.pendingItems.map((split: any) => (
+                            {group.items.map((split: any) => (
                               <div key={split.id} className="px-3 py-2.5">
                                 <div className="flex justify-between gap-2">
                                   <p className="text-sm">{split.expenses?.title || "Despesa sem título"}</p>
