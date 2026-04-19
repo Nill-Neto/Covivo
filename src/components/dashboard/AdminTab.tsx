@@ -86,7 +86,6 @@ export function AdminTab({
     const selectedMemberPaymentsByCompetence = selectedMemberId
       ? (memberPaymentsByCompetence[selectedMemberId] || {})
       : {};
-    const previousDebtFallback = Number(selectedMember?.previous_debt || 0);
 
     const groups: Record<string, any[]> = {};
     selectedMemberPreviousSplits.forEach((split: any) => {
@@ -139,9 +138,7 @@ export function AdminTab({
       Number(selectedMember?.total_paid ?? selectedMember?.current_cycle_paid ?? 0),
       currentCompetencePaidFallback
     );
-    const previousPendingFromGroups = selectedPreviousByCompetence.reduce((acc, group) => acc + group.totalPending, 0);
-    const previousPendingFallback = Number(selectedMember?.previous_debt || 0);
-    const previousPendingTotal = Math.max(previousPendingFromGroups, previousPendingFallback);
+    const previousPendingTotal = selectedPreviousByCompetence.reduce((acc, group) => acc + group.totalPending, 0);
     const totalConsolidated = Math.max(previousPendingTotal + currentCompetenceTotal - currentCompetencePaid, 0);
 
     return {
