@@ -386,12 +386,12 @@ export function AdminTab({
                     className={`flex items-center justify-between px-6 py-3 transition-colors hover:bg-muted/50 cursor-pointer ${isDebt ? "bg-destructive/5" : ""}`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Avatar className="h-9 w-9 border border-border">
-                        <AvatarImage src={member.profile?.avatar_url} />
-                        <AvatarFallback className="text-xs font-medium bg-muted">
-                          {member.profile?.full_name?.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                        <Avatar className="h-9 w-9 border border-border">
+                          <AvatarImage src={member.profile?.avatar_url} />
+                          <AvatarFallback className="text-xs font-medium bg-muted">
+                          {member.profile?.full_name?.substring(0, 2)?.toUpperCase() || "?"}
+                          </AvatarFallback>
+                        </Avatar>
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{member.profile?.full_name}</p>
                         <div className="flex items-center gap-2">
