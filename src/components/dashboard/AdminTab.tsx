@@ -83,7 +83,6 @@ export function AdminTab({
   }, [currentCompetenceKey, pendingSplits, selectedMemberId]);
 
   const selectedPreviousByCompetence = useMemo(() => {
-    const previousDebtFallback = Number(selectedMember?.previous_debt || 0);
     const selectedMemberPaymentsByCompetence = selectedMemberId
       ? (memberPaymentsByCompetence[selectedMemberId] || {})
       : {};
@@ -117,15 +116,15 @@ export function AdminTab({
 
     if (grouped.length > 0) return grouped;
 
-    if (previousDebtFallback > 0.05) {
+    if (Number(selectedMember?.previous_debt || 0) > 0.05) {
       return [{
         competenceKey: "saldo-anterior",
         items: [],
-        totalCompetence: previousDebtFallback,
+        totalCompetence: Number(selectedMember?.previous_debt || 0),
         totalPaidFromSplits: 0,
         totalPaidFromPayments: 0,
         totalPaid: 0,
-        totalPending: previousDebtFallback,
+        totalPending: Number(selectedMember?.previous_debt || 0),
         pendingItems: [],
         synthetic: true,
       }];
@@ -143,7 +142,7 @@ export function AdminTab({
       Number(selectedMember?.total_paid ?? selectedMember?.current_cycle_paid ?? 0),
       currentCompetencePaidFallback
     );
-    const previousPendingTotal = selectedPreviousByCompetence.reduce((acc, group) => acc + group.totalPending, 0);
+    const previousPendingTotal = selectedPreviousByCompetence.reduce<number>((acc, group) => acc + Number(group.totalPending || 0), 0);
     const totalConsolidated = Math.max(previousPendingTotal + currentCompetenceTotal - currentCompetencePaid, 0);
 
     return {
