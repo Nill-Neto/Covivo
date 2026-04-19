@@ -93,6 +93,7 @@ export function AdminTab({
       groups[key] = groups[key] || [];
       groups[key].push(split);
     });
+
     const grouped = Object.entries(groups)
       .map(([competenceKey, items]) => ({
         competenceKey,
@@ -101,26 +102,29 @@ export function AdminTab({
         totalPaidFromSplits: items.reduce((acc, s) => acc + (s.status === "paid" ? Number(s.amount || 0) : 0), 0),
         totalPaidFromPayments: Number(selectedMemberPaymentsByCompetence[competenceKey] || 0),
       }))
-      .map((group) => ({
-        ...group,
-        totalPaid: Math.max(group.totalPaidFromSplits, group.totalPaidFromPayments),
-        totalPending: Math.max(group.totalCompetence - group.totalPaid, 0),
-        pendingItems: group.items.filter((split: any) => split.status !== "paid"),
-      }))
+      .map((group) => {
+        const totalPaid = Math.max(group.totalPaidFromSplits, group.totalPaidFromPayments);
+        return {
+          ...group,
+          totalPaid,
+          totalPending: Math.max(group.totalCompetence - totalPaid, 0),
+          pendingItems: group.items.filter((split: any) => split.status !== "paid"),
+        };
+      })
       .filter((group) => group.totalPending > 0.05)
       .sort((a, b) => b.competenceKey.localeCompare(a.competenceKey));
 
     if (grouped.length > 0) return grouped;
 
-    if (previousDebtFallback > 0.05) {
+    if (Number(selectedMember?.previous_debt || 0) > 0.05) {
       return [{
         competenceKey: "saldo-anterior",
         items: [],
-        totalCompetence: previousDebtFallback,
+        totalCompetence: Number(selectedMember?.previous_debt || 0),
         totalPaidFromSplits: 0,
         totalPaidFromPayments: 0,
         totalPaid: 0,
-        totalPending: previousDebtFallback,
+        totalPending: Number(selectedMember?.previous_debt || 0),
         pendingItems: [],
         synthetic: true,
       }];
@@ -138,7 +142,10 @@ export function AdminTab({
       Number(selectedMember?.total_paid ?? selectedMember?.current_cycle_paid ?? 0),
       currentCompetencePaidFallback
     );
-    const previousPendingTotal = selectedPreviousByCompetence.reduce((acc, group) => acc + group.totalPending, 0);
+    let previousPendingTotal = 0;
+    for (const group of selectedPreviousByCompetence) {
+      previousPendingTotal += Number((group as any).totalPending || 0);
+    }
     const totalConsolidated = Math.max(previousPendingTotal + currentCompetenceTotal - currentCompetencePaid, 0);
 
     return {

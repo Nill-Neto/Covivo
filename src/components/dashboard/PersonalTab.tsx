@@ -177,25 +177,25 @@ export function PersonalTab({
                                     <div className="min-w-0 pr-4">
                                       <div className="flex items-center gap-2 mb-1">
                                         <p className="text-sm font-medium truncate text-foreground">
-                                          {item.expenses?.title || "Despesa sem título"}
+                                          {(item as any).expenses?.title || "Despesa sem título"}
                                           {item.originalAmount && item.originalAmount > item.amount && (
                                             <span className="ml-2 font-normal text-[10px] text-muted-foreground">
                                               (Parcial - Orig: R$ {Number(item.originalAmount).toFixed(2)})
                                             </span>
                                           )}
                                         </p>
-                                        {item.expenses?.installments > 1 && (
+                                        {(item as any).expenses?.installments > 1 && (
                                           <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
-                                            Parc. {item.installment_number || 1}/{item.expenses.installments}
+                                            Parc. {(item as any).installment_number || 1}/{(item as any).expenses.installments}
                                           </Badge>
                                         )}
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal">
-                                          {getCategoryLabel(item.expenses?.category)}
+                                          {getCategoryLabel((item as any).expenses?.category)}
                                         </Badge>
                                         <span className="text-xs text-muted-foreground">
-                                          {item.expenses?.purchase_date ? format(parseLocalDate(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
+                                          {(item as any).expenses?.purchase_date ? format(parseLocalDate((item as any).expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
                                         </span>
                                       </div>
                                     </div>
@@ -281,25 +281,25 @@ export function PersonalTab({
                                     <div className="min-w-0 pr-4">
                                       <div className="flex items-center gap-2 mb-1">
                                         <p className="text-sm font-medium truncate text-foreground">
-                                          {item.expenses?.title || "Despesa sem título"}
+                                          {(item as any).expenses?.title || "Despesa sem título"}
                                           {item.originalAmount && item.originalAmount > item.amount && (
                                             <span className="ml-2 font-normal text-[10px] text-muted-foreground">
                                               (Parcial - Orig: R$ {Number(item.originalAmount).toFixed(2)})
                                             </span>
                                           )}
                                         </p>
-                                        {item.expenses?.installments > 1 && (
+                                        {(item as any).expenses?.installments > 1 && (
                                           <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0.5 leading-none shrink-0">
-                                            Parc. {item.installment_number || 1}/{item.expenses.installments}
+                                            Parc. {(item as any).installment_number || 1}/{(item as any).expenses.installments}
                                           </Badge>
                                         )}
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal">
-                                          {getCategoryLabel(item.expenses?.category)}
+                                          {getCategoryLabel((item as any).expenses?.category)}
                                         </Badge>
                                         <span className="text-xs text-muted-foreground">
-                                          {item.expenses?.purchase_date ? format(parseLocalDate(item.expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
+                                          {(item as any).expenses?.purchase_date ? format(parseLocalDate((item as any).expenses.purchase_date), "dd/MM/yyyy") : "Data n/d"}
                                         </span>
                                       </div>
                                     </div>
