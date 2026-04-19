@@ -92,6 +92,7 @@ function renderAdminTab() {
             id: "split-prev-1",
             user_id: "u-1",
             amount: 50,
+            status: "paid",
             expenses: {
               title: "Água",
               purchase_date: "2026-03-15",
@@ -102,6 +103,7 @@ function renderAdminTab() {
             id: "split-prev-2",
             user_id: "u-1",
             amount: 70,
+            status: "pending",
             expenses: {
               title: "Luz",
               purchase_date: "2026-02-15",
@@ -112,6 +114,7 @@ function renderAdminTab() {
             id: "split-current-pending",
             user_id: "u-1",
             amount: 80,
+            status: "pending",
             expenses: {
               title: "Mercado",
               purchase_date: "2026-04-03",
@@ -134,30 +137,45 @@ describe("Checklist funcional do AdminTab", () => {
     expect(screen.getByText("Bruno Costa")).toBeInTheDocument();
   });
 
-  it("mostra débito anterior, competência atual e total acumulado para morador com pendência anterior", () => {
+  it("mostra resumo da competência com total, pago, pendente e pendências anteriores", () => {
     renderAdminTab();
 
-    expect(screen.getByText("Débito anterior: R$ 120.00")).toBeInTheDocument();
-    expect(screen.getByText("Competência atual: -R$ 80.00")).toBeInTheDocument();
-    expect(screen.getByText("Total acumulado: R$ 200.00")).toBeInTheDocument();
+    expect(screen.getByText("Total competência: R$ 80.00")).toBeInTheDocument();
+    expect(screen.getAllByText("Total pago: R$ 0.00").length).toBeGreaterThan(0);
+    expect(screen.getByText("Total pendente: R$ 80.00")).toBeInTheDocument();
+    expect(screen.getByText("Pendências anteriores: R$ 120.00")).toBeInTheDocument();
   });
 
-  it("discrimina competências anteriores no modal do morador", async () => {
+  it("discrimina competências anteriores no modal e mantém itens colapsados por padrão", async () => {
     renderAdminTab();
     fireEvent.click(screen.getByText("Ana Silva"));
 
-    expect(await screen.findByText(/Competência março\/2026/i)).toBeInTheDocument();
-    expect(screen.getByText(/Competência fevereiro\/2026/i)).toBeInTheDocument();
-    expect(screen.getByText("Água")).toBeInTheDocument();
-    expect(screen.getByText("Luz")).toBeInTheDocument();
+    expect(await screen.findByText("Total competência atual")).toBeInTheDocument();
+    expect(screen.getAllByText("Pendências anteriores").length).toBeGreaterThan(0);
+    expect(screen.getByText("Total pago (comp. atual)")).toBeInTheDocument();
+    expect(screen.getByText("Total consolidado")).toBeInTheDocument();
+
+    expect(await screen.findByText(/Competência fevereiro\/2026/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Competência março\/2026/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText("Total competência").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Total pago").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Total pendente").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Água")).not.toBeInTheDocument();
+    expect(screen.queryByText("Luz")).not.toBeInTheDocument();
     expect(screen.queryByText("Competência abril/2026")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Itens pendentes da competência (1)"));
+    expect(await screen.findByText("Luz")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Itens da competência atual (1)"));
+    expect((await screen.findAllByText("Mercado")).length).toBeGreaterThan(1);
   });
 
   it("mantém valores corretos para usuário sem pendência anterior", () => {
     renderAdminTab();
 
-    expect(screen.getByText("Débito anterior: R$ 0.00")).toBeInTheDocument();
-    expect(screen.getByText("Competência atual: -R$ 40.00")).toBeInTheDocument();
-    expect(screen.getByText("Total acumulado: R$ 40.00")).toBeInTheDocument();
+    expect(screen.getByText("Total competência: R$ 40.00")).toBeInTheDocument();
+    expect(screen.getByText("Total pendente: R$ 40.00")).toBeInTheDocument();
+    expect(screen.getByText("Pendências anteriores: R$ 0.00")).toBeInTheDocument();
   });
 });
