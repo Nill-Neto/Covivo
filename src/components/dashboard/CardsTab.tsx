@@ -285,27 +285,27 @@ export function CardsTab({
                   />
                 </div>
                 
-                <div className="flex flex-col space-y-2 w-full max-w-full md:max-w-[240px] overflow-y-auto max-h-[220px] pr-2 scrollbar-thin">
+                <div className="flex flex-col space-y-1 w-full max-w-full md:max-w-[280px] overflow-y-auto max-h-[200px] md:max-h-[240px] pr-1 md:pr-2 scrollbar-thin">
                   {donutData.map((segment) => (
                     <div
                       key={segment.label}
                       className={cn(
-                        "flex items-center justify-between p-2 rounded-md transition-colors cursor-default text-sm",
+                        "flex items-center justify-between p-1.5 md:p-2 rounded-md transition-colors cursor-default text-xs md:text-sm",
                         hoveredSegmentLabel === segment.label ? "bg-muted" : "hover:bg-muted/50"
                       )}
                       onMouseEnter={() => setHoveredSegmentLabel(segment.label)}
                       onMouseLeave={() => setHoveredSegmentLabel(null)}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 pr-3">
                         <span
-                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          className="h-2 w-2 md:h-2.5 md:w-2.5 rounded-full shrink-0"
                           style={{ backgroundColor: segment.color }}
                         />
-                        <span className="font-medium truncate text-muted-foreground">
+                        <span className="font-medium truncate text-muted-foreground" title={segment.label}>
                           {segment.label}
                         </span>
                       </div>
-                      <span className="font-semibold tabular-nums">
+                      <span className="font-semibold tabular-nums shrink-0">
                         R$ {segment.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
