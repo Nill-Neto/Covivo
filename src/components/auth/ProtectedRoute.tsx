@@ -4,8 +4,9 @@ import { CustomLoader } from "@/components/ui/custom-loader";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
+  const isSessionBootstrap = loading && (!user || !profile);
 
-  if (loading) {
+  if (isSessionBootstrap) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <CustomLoader className="h-8 w-8 text-primary" />
