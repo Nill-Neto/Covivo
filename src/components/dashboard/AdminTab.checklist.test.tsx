@@ -92,6 +92,7 @@ function renderAdminTab() {
             id: "split-prev-1",
             user_id: "u-1",
             amount: 50,
+            status: "paid",
             expenses: {
               title: "Água",
               purchase_date: "2026-03-15",
@@ -102,6 +103,7 @@ function renderAdminTab() {
             id: "split-prev-2",
             user_id: "u-1",
             amount: 70,
+            status: "pending",
             expenses: {
               title: "Luz",
               purchase_date: "2026-02-15",
@@ -112,6 +114,7 @@ function renderAdminTab() {
             id: "split-current-pending",
             user_id: "u-1",
             amount: 80,
+            status: "pending",
             expenses: {
               title: "Mercado",
               purchase_date: "2026-04-03",
@@ -119,6 +122,12 @@ function renderAdminTab() {
             },
           },
         ]}
+        memberPaymentsByCompetence={{
+          "u-1": {
+            "2026-02": 20,
+            "2026-03": 50,
+          },
+        }}
         closingDay={10}
       />
     </MemoryRouter>
@@ -126,38 +135,48 @@ function renderAdminTab() {
 }
 
 describe("Checklist funcional do AdminTab", () => {
-  it("carrega dados iniciais sem tela em branco", () => {
+  it("carrega dados iniciais e abre detalhes da competência", async () => {
     renderAdminTab();
 
-    expect(screen.getByText("Resumo da Competência")).toBeInTheDocument();
+    // Ensure button is there
+    const detailsBtn = screen.getByText(/Ver detalhes/i);
+    expect(detailsBtn).toBeInTheDocument();
+
+    // Open modal
+    fireEvent.click(detailsBtn);
+
+    expect(await screen.findByText("Resumo da Competência")).toBeInTheDocument();
     expect(screen.getByText("Ana Silva")).toBeInTheDocument();
     expect(screen.getByText("Bruno Costa")).toBeInTheDocument();
   });
 
-  it("mostra débito anterior, competência atual e total acumulado para morador com pendência anterior", () => {
+  it("mostra o saldo principal do morador", async () => {
     renderAdminTab();
 
-    expect(screen.getByText("Débito anterior: R$ 120.00")).toBeInTheDocument();
-    expect(screen.getByText("Competência atual: -R$ 80.00")).toBeInTheDocument();
-    expect(screen.getByText("Total acumulado: R$ 200.00")).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Ver detalhes/i));
+
+    // Ana Silva: accumulated_balance = -200
+    expect(await screen.findByText("-R$ 200.00")).toBeInTheDocument();
+    // Bruno Costa: accumulated_balance = -40
+    expect(screen.getByText("-R$ 40.00")).toBeInTheDocument();
   });
 
-  it("discrimina competências anteriores no modal do morador", async () => {
+  it("discrimina competências anteriores no modal e mantém itens colapsados por padrão", async () => {
     renderAdminTab();
-    fireEvent.click(screen.getByText("Ana Silva"));
+    
+    fireEvent.click(screen.getByText(/Ver detalhes/i));
+    fireEvent.click(await screen.findByText("Ana Silva"));
 
     expect(await screen.findByText(/Competência março\/2026/i)).toBeInTheDocument();
     expect(screen.getByText(/Competência fevereiro\/2026/i)).toBeInTheDocument();
-    expect(screen.getByText("Água")).toBeInTheDocument();
-    expect(screen.getByText("Luz")).toBeInTheDocument();
+    expect(screen.getAllByText("Total competência").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Total pago").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Total pendente").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Água")).not.toBeInTheDocument();
+    expect(screen.queryByText("Luz")).not.toBeInTheDocument();
     expect(screen.queryByText("Competência abril/2026")).not.toBeInTheDocument();
-  });
 
-  it("mantém valores corretos para usuário sem pendência anterior", () => {
-    renderAdminTab();
-
-    expect(screen.getByText("Débito anterior: R$ 0.00")).toBeInTheDocument();
-    expect(screen.getByText("Competência atual: -R$ 40.00")).toBeInTheDocument();
-    expect(screen.getByText("Total acumulado: R$ 40.00")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByText("Itens da competência (1)")[0]);
+    expect(await screen.findByText("Água")).toBeInTheDocument();
   });
 });
