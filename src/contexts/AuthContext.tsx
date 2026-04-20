@@ -174,24 +174,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         const user = session?.user ?? null;
-        if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
-          safeSetState((prev) => ({ ...prev, user, session, loading: true }));
-          if (user) {
-            void loadUserData(user);
-          } else {
-            safeSetState((prev) => ({ ...prev, loading: false }));
-          }
-          return;
-        }
+        safeSetState((prev) => ({ ...prev, user, session, loading: !!user }));
 
-        if (event === "TOKEN_REFRESHED") {
-          safeSetState((prev) => ({ ...prev, user, session, loading: false }));
-          return;
-        }
-
-        if (event === "SIGNED_OUT") {
+        if (user) {
+          void loadUserData(user);
+        } else {
           localStorage.removeItem(ACTIVE_GROUP_KEY);
           safeSetState({
             user: null,
@@ -201,12 +190,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             activeGroupId: null,
             loading: false,
           });
-          return;
         }
-
-        safeSetState((prev) => ({ ...prev, user, session, loading: false }));
       }
     );
+
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        const user = session?.user ?? null;
+        safeSetState((prev) => ({ ...prev, user, session, loading: !!user }));
+        if (user) {
+          void loadUserData(user);
+        } else {
+          safeSetState((prev) => ({ ...prev, loading: false }));
+        }
+      })
+      .catch((error) => {
+        console.error("Erro ao recuperar sessão", error);
+        safeSetState((prev) => ({ ...prev, loading: false }));
+      });
 
     return () => {
       isMountedRef.current = false;
