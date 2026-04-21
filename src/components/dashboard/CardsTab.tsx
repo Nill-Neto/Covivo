@@ -330,7 +330,7 @@ export function CardsTab({
                   </div>
                 </div>
                 
-                <div className="flex flex-col space-y-2 w-full max-w-full md:max-w-[280px] overflow-y-auto max-h-[220px] pr-2 scrollbar-thin">
+                <div className="flex-1 flex flex-col space-y-2 w-full overflow-y-auto max-h-[220px] pr-2 scrollbar-thin">
                   {donutData.map((segment) => (
                     <div
                       key={segment.label}

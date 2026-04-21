@@ -382,16 +382,16 @@ export function AdminTab({
       {/* Main Content Grid */}
       <div className="grid gap-4 md:grid-cols-12">
         {/* Distribuição por Categoria */}
-        <Card className="md:col-span-4 lg:col-span-4 flex flex-col">
+        <Card className="md:col-span-6 lg:col-span-6 flex flex-col">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4" /> Distribuição por Categoria
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col gap-4 p-4 pt-0">
+          <CardContent className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 p-4 pt-0">
             {donutData.length > 0 ? (
               <>
-                <div className="relative h-[200px] w-full shrink-0 mx-auto">
+                <div className="relative h-[200px] w-[200px] shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie 
@@ -435,7 +435,7 @@ export function AdminTab({
                   </div>
                 </div>
                 
-                <div className="flex flex-col space-y-2 w-full overflow-y-auto max-h-[160px] pr-2 scrollbar-thin">
+                <div className="flex-1 flex flex-col space-y-2 w-full overflow-y-auto max-h-[200px] pr-2 scrollbar-thin">
                   {donutData.map((segment) => (
                     <div
                       key={segment.label}
@@ -471,7 +471,7 @@ export function AdminTab({
         </Card>
 
         {/* Últimas Despesas Coletivas */}
-        <Card className="md:col-span-8 lg:col-span-8">
+        <Card className="md:col-span-6 lg:col-span-6">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Receipt className="h-4 w-4" /> Últimas Despesas
