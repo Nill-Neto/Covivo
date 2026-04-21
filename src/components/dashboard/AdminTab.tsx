@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getCategoryLabel, CHART_COLORS, CATEGORY_COLORS } from "@/constants/categories";
+import { getCategoryLabel } from "@/constants/categories";
 import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,6 +37,18 @@ interface AdminTabProps {
   memberPaymentsByCompetence?: Record<string, Record<string, number>>;
   closingDay: number;
 }
+
+// Cores coerentes com as variáveis do sistema (Primary, Warning, Destructive + cores complementares neutras)
+const SYSTEM_COHERENT_COLORS = [
+  "hsl(var(--primary))",         // Teal (Primary)
+  "hsl(215, 90%, 50%)",          // Blue
+  "hsl(var(--warning))",         // Amber (Warning)
+  "hsl(270, 70%, 55%)",          // Violet
+  "hsl(var(--destructive))",     // Red (Destructive)
+  "hsl(190, 85%, 40%)",          // Cyan
+  "hsl(25, 90%, 55%)",           // Orange
+  "hsl(220, 20%, 50%)"           // Slate
+];
 
 export function AdminTab({
   members,
@@ -203,10 +215,11 @@ export function AdminTab({
       .sort((a, b) => b.value - a.value);
   }, [collectiveExpenses]);
 
+  // APLICAÇÃO DA PALETA COERENTE APENAS NESTE GRÁFICO
   const donutData = categoryBreakdown.map((entry, index) => ({
     label: entry.name,
     value: entry.value,
-    color: CATEGORY_COLORS[entry.name] || CHART_COLORS[index % CHART_COLORS.length],
+    color: SYSTEM_COHERENT_COLORS[index % SYSTEM_COHERENT_COLORS.length],
   }));
 
   const activeSegment = donutData.find(d => d.label === hoveredSegmentLabel);
