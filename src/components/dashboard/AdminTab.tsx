@@ -5,17 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
-import { parseLocalDate } from "@/lib/utils";
+import { parseLocalDate, cn } from "@/lib/utils";
 import {
   Users, ArrowRight, RefreshCw, DollarSign, AlertTriangle,
   Receipt, Settings, ClipboardList, BarChart3,
-  Clock, UserPlus, Scale, UserMinus, Package
+  Clock, UserPlus, Scale, UserMinus, Package,
+  type LucideIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getCategoryLabel, CHART_COLORS, CATEGORY_COLORS } from "@/constants/categories";
 import { useMemo, useState } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -56,6 +57,8 @@ export function AdminTab({
 }: AdminTabProps) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [isReceivablesOpen, setIsReceivablesOpen] = useState(false);
+  const [hoveredSegmentLabel, setHoveredSegmentLabel] = useState<string | null>(null);
+  
   const currentCompetenceKey = format(currentDate, "yyyy-MM");
 
   // Ordena os membros pelo saldo acumulado (negativos primeiro)
@@ -199,6 +202,17 @@ export function AdminTab({
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [collectiveExpenses]);
+
+  const donutData = categoryBreakdown.map((entry, index) => ({
+    label: entry.name,
+    value: entry.value,
+    color: CATEGORY_COLORS[entry.name] || CHART_COLORS[index % CHART_COLORS.length],
+  }));
+
+  const activeSegment = donutData.find(d => d.label === hoveredSegmentLabel);
+  const displayValue = activeSegment ? activeSegment.value : totalMonthExpenses;
+  const displayLabel = activeSegment ? activeSegment.label : "Total";
+  const displayPercentage = activeSegment && totalMonthExpenses > 0 ? (activeSegment.value / totalMonthExpenses) * 100 : 100;
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -366,60 +380,86 @@ export function AdminTab({
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-12">
         {/* Distribuição por Categoria */}
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="md:col-span-6 lg:col-span-6 flex flex-col">
+          <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4" /> Distribuição por Categoria
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-[250px] relative">
-            {categoryBreakdown.length > 0 ? (
+          <CardContent className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-6 p-4 pt-0">
+            {donutData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie 
-                      data={categoryBreakdown} 
-                      dataKey="value" 
-                      nameKey="name" 
-                      cx="50%" 
-                      cy="50%" 
-                      innerRadius={50} 
-                      outerRadius={70} 
-                      paddingAngle={5}
-                      stroke="none"
-                      cornerRadius={5}
+                <div className="relative h-[200px] w-[200px] shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={donutData} 
+                        dataKey="value" 
+                        nameKey="label" 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={70} 
+                        outerRadius={90} 
+                        paddingAngle={5}
+                        stroke="none"
+                        cornerRadius={5}
+                        onMouseEnter={(_, index) => setHoveredSegmentLabel(donutData[index].label)}
+                        onMouseLeave={() => setHoveredSegmentLabel(null)}
+                      >
+                        {donutData.map((entry, i) => (
+                          <Cell 
+                            key={i} 
+                            fill={entry.color} 
+                            opacity={hoveredSegmentLabel === null || hoveredSegmentLabel === entry.label ? 1 : 0.3}
+                            className="transition-opacity duration-200"
+                            style={{ outline: "none" }}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none flex flex-col items-center justify-center w-full px-4">
+                    <p className="text-muted-foreground text-[10px] font-medium truncate max-w-[120px] uppercase tracking-wider leading-tight">
+                      {displayLabel}
+                    </p>
+                    <p className="text-lg font-bold text-foreground tabular-nums whitespace-nowrap">
+                      R$ {displayValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    {activeSegment && (
+                      <p className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full mt-1">
+                        {displayPercentage.toFixed(1)}%
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex-1 flex flex-col space-y-2 w-full overflow-y-auto max-h-[200px] pr-2 scrollbar-thin">
+                  {donutData.map((segment) => (
+                    <div
+                      key={segment.label}
+                      className={cn(
+                        "flex items-center justify-between p-2 rounded-md transition-colors cursor-default text-sm gap-3",
+                        hoveredSegmentLabel === segment.label ? "bg-muted" : "hover:bg-muted/50"
+                      )}
+                      onMouseEnter={() => setHoveredSegmentLabel(segment.label)}
+                      onMouseLeave={() => setHoveredSegmentLabel(null)}
                     >
-                      {categoryBreakdown.map((entry, i) => (
-                        <Cell 
-                          key={i} 
-                          fill={CATEGORY_COLORS[entry.name] || CHART_COLORS[i % CHART_COLORS.length]} 
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: segment.color }}
                         />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip 
-                      formatter={(v: number) => `R$ ${v.toFixed(2)}`} 
-                      contentStyle={{ 
-                        borderRadius: "8px", 
-                        border: "none", 
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                        fontSize: "12px"
-                      }}
-                      itemStyle={{ color: "#1e293b" }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={36} 
-                      iconType="circle"
-                      formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center Label */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60%] text-center pointer-events-none">
-                  <span className="text-[10px] text-muted-foreground block">Total</span>
-                  <span className="text-sm font-bold">R$ {totalMonthExpenses.toFixed(0)}</span>
+                        <span className="font-medium truncate text-muted-foreground" title={segment.label}>
+                          {segment.label}
+                        </span>
+                      </div>
+                      <span className="font-semibold tabular-nums shrink-0 whitespace-nowrap text-right text-foreground">
+                        R$ {segment.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
@@ -431,7 +471,7 @@ export function AdminTab({
         </Card>
 
         {/* Últimas Despesas Coletivas */}
-        <Card>
+        <Card className="md:col-span-6 lg:col-span-6">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Receipt className="h-4 w-4" /> Últimas Despesas
@@ -685,15 +725,31 @@ export function AdminTab({
   );
 }
 
-function QuickActionLink({ to, state, icon: Icon, label, desc }: { to: string; state?: any; icon: any; label: string; desc: string }) {
+function QuickActionLink({
+  to,
+  icon: Icon,
+  label,
+  desc,
+  state
+}: {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  desc: string;
+  state?: any;
+}) {
   return (
-    <Link to={to} state={state} className="flex items-center gap-3 px-6 py-4 hover:bg-muted/50 transition-colors group">
-      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-        <Icon className="h-4 w-4 text-primary" />
+    <Link
+      to={to}
+      state={state}
+      className="flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors group outline-none focus-visible:bg-muted/50"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+        <Icon className="h-5 w-5" />
       </div>
-      <div className="min-w-0">
-        <p className="text-sm font-medium group-hover:text-primary transition-colors">{label}</p>
-        <p className="text-xs text-muted-foreground truncate">{desc}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{desc}</p>
       </div>
     </Link>
   );
