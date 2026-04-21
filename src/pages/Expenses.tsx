@@ -42,6 +42,7 @@ import {
   CheckCircle2,
   Receipt,
   Settings,
+  Search,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -152,7 +153,16 @@ export default function Expenses() {
 
   const [editingOriginalAmount, setEditingOriginalAmount] = useState<number | null>(null);
 
-  const { currentDate, cycleStart, cycleEnd, nextMonth, prevMonth, loading, closingDay } = useCycleDates(membership?.group_id);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const { currentDate, setCurrentDate, cycleStart, cycleEnd, nextMonth, prevMonth, loading, closingDay } = useCycleDates(membership?.group_id);
 
   useEffect(() => {
     if (!editingId && activeTab !== "recurring") {
@@ -167,6 +177,26 @@ export default function Expenses() {
   }, [category]);
 
   const currentCompetenceKey = formatCompetenceKey(currentDate);
+
+  const { data: globalSearchResults = [] } = useQuery({
+    queryKey: ["global-expenses-search", membership?.group_id, debouncedSearch, currentCompetenceKey],
+    queryFn: async () => {
+      if (!debouncedSearch.trim() || !membership?.group_id) return [];
+      
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("id, title, purchase_date, competence_key, amount, category, expense_type")
+        .eq("group_id", membership.group_id)
+        .ilike("title", `%${debouncedSearch}%`)
+        .neq("competence_key", currentCompetenceKey)
+        .order("purchase_date", { ascending: false })
+        .limit(10);
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!debouncedSearch.trim() && !!membership?.group_id,
+  });
 
   const { data: cycleExpenses = [], isLoading: loadingExpenses } = useQuery({
     queryKey: ["expenses", membership?.group_id, currentCompetenceKey],
@@ -746,6 +776,21 @@ export default function Expenses() {
 
   const filteredCollective = (decoratedExpenses ?? []).filter((e: any) => e.expense_type === "collective");
 
+  const lowerSearchTerm = searchTerm.toLowerCase().trim();
+  const filterBySearch = (e: any) => {
+    if (!lowerSearchTerm) return true;
+    const catLabel = CATEGORIES.find((c) => c.value === e.category)?.label ?? e.category;
+    return (
+      e.title?.toLowerCase().includes(lowerSearchTerm) ||
+      catLabel.toLowerCase().includes(lowerSearchTerm)
+    );
+  };
+
+  const finalFilteredAll = filteredAll.filter(filterBySearch);
+  const finalFilteredMine = filteredMine.filter(filterBySearch);
+  const finalFilteredCollective = filteredCollective.filter(filterBySearch);
+  const finalRecurring = recurringExpenses?.filter(filterBySearch);
+
   const handleEditClick = (expense: any) => {
     if (expense._is_installment && expense.installments > 1) {
       setEditConfirmExpense(expense);
@@ -1267,9 +1312,61 @@ export default function Expenses() {
         </TabsList>
       )}
 
+      <div className="relative z-20">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar despesas..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+            className="pl-9 bg-card"
+          />
+        </div>
+        
+        {isSearchFocused && debouncedSearch && globalSearchResults.length > 0 && (
+          <Card className="absolute top-full left-0 right-0 mt-1 shadow-lg border-border overflow-hidden">
+            <div className="p-2 bg-muted/30 border-b">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Em outras competências
+              </p>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto">
+              {globalSearchResults.map((res: any) => {
+                const d = parseLocalDate(res.purchase_date);
+                const [y, m] = res.competence_key ? res.competence_key.split('-') : [d.getFullYear(), d.getMonth() + 1];
+                return (
+                  <button
+                    key={res.id}
+                    className="w-full text-left px-4 py-3 hover:bg-muted/50 border-b last:border-0 transition-colors flex items-center justify-between"
+                    onClick={() => {
+                      setCurrentDate(new Date(Number(y), Number(m) - 1, 15));
+                      setIsSearchFocused(false);
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{res.title}</p>
+                      <p className="text-xs text-muted-foreground flex gap-2">
+                        <span>{format(d, "dd/MM/yyyy", { locale: ptBR })}</span>
+                        <span>•</span>
+                        <span className="font-medium text-primary">Comp. {res.competence_key}</span>
+                      </p>
+                    </div>
+                    <div className="text-sm font-semibold whitespace-nowrap ml-4">
+                      R$ {Number(res.amount).toFixed(2)}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+        )}
+      </div>
+
       <TabsContent value="all" className="space-y-3 mt-4">
-        {filteredAll.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
-        {filteredAll.map((e: any) => (
+        {finalFilteredAll.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
+        {finalFilteredAll.map((e: any) => (
           <ExpenseCard
             key={e.id}
             expense={e}
@@ -1289,8 +1386,8 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="mine" className="space-y-3 mt-4">
-        {filteredMine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
-        {filteredMine.map((e: any) => (
+        {finalFilteredMine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
+        {finalFilteredMine.map((e: any) => (
           <ExpenseCard
             key={e.id}
             expense={e}
@@ -1310,8 +1407,8 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="collective" className="space-y-3 mt-4">
-        {filteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
-        {filteredCollective.map((e: any) => (
+        {finalFilteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
+        {finalFilteredCollective.map((e: any) => (
           <ExpenseCard
             key={e.id}
             expense={e}
@@ -1344,8 +1441,8 @@ export default function Expenses() {
           </Button>
         </div>
 
-        {!recurringExpenses?.length && <p className="text-center text-muted-foreground py-8">Nenhuma recorrência configurada.</p>}
-        {recurringExpenses?.map((r: any) => (
+        {!finalRecurring?.length && <p className="text-center text-muted-foreground py-8">Nenhuma recorrência configurada.</p>}
+        {finalRecurring?.map((r: any) => (
           <RecurringCard key={r.id} recurring={r} isAdmin={isAdmin} userId={user?.id} onEdit={() => openEditRecurring(r)} onDelete={() => deleteRecurring.mutate(r.id)} />
         ))}
       </TabsContent>
