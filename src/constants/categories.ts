@@ -30,6 +30,12 @@ export const CATEGORY_COLORS: Record<string, string> = {
   "Internet/TV": "#2563eb", // blue
   "Limpeza": "#0891b2", // cyan
   "Outros": "#64748b", // slate
+  "Transporte": "#f59e0b", // amber
+  "Alimentação": "#e11d48", // rose
+  "Saúde": "#14b8a6", // teal
+  "Lazer": "#8b5cf6", // violet
+  "Educação": "#d946ef", // fuchsia
+  "Manutenção": "#84cc16", // lime
 };
 
 export const getCategoryLabel = (key: string | undefined | null) => {
