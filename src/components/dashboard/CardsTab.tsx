@@ -335,7 +335,12 @@ export function CardsTab({
     const dateA = a.expenses?.purchase_date || "";
     const dateB = b.expenses?.purchase_date || "";
 
-    return dateB.localeCompare(dateA);
+    if (dateA === dateB) {
+      const createdA = a.expenses?.created_at || "";
+      const createdB = b.expenses?.created_at || "";
+      return createdA.localeCompare(createdB);
+    }
+    return dateA.localeCompare(dateB);
   });
 
   const selectedCardTotal = selectedCardInstallments.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
@@ -356,7 +361,13 @@ export function CardsTab({
   const sortedInstallments = [...billInstallments].sort((a: any, b: any) => {
     const dateA = a.expenses?.purchase_date || "";
     const dateB = b.expenses?.purchase_date || "";
-    return dateB.localeCompare(dateA);
+    
+    if (dateA === dateB) {
+      const createdA = a.expenses?.created_at || "";
+      const createdB = b.expenses?.created_at || "";
+      return createdA.localeCompare(createdB);
+    }
+    return dateA.localeCompare(dateB);
   });
 
   const globalIndividualTotal = billInstallments
