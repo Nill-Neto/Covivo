@@ -497,7 +497,7 @@ export function CardsTab({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <ScrollArea className="h-[300px]">
+          <ScrollArea className="max-h-[320px]">
             <div className="divide-y">
               {sortedInstallments.map((i: any, idx: number) => {
                 const totalInstallments = i.expenses?.installments ?? 1;

@@ -616,7 +616,7 @@ export function PersonalTab({
             </Button>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[300px] pr-2 px-2">
+            <ScrollArea className="max-h-[320px] pr-2 px-2">
               <div className="space-y-1">
                 {myPersonalExpenses.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa individual registrada.</p>
@@ -755,7 +755,7 @@ export function PersonalTab({
             </Button>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[300px] pr-2 px-2">
+            <ScrollArea className="max-h-[320px] pr-2 px-2">
               <div className="space-y-1">
                 {collectiveExpenses.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa coletiva registrada.</p>
