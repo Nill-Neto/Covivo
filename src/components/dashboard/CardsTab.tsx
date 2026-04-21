@@ -72,6 +72,7 @@ const cardSchema = z.object({
       (value) => !value || (!Number.isNaN(Number(value)) && Number(value) >= 0),
       "Informe um limite válido",
     ),
+  color: z.string().optional(),
 });
 
 type CardFormValues = z.infer<typeof cardSchema>;
@@ -93,6 +94,7 @@ const CARD_COLORS = [
   "#e11d48", // rose-600
   "#0891b2", // cyan-600
   "#d946ef", // fuchsia-500
+  "#0f172a", // slate-900
 ];
 
 export function CardsTab({
@@ -120,6 +122,7 @@ export function CardsTab({
       closing_day: 5,
       due_day: 10,
       limit_amount: "",
+      color: CARD_COLORS[0],
     },
   });
 
@@ -133,13 +136,14 @@ export function CardsTab({
         closing_day: values.closing_day,
         due_day: values.due_day,
         limit_amount: limitAmount,
+        color: values.color || null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-credit-cards"] });
       queryClient.invalidateQueries({ queryKey: ["credit-cards"] });
-      form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "" });
+      form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "", color: CARD_COLORS[0] });
       setAddCardOpen(false);
       toast({ title: "Cartão salvo", description: "Cartão adicionado com sucesso." });
     },
@@ -157,6 +161,7 @@ export function CardsTab({
       closing_day: card.closing_day,
       due_day: card.due_day,
       limit_amount: card.limit_amount ? String(card.limit_amount) : "",
+      color: card.color || CARD_COLORS[0],
     });
     setSelectedCard(card);
     setEditCardOpen(true);
@@ -171,6 +176,7 @@ export function CardsTab({
         closing_day: values.closing_day,
         due_day: values.due_day,
         limit_amount: limitAmount,
+        color: values.color || null,
       }).eq("id", selectedCard!.id);
       if (error) throw error;
     },
@@ -179,7 +185,7 @@ export function CardsTab({
       queryClient.invalidateQueries({ queryKey: ["credit-cards"] });
       setEditCardOpen(false);
       setSelectedCard(null);
-      form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "" });
+      form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "", color: CARD_COLORS[0] });
       toast({ title: "Cartão atualizado", description: "Alterações salvas." });
     },
     onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
@@ -253,7 +259,6 @@ export function CardsTab({
     const totalsByMonth = new Map<string, Record<string, number>>();
     const cardIdToKey = new Map(creditCards.map((c, i) => [c.id, `card_${i}`]));
     
-    // Inicializa o bucket garantindo que todo cartão exista para a linha não quebrar no Recharts
     monthKeys.forEach((key) => {
       const initialCardsState: Record<string, number> = {};
       creditCards.forEach((c, i) => {
@@ -294,7 +299,6 @@ export function CardsTab({
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       const monthValues = totalsByMonth.get(key) ?? {};
 
-      // Arredonda valores para evitar erros de ponto flutuante no gráfico e calcula o total
       let totalMonth = 0;
       const roundedValues: Record<string, number> = {};
       for (const [k, v] of Object.entries(monthValues)) {
@@ -367,14 +371,11 @@ export function CardsTab({
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid gap-4 md:grid-cols-3">
-        {/* Total em Faturas - DESTAQUE PREMIUM */}
         <Card className="relative overflow-hidden border-0 md:col-span-1 flex flex-col justify-between bg-primary shadow-xl shadow-primary/20 min-h-[220px]">
-          {/* Premium Background Effects */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent mix-blend-overlay pointer-events-none" />
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/20 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-black/10 blur-3xl pointer-events-none" />
           
-          {/* Watermark Icon to fill empty space */}
           <CreditCard className="absolute -bottom-6 -right-6 w-48 h-48 text-black/5 pointer-events-none transform -rotate-12" />
 
           <CardHeader className="relative z-10 pb-0 pt-6 px-6">
@@ -543,7 +544,11 @@ export function CardsTab({
               return (
                 <Card
                   key={card.id}
-                  className="flex flex-col justify-between hover:shadow-md transition-all border-l-4 border-l-primary/80 cursor-pointer"
+                  className={cn(
+                    "flex flex-col justify-between hover:shadow-md transition-all border-l-4 cursor-pointer",
+                    !card.color && "border-l-primary/80"
+                  )}
+                  style={card.color ? { borderLeftColor: card.color } : undefined}
                   onClick={() => {
                     if (editCardOpen || !!deletingCard) return;
                     setSelectedCard(card);
@@ -736,7 +741,7 @@ export function CardsTab({
                       type="monotone"
                       dataKey={`card_${index}`}
                       name={card.label}
-                      stroke={CARD_COLORS[index % CARD_COLORS.length]}
+                      stroke={card.color || CARD_COLORS[index % CARD_COLORS.length]}
                       strokeWidth={2}
                       dot={{ r: 3 }}
                       activeDot={{ r: 5 }}
@@ -754,7 +759,7 @@ export function CardsTab({
         onOpenChange={(open) => {
           setAddCardOpen(open);
           if (!open) {
-            form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "" });
+            form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "", color: CARD_COLORS[0] });
           }
         }}
       >
@@ -848,6 +853,34 @@ export function CardsTab({
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cor de identificação</FormLabel>
+                    <FormControl>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {CARD_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={cn(
+                              "h-8 w-8 rounded-full border-2 transition-all",
+                              field.value === c ? "border-foreground scale-110" : "border-transparent hover:scale-105"
+                            )}
+                            style={{ backgroundColor: c }}
+                            onClick={() => field.onChange(c)}
+                            aria-label={`Cor ${c}`}
+                          />
+                        ))}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <Button type="submit" className="w-full" disabled={createCard.isPending || !user}>
                 {createCard.isPending && <CustomLoader className="mr-2 h-4 w-4" />}
                 Salvar cartão
@@ -929,7 +962,7 @@ export function CardsTab({
         onOpenChange={(open) => {
           setEditCardOpen(open);
           if (!open) {
-            form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "" });
+            form.reset({ label: "", brand: "", closing_day: 5, due_day: 10, limit_amount: "", color: CARD_COLORS[0] });
             setSelectedCard(null);
           }
         }}
@@ -948,6 +981,35 @@ export function CardsTab({
                 <FormField control={form.control} name="due_day" render={({ field }) => (<FormItem><FormLabel>Dia de vencimento</FormLabel><FormControl><Input type="number" min={1} max={31} {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
               <FormField control={form.control} name="limit_amount" render={({ field }) => (<FormItem><FormLabel>Limite (opcional)</FormLabel><FormControl><Input type="number" min={0} step="0.01" placeholder="R$" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cor de identificação</FormLabel>
+                    <FormControl>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {CARD_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={cn(
+                              "h-8 w-8 rounded-full border-2 transition-all",
+                              field.value === c ? "border-foreground scale-110" : "border-transparent hover:scale-105"
+                            )}
+                            style={{ backgroundColor: c }}
+                            onClick={() => field.onChange(c)}
+                            aria-label={`Cor ${c}`}
+                          />
+                        ))}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <Button type="submit" className="w-full" disabled={updateCard.isPending}>{updateCard.isPending && <CustomLoader className="mr-2 h-4 w-4" />}Salvar alterações</Button>
             </form>
           </Form>
