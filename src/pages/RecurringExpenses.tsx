@@ -298,33 +298,26 @@ export default function RecurringExpenses() {
     }
   };
 
-  const generateNow = async () => {
-    const { rec, amount: genAmount } = generateConfig;
-    if (!rec) return;
-
-    const finalAmount = parseFloat(genAmount);
-    if (isNaN(finalAmount) || finalAmount <= 0) {
-      toast({ title: "Erro", description: "Valor inválido.", variant: "destructive" });
-      return;
-    }
-
-    try {
+  const generateMutation = useMutation({
+    mutationFn: async ({ rec, finalAmount }: { rec: any, finalAmount: number }) => {
       const { error } = await supabase.rpc("create_expense_with_splits", {
         _group_id: rec.group_id,
         _title: rec.title,
-        _description: rec.description,
+        _description: rec.description || null,
         _amount: finalAmount,
         _category: rec.category,
         _expense_type: rec.expense_type || "collective",
-        _due_date: rec.next_due_date,
+        _due_date: rec.next_due_date || null,
+        _receipt_url: null,
         _recurring_expense_id: rec.id,
-        _payment_method: rec.payment_method || "cash",
-        _credit_card_id: rec.credit_card_id,
-        _installments: 1,
-        _purchase_date: rec.next_due_date,
         _target_user_id: rec.expense_type === "individual" ? rec.created_by : null,
-        _participant_user_ids: rec.participant_user_ids,
+        _payment_method: rec.payment_method || "cash",
+        _credit_card_id: rec.credit_card_id || null,
+        _installments: 1,
+        _purchase_date: rec.next_due_date || null,
+        _participant_user_ids: rec.participant_user_ids || null,
       } as any);
+
       if (error) throw error;
 
       // Advance next_due_date
@@ -333,18 +326,36 @@ export default function RecurringExpenses() {
       else if (rec.frequency === "weekly") next.setDate(next.getDate() + 7);
       else next.setFullYear(next.getFullYear() + 1);
 
-      await supabase.from("recurring_expenses").update({
+      const { error: updateError } = await supabase.from("recurring_expenses").update({
         next_due_date: next.toISOString().split("T")[0],
         last_generated_at: new Date().toISOString(),
       }).eq("id", rec.id);
 
+      if (updateError) throw updateError;
+    },
+    onSuccess: (_, { rec }) => {
       toast({ title: "Despesa gerada!", description: `"${rec.title}" criada com sucesso.` });
       queryClient.invalidateQueries({ queryKey: ["recurring"] });
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       setGenerateConfig({ open: false, rec: null, amount: "" });
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
+  });
+
+  const generateNow = () => {
+    const { rec, amount: genAmount } = generateConfig;
+    if (!rec) return;
+
+    // Converte de vírgula para ponto caso o usuário digite com vírgula
+    const finalAmount = parseFloat(String(genAmount).replace(",", "."));
+    if (isNaN(finalAmount) || finalAmount <= 0) {
+      toast({ title: "Erro", description: "Valor inválido.", variant: "destructive" });
+      return;
+    }
+
+    generateMutation.mutate({ rec, finalAmount });
   };
 
   if (isLoading) {
@@ -552,7 +563,8 @@ export default function RecurringExpenses() {
             <Button variant="outline" onClick={() => setGenerateConfig(prev => ({ ...prev, open: false }))}>
               Cancelar
             </Button>
-            <Button onClick={generateNow}>
+            <Button onClick={generateNow} disabled={generateMutation.isPending}>
+              {generateMutation.isPending ? <CustomLoader className="h-4 w-4 mr-2" /> : null}
               Gerar Despesa
             </Button>
           </DialogFooter>
