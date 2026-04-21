@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, DollarSign, Users, Wallet, CheckCircle2, List, Receipt, ArrowRight } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { parseLocalDate } from "@/lib/utils";
+import { parseLocalDate, cn } from "@/lib/utils";
 import { ptBR } from "date-fns/locale";
 import { CHART_COLORS, CATEGORY_COLORS, getCategoryLabel } from "@/constants/categories";
 import { 
@@ -65,10 +65,33 @@ export function PersonalTab({
   const [isCurrentCollectiveOpen, setIsCurrentCollectiveOpen] = useState(false);
   const [isCashDetailOpen, setIsCashDetailOpen] = useState(false);
 
+  const [hoveredPersonalLabel, setHoveredPersonalLabel] = useState<string | null>(null);
+  const [hoveredCollectiveLabel, setHoveredCollectiveLabel] = useState<string | null>(null);
+
   const cashExpenses = myPersonalExpenses
     .filter((e: any) => e.payment_method !== 'credit_card')
     .sort((a: any, b: any) => (b.purchase_date || "").localeCompare(a.purchase_date || ""));
   const totalPersonalExpensesSum = myPersonalExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const personalDonutData = personalChartData.map((entry, index) => ({
+    label: entry.name,
+    value: entry.value,
+    color: CATEGORY_COLORS[entry.name] || CHART_COLORS[index % CHART_COLORS.length],
+  }));
+  const activePersonal = personalDonutData.find(d => d.label === hoveredPersonalLabel);
+  const displayPersonalValue = activePersonal ? activePersonal.value : totalPersonalExpensesSum;
+  const displayPersonalLabel = activePersonal ? activePersonal.label : "Total";
+  const displayPersonalPercentage = activePersonal && totalPersonalExpensesSum > 0 ? (activePersonal.value / totalPersonalExpensesSum) * 100 : 100;
+
+  const collectiveDonutData = republicChartData.map((entry, index) => ({
+    label: entry.name,
+    value: entry.value,
+    color: CATEGORY_COLORS[entry.name] || CHART_COLORS[index % CHART_COLORS.length],
+  }));
+  const activeCollective = collectiveDonutData.find(d => d.label === hoveredCollectiveLabel);
+  const displayCollectiveValue = activeCollective ? activeCollective.value : totalMonthExpenses;
+  const displayCollectiveLabel = activeCollective ? activeCollective.label : "Total Casa";
+  const displayCollectivePercentage = activeCollective && totalMonthExpenses > 0 ? (activeCollective.value / totalMonthExpenses) * 100 : 100;
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -497,56 +520,81 @@ export function PersonalTab({
       {/* --- GRÁFICOS E LISTAS INDIVIDUAIS --- */}
       <div className="grid gap-4 md:grid-cols-12">
         {/* Chart Individual */}
-        <Card className="md:col-span-4 lg:col-span-4">
+        <Card className="md:col-span-4 lg:col-span-4 flex flex-col">
           <CardHeader>
             <CardTitle className="text-base">Distribuição Individual</CardTitle>
           </CardHeader>
-          <CardContent className="h-[250px] relative">
-            {personalChartData.length > 0 ? (
+          <CardContent className="flex-1 flex flex-col gap-4 p-4 pt-0">
+            {personalDonutData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie 
-                      data={personalChartData} 
-                      dataKey="value" 
-                      nameKey="name" 
-                      cx="50%" 
-                      cy="50%" 
-                      innerRadius={60} 
-                      outerRadius={80} 
-                      paddingAngle={5}
-                      stroke="none"
-                      cornerRadius={5}
+                <div className="relative h-[200px] w-full shrink-0 mx-auto">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={personalDonutData} 
+                        dataKey="value" 
+                        nameKey="label" 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={70} 
+                        outerRadius={90} 
+                        paddingAngle={5}
+                        stroke="none"
+                        cornerRadius={5}
+                        onMouseEnter={(_, index) => setHoveredPersonalLabel(personalDonutData[index].label)}
+                        onMouseLeave={() => setHoveredPersonalLabel(null)}
+                      >
+                        {personalDonutData.map((entry, i) => (
+                          <Cell 
+                            key={i} 
+                            fill={entry.color} 
+                            opacity={hoveredPersonalLabel === null || hoveredPersonalLabel === entry.label ? 1 : 0.3}
+                            className="transition-opacity duration-200"
+                            style={{ outline: "none" }}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none flex flex-col items-center justify-center w-full px-4">
+                    <p className="text-muted-foreground text-[10px] font-medium truncate max-w-[120px] uppercase tracking-wider leading-tight">
+                      {displayPersonalLabel}
+                    </p>
+                    <p className="text-lg font-bold text-foreground tabular-nums whitespace-nowrap">
+                      R$ {displayPersonalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    {activePersonal && (
+                      <p className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full mt-1">
+                        {displayPersonalPercentage.toFixed(1)}%
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col space-y-2 w-full overflow-y-auto max-h-[160px] pr-2 scrollbar-thin">
+                  {personalDonutData.map((segment) => (
+                    <div
+                      key={segment.label}
+                      className={cn(
+                        "flex items-center justify-between p-2 rounded-md transition-colors cursor-default text-sm gap-3",
+                        hoveredPersonalLabel === segment.label ? "bg-muted" : "hover:bg-muted/50"
+                      )}
+                      onMouseEnter={() => setHoveredPersonalLabel(segment.label)}
+                      onMouseLeave={() => setHoveredPersonalLabel(null)}
                     >
-                      {personalChartData.map((entry, i) => (
-                        <Cell 
-                          key={i} 
-                          fill={CATEGORY_COLORS[entry.name] || CHART_COLORS[i % CHART_COLORS.length]} 
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: segment.color }}
                         />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip 
-                      formatter={(v: number) => `R$ ${v.toFixed(2)}`} 
-                      contentStyle={{ 
-                        borderRadius: "8px", 
-                        border: "none", 
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                        fontSize: "12px"
-                      }}
-                      itemStyle={{ color: "#1e293b" }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={36} 
-                      iconType="circle"
-                      formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center Label */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60%] text-center pointer-events-none">
-                  <span className="text-xs text-muted-foreground block">Total</span>
-                  <span className="text-lg font-bold">R$ {totalPersonalExpensesSum.toFixed(0)}</span>
+                        <span className="font-medium truncate text-muted-foreground" title={segment.label}>
+                          {segment.label}
+                        </span>
+                      </div>
+                      <span className="font-semibold tabular-nums shrink-0 whitespace-nowrap text-right text-foreground">
+                        R$ {segment.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
@@ -568,7 +616,7 @@ export function PersonalTab({
             </Button>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[250px] pr-2 px-2">
+            <ScrollArea className="h-[380px] pr-2 px-2">
               <div className="space-y-1">
                 {myPersonalExpenses.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa individual registrada.</p>
@@ -611,56 +659,81 @@ export function PersonalTab({
       {/* --- GRÁFICOS E LISTAS COLETIVAS --- */}
       <div className="grid gap-4 md:grid-cols-12">
         {/* Chart Coletivo */}
-        <Card className="md:col-span-4 lg:col-span-4">
+        <Card className="md:col-span-4 lg:col-span-4 flex flex-col">
           <CardHeader>
             <CardTitle className="text-base">Distribuição Coletiva</CardTitle>
           </CardHeader>
-          <CardContent className="h-[250px] relative">
-            {republicChartData.length > 0 ? (
+          <CardContent className="flex-1 flex flex-col gap-4 p-4 pt-0">
+            {collectiveDonutData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie 
-                      data={republicChartData} 
-                      dataKey="value" 
-                      nameKey="name" 
-                      cx="50%" 
-                      cy="50%" 
-                      innerRadius={60} 
-                      outerRadius={80} 
-                      paddingAngle={5}
-                      stroke="none"
-                      cornerRadius={5}
+                <div className="relative h-[200px] w-full shrink-0 mx-auto">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={collectiveDonutData} 
+                        dataKey="value" 
+                        nameKey="label" 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={70} 
+                        outerRadius={90} 
+                        paddingAngle={5}
+                        stroke="none"
+                        cornerRadius={5}
+                        onMouseEnter={(_, index) => setHoveredCollectiveLabel(collectiveDonutData[index].label)}
+                        onMouseLeave={() => setHoveredCollectiveLabel(null)}
+                      >
+                        {collectiveDonutData.map((entry, i) => (
+                          <Cell 
+                            key={i} 
+                            fill={entry.color} 
+                            opacity={hoveredCollectiveLabel === null || hoveredCollectiveLabel === entry.label ? 1 : 0.3}
+                            className="transition-opacity duration-200"
+                            style={{ outline: "none" }}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none flex flex-col items-center justify-center w-full px-4">
+                    <p className="text-muted-foreground text-[10px] font-medium truncate max-w-[120px] uppercase tracking-wider leading-tight">
+                      {displayCollectiveLabel}
+                    </p>
+                    <p className="text-lg font-bold text-foreground tabular-nums whitespace-nowrap">
+                      R$ {displayCollectiveValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    {activeCollective && (
+                      <p className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full mt-1">
+                        {displayCollectivePercentage.toFixed(1)}%
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col space-y-2 w-full overflow-y-auto max-h-[160px] pr-2 scrollbar-thin">
+                  {collectiveDonutData.map((segment) => (
+                    <div
+                      key={segment.label}
+                      className={cn(
+                        "flex items-center justify-between p-2 rounded-md transition-colors cursor-default text-sm gap-3",
+                        hoveredCollectiveLabel === segment.label ? "bg-muted" : "hover:bg-muted/50"
+                      )}
+                      onMouseEnter={() => setHoveredCollectiveLabel(segment.label)}
+                      onMouseLeave={() => setHoveredCollectiveLabel(null)}
                     >
-                      {republicChartData.map((entry, i) => (
-                        <Cell 
-                          key={i} 
-                          fill={CATEGORY_COLORS[entry.name] || CHART_COLORS[i % CHART_COLORS.length]} 
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: segment.color }}
                         />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip 
-                      formatter={(v: number) => `R$ ${v.toFixed(2)}`} 
-                      contentStyle={{ 
-                        borderRadius: "8px", 
-                        border: "none", 
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                        fontSize: "12px"
-                      }}
-                      itemStyle={{ color: "#1e293b" }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={36} 
-                      iconType="circle"
-                      formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center Label */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60%] text-center pointer-events-none">
-                  <span className="text-xs text-muted-foreground block">Total Casa</span>
-                  <span className="text-lg font-bold">R$ {totalMonthExpenses.toFixed(0)}</span>
+                        <span className="font-medium truncate text-muted-foreground" title={segment.label}>
+                          {segment.label}
+                        </span>
+                      </div>
+                      <span className="font-semibold tabular-nums shrink-0 whitespace-nowrap text-right text-foreground">
+                        R$ {segment.value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
@@ -682,7 +755,7 @@ export function PersonalTab({
             </Button>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[250px] pr-2 px-2">
+            <ScrollArea className="h-[380px] pr-2 px-2">
               <div className="space-y-1">
                 {collectiveExpenses.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa coletiva registrada.</p>
