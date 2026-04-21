@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -113,6 +113,8 @@ export function CardsTab({
   const [editCardOpen, setEditCardOpen] = useState(false);
   const [deletingCard, setDeletingCard] = useState<any | null>(null);
 
+  const [monthsCount, setMonthsCount] = useState<6 | 12>(6);
+
   const form = useForm<CardFormValues>({
     resolver: zodResolver(cardSchema),
     defaultValues: {
@@ -204,22 +206,23 @@ export function CardsTab({
     onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
   });
 
-  const lastSixMonths = useMemo(
-    () => Array.from({ length: 6 }, (_, index) => subMonths(currentDate, 5 - index)),
-    [currentDate],
+  const lastMonths = useMemo(
+    () => Array.from({ length: monthsCount }, (_, index) => subMonths(currentDate, (monthsCount - 1) - index)),
+    [currentDate, monthsCount],
   );
 
-  const { data: rawLastSixMonthsData, isLoading: isLoadingLastSixMonthsCardsData } = useQuery({
+  const { data: rawLastMonthsData, isLoading: isLoadingLastMonthsCardsData } = useQuery({
     queryKey: [
-      "cards-last-six-months-raw",
+      "cards-last-months-raw",
       user?.id,
       membership?.group_id,
       currentDate.getMonth(),
       currentDate.getFullYear(),
+      monthsCount,
     ],
     queryFn: async () => {
-      const months = lastSixMonths.map((date) => date.getMonth() + 1);
-      const years = Array.from(new Set(lastSixMonths.map((date) => date.getFullYear())));
+      const months = lastMonths.map((date) => date.getMonth() + 1);
+      const years = Array.from(new Set(lastMonths.map((date) => date.getFullYear())));
 
       const [groupRes, personalRes] = await Promise.all([
         supabase
@@ -251,10 +254,10 @@ export function CardsTab({
     staleTime: 60_000,
   });
 
-  const lastSixMonthsCardsData = useMemo(() => {
-    if (!rawLastSixMonthsData) return [];
+  const lastMonthsCardsData = useMemo(() => {
+    if (!rawLastMonthsData) return [];
 
-    const monthKeys = new Set(lastSixMonths.map((date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`));
+    const monthKeys = new Set(lastMonths.map((date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`));
     const totalsByMonth = new Map<string, Record<string, number>>();
     const cardIdToKey = new Map(creditCards.map((c, i) => [c.id, `card_${i}`]));
     
@@ -266,7 +269,7 @@ export function CardsTab({
       totalsByMonth.set(key, initialCardsState);
     });
 
-    rawLastSixMonthsData.groupInstallments.forEach((item: any) => {
+    rawLastMonthsData.groupInstallments.forEach((item: any) => {
       const month = Number(item.bill_month);
       const year = Number(item.bill_year);
       const key = `${year}-${String(month).padStart(2, "0")}`;
@@ -280,7 +283,7 @@ export function CardsTab({
       }
     });
 
-    rawLastSixMonthsData.personalInstallments.forEach((item: any) => {
+    rawLastMonthsData.personalInstallments.forEach((item: any) => {
       const month = Number(item.bill_month);
       const year = Number(item.bill_year);
       const key = `${year}-${String(month).padStart(2, "0")}`;
@@ -294,7 +297,7 @@ export function CardsTab({
       }
     });
 
-    return lastSixMonths.map((date) => {
+    return lastMonths.map((date) => {
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       const monthValues = totalsByMonth.get(key) ?? {};
 
@@ -311,7 +314,7 @@ export function CardsTab({
         ...roundedValues,
       };
     });
-  }, [rawLastSixMonthsData, lastSixMonths, creditCards]);
+  }, [rawLastMonthsData, lastMonths, creditCards]);
 
   const donutData = cardsChartData.map((entry, index) => ({
     label: entry.name,
@@ -739,12 +742,23 @@ export function CardsTab({
 
       {/* Gráfico de Evolução dos Cartões */}
       <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium">Evolução de Gastos por Cartão (Últimos 6 meses)</CardTitle>
-          <Wallet className="h-4 w-4 text-muted-foreground" />
+        <CardHeader className="pb-2 flex flex-row items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-sm font-medium">Evolução de Gastos por Cartão</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground hidden sm:block" />
+          </div>
+          <Select value={String(monthsCount)} onValueChange={(v) => setMonthsCount(Number(v) as 6 | 12)}>
+            <SelectTrigger className="w-[130px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="6">Últimos 6 meses</SelectItem>
+              <SelectItem value="12">Últimos 12 meses</SelectItem>
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent className="pt-2">
-          {isLoadingLastSixMonthsCardsData ? (
+          {isLoadingLastMonthsCardsData ? (
             <div className="flex min-h-[180px] items-center justify-center text-sm text-muted-foreground">
               <CustomLoader className="h-5 w-5 mr-2" />
               Carregando evolução dos cartões...
@@ -757,7 +771,7 @@ export function CardsTab({
             <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                  data={lastSixMonthsCardsData}
+                  data={lastMonthsCardsData}
                   margin={{ top: 8, right: 16, left: 8, bottom: 24 }}
                 >
                   <CartesianGrid strokeDasharray="4 4" className="stroke-muted" vertical={false} />
