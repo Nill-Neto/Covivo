@@ -214,6 +214,9 @@ export function CardsTab({
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   const sortedInstallments = [...billInstallments].sort((a: any, b: any) => {
     const dateA = a.expenses?.purchase_date || "";
     const dateB = b.expenses?.purchase_date || "";
@@ -254,12 +257,12 @@ export function CardsTab({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="relative z-10 pt-6 pb-6 px-6 flex flex-col gap-4 mt-auto">
-            <div>
-              <div className="text-4xl lg:text-5xl font-bold tracking-tight text-white drop-shadow-sm mb-2">
-                R$ {formatCurrency(totalBill)}
-              </div>
-              <span className="inline-block text-[10px] font-medium bg-black/20 text-white px-2.5 py-1 rounded-full backdrop-blur-md border border-white/10 capitalize">
+          <CardContent className="relative z-10 pt-8 pb-6 px-6 flex flex-col gap-3 mt-auto">
+            <div className="text-4xl lg:text-5xl font-bold tracking-tight text-white drop-shadow-sm">
+              R$ {formatCurrency(totalBill)}
+            </div>
+            <div className="flex items-center">
+              <span className="text-xs font-medium bg-black/20 text-white px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 capitalize">
                 {format(currentDate, "MMMM yyyy", { locale: ptBR })}
               </span>
             </div>
@@ -449,14 +452,14 @@ export function CardsTab({
                       <p className="text-2xl font-bold text-primary">R$ {formatCurrency(billValue)}</p>
                     </div>
 
-                    <div className="mb-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-md border border-emerald-500/40 bg-emerald-500/15 px-2 py-1.5">
-                        <span className="block text-[10px] font-bold text-emerald-800 dark:text-emerald-300">Individuais</span>
-                        <span className="block text-xs font-extrabold text-foreground mt-0.5">R$ {formatCurrency(individualTotal)}</span>
+                    <div className="mb-3 grid grid-cols-2 gap-2 text-[10px] rounded border border-border/50 bg-muted/25 p-2">
+                      <div>
+                        <span className="text-muted-foreground block">Individuais</span>
+                        <span className="font-semibold text-foreground">R$ {formatCurrency(individualTotal)}</span>
                       </div>
-                      <div className="rounded-md border border-blue-500/40 bg-blue-500/15 px-2 py-1.5">
-                        <span className="block text-[10px] font-bold text-blue-800 dark:text-blue-300">Coletivos</span>
-                        <span className="block text-xs font-extrabold text-foreground mt-0.5">R$ {formatCurrency(collectiveTotal)}</span>
+                      <div>
+                        <span className="text-muted-foreground block">Coletivos</span>
+                        <span className="font-semibold text-foreground">R$ {formatCurrency(collectiveTotal)}</span>
                       </div>
                     </div>
 
