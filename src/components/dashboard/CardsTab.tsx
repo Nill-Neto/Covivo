@@ -294,14 +294,17 @@ export function CardsTab({
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       const monthValues = totalsByMonth.get(key) ?? {};
 
-      // Arredonda valores para evitar erros de ponto flutuante no gráfico
+      // Arredonda valores para evitar erros de ponto flutuante no gráfico e calcula o total
+      let totalMonth = 0;
       const roundedValues: Record<string, number> = {};
       for (const [k, v] of Object.entries(monthValues)) {
         roundedValues[k] = Number(v.toFixed(2));
+        totalMonth += v;
       }
 
       return {
         monthLabel: format(date, "MMM/yy", { locale: ptBR }),
+        total: Number(totalMonth.toFixed(2)),
         ...roundedValues,
       };
     });
@@ -716,6 +719,17 @@ export function CardsTab({
                     wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} 
                     iconType="circle"
                   />
+                  {/* Linha Total Destacada */}
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    name="Total (Todos os Cartões)"
+                    stroke="hsl(var(--foreground))"
+                    strokeWidth={3}
+                    strokeDasharray="5 5"
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
                   {creditCards.map((card, index) => (
                     <Line
                       key={card.id}
@@ -723,9 +737,9 @@ export function CardsTab({
                       dataKey={`card_${index}`}
                       name={card.label}
                       stroke={CARD_COLORS[index % CARD_COLORS.length]}
-                      strokeWidth={3}
-                      dot={{ r: 4, strokeWidth: 2 }}
-                      activeDot={{ r: 6 }}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
                     />
                   ))}
                 </LineChart>
