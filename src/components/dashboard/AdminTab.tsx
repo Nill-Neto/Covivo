@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getCategoryLabel, CHART_COLORS, CATEGORY_COLORS } from "@/constants/categories";
+import { getCategoryLabel, CATEGORY_COLORS, CHART_COLORS } from "@/constants/categories";
 import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -481,7 +481,7 @@ export function AdminTab({
             </Button>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[250px] pr-2 px-2">
+            <ScrollArea className="h-[380px] pr-2 px-2">
               <div className="space-y-1">
                 {recentExpenses.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhuma despesa registrada.</p>
