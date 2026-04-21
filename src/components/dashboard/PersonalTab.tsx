@@ -570,7 +570,7 @@ export function PersonalTab({
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col space-y-2 w-full max-w-full lg:max-w-[280px] overflow-y-auto max-h-[200px] pr-2 scrollbar-thin">
+                <div className="flex-1 flex flex-col space-y-2 w-full overflow-y-auto max-h-[200px] pr-2 scrollbar-thin">
                   {personalDonutData.map((segment) => (
                     <div
                       key={segment.label}
@@ -709,7 +709,7 @@ export function PersonalTab({
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col space-y-2 w-full max-w-full lg:max-w-[280px] overflow-y-auto max-h-[200px] pr-2 scrollbar-thin">
+                <div className="flex-1 flex flex-col space-y-2 w-full overflow-y-auto max-h-[200px] pr-2 scrollbar-thin">
                   {collectiveDonutData.map((segment) => (
                     <div
                       key={segment.label}
