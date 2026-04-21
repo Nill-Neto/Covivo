@@ -64,6 +64,7 @@ export function PersonalTab({
   const [isPreviousCollectiveOpen, setIsPreviousCollectiveOpen] = useState(false);
   const [isCurrentCollectiveOpen, setIsCurrentCollectiveOpen] = useState(false);
   const [isCashDetailOpen, setIsCashDetailOpen] = useState(false);
+  const [isTotalDetailOpen, setIsTotalDetailOpen] = useState(false);
 
   const [hoveredPersonalLabel, setHoveredPersonalLabel] = useState<string | null>(null);
   const [hoveredCollectiveLabel, setHoveredCollectiveLabel] = useState<string | null>(null);
@@ -122,13 +123,75 @@ export function PersonalTab({
             <div className="text-4xl lg:text-5xl font-bold tracking-tight text-white drop-shadow-sm">
               R$ {totalUserExpensesCurrentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className="flex items-center">
+            <div className="flex flex-col items-start gap-2">
               <span className="text-xs font-medium bg-black/20 text-white px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10">
                 Saldo atual consolidado (inclui pendências anteriores)
               </span>
+              <Button 
+                variant="link" 
+                className="p-0 h-auto text-xs text-white/90 hover:text-white" 
+                onClick={() => setIsTotalDetailOpen(true)}
+              >
+                Ver detalhes <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* Detalhes do Total Comprometido */}
+        <Dialog open={isTotalDetailOpen} onOpenChange={setIsTotalDetailOpen}>
+          <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[85vh]">
+            <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+              <DialogTitle className="text-lg font-semibold text-foreground">
+                Detalhamento do Saldo
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">Composição do total comprometido</p>
+            </DialogHeader>
+
+            <div className="mx-5 mb-4 rounded-lg bg-primary/10 border border-primary/20 px-4 py-3 flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">Total consolidado</span>
+              <span className="text-lg font-bold text-primary tabular-nums">
+                R$ {totalUserExpensesCurrentBalance.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="border-t">
+              <div className="overflow-y-auto max-h-[50vh]">
+                <div className="divide-y">
+                  <div className="px-5 py-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Sua parte nas despesas da casa</span>
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        R$ {myCollectiveShare.toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Sua cota no rateio da competência atual (em aberto ou paga).</p>
+                  </div>
+
+                  <div className="px-5 py-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Pendências individuais</span>
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        R$ {totalIndividualPending.toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Valores a pagar de uso próprio (ex: cartões da competência atual).</p>
+                  </div>
+
+                  <div className="px-5 py-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Rateios de meses anteriores</span>
+                      <span className={`text-sm font-semibold tabular-nums ${totalCollectivePendingPrevious > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                        R$ {totalCollectivePendingPrevious.toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Dívida acumulada da casa em ciclos passados.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Rateio pendente (competências anteriores) */}
         <Card className={`border-l-4 ${totalCollectivePendingPrevious > 0.01 ? "border-l-destructive" : "border-l-success"} bg-card shadow-sm`}>
