@@ -1,4 +1,4 @@
-'''
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +18,7 @@ interface MemberBalance {
 export function MemberBalances() {
   const { activeGroupId, user } = useAuth();
 
-  const { data: balances, isLoading, error } = useQuery<MemberBalance[]>(
+  const { data: balances, isLoading, error } = useQuery<MemberBalance[]>({
     queryKey: ["member_balances", activeGroupId],
     queryFn: async () => {
       if (!activeGroupId) return [];
@@ -30,11 +30,10 @@ export function MemberBalances() {
         throw new Error(error.message);
       }
       // Filter out the current user from the list
-      return data.filter((b) => b.user_id !== user?.id);
+      return data.filter((b: MemberBalance) => b.user_id !== user?.id);
     },
     enabled: !!activeGroupId && !!user?.id,
-    }
-  );
+  });
 
   if (isLoading) {
     return (
@@ -147,9 +146,3 @@ export function MemberBalances() {
     </Card>
   );
 }
-)}
-      </CardContent>
-    </Card>
-  );
-}
-'''
