@@ -948,6 +948,34 @@ export default function Expenses() {
               </DialogTitle>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              <div className="space-y-2">
+                <Label>Título</Label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Mercado Mensal" maxLength={200} />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Valor Total (R$)</Label>
+                  <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {category === "other" && (
+                <div className="space-y-2">
+                  <Label>Nome da Categoria</Label>
+                  <Input placeholder="Ex: Farmácia" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} />
+                </div>
+              )}
+
               {editingType === "expense" && (
                 <div className="space-y-3">
                   <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
@@ -1130,34 +1158,6 @@ export default function Expenses() {
                       </>
                     )}
                   </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Título</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Mercado Mensal" maxLength={200} />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Valor Total (R$)</Label>
-                  <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {category === "other" && (
-                <div className="space-y-2">
-                  <Label>Nome da Categoria</Label>
-                  <Input placeholder="Ex: Farmácia" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} />
                 </div>
               )}
 

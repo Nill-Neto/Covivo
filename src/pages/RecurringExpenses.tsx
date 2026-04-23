@@ -10,7 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -385,7 +393,34 @@ export default function RecurringExpenses() {
                 </DialogTitle>
               </DialogHeader>
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Aluguel" maxLength={200} />
+                </div>
                 
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Valor (R$)</Label>
+                    <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {category === "other" && (
+                  <div className="space-y-2">
+                    <Label>Nome da Categoria</Label>
+                    <Input placeholder="Ex: Farmácia" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} />
+                  </div>
+                )}
+
                 <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
                   <Label className="text-base font-medium">1. Tipo</Label>
                   <Select value={expenseType} onValueChange={(v) => setExpenseType(v as any)} disabled={!!editingId}>
@@ -475,34 +510,6 @@ export default function RecurringExpenses() {
                     </div>
                   )}
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Título</Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Aluguel" maxLength={200} />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Valor (R$)</Label>
-                    <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {category === "other" && (
-                  <div className="space-y-2">
-                    <Label>Nome da Categoria</Label>
-                    <Input placeholder="Ex: Farmácia" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} />
-                  </div>
-                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
