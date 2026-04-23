@@ -455,6 +455,11 @@ export default function Expenses() {
       return;
     }
 
+    if (expenseType === "collective" && splitMode === "manual" && selectedParticipantIds.length === 0) {
+      toast({ title: "Erro", description: "Selecione pelo menos um participante.", variant: "destructive" });
+      return;
+    }
+
     const categoryToSend = category === "other" ? customCategory.trim() : category;
     const finalCreditCardId = creditCardId === "none" ? null : creditCardId;
     const providerPaid = paymentMethod === "credit_card" || statusWithProvider === "paid" || isPaid;
@@ -963,7 +968,12 @@ export default function Expenses() {
                   </div>
 
                   <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
-                    <Label className="text-base font-medium">2. Status com fornecedor</Label>
+                    <div>
+                      <Label className="text-base font-medium">2. Status com fornecedor</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Indica se a conta principal (ex: boleto de luz) já foi paga à empresa.
+                      </p>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         type="button"
@@ -980,10 +990,16 @@ export default function Expenses() {
                         Paga
                       </Button>
                     </div>
+                    
                     {paymentMethod !== "credit_card" && !editingId && (
-                      <div className="flex items-center gap-2 pt-2 border-t border-dashed">
-                        <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
-                        <Label htmlFor="paid-switch" className="cursor-pointer text-sm">Marcar rateio como pago no lançamento</Label>
+                      <div className="pt-3 border-t space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
+                          <Label htmlFor="paid-switch" className="cursor-pointer text-sm">Marcar rateio como pago</Label>
+                        </div>
+                        <p className="text-xs text-muted-foreground pl-11">
+                          Ative se os participantes já te reembolsaram. Isso marcará a parte de todos como 'paga' no sistema.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1099,7 +1115,7 @@ export default function Expenses() {
                           </Button>
                         </div>
                         {splitMode === "manual" && (
-                          <div className="space-y-2 border rounded-md p-2">
+                          <div className="space-y-2 border rounded-md p-2 max-h-32 overflow-y-auto">
                             {participantOptions.map((participant) => (
                               <label key={participant.id} className="flex items-center gap-2 text-sm">
                                 <Checkbox
@@ -1121,7 +1137,7 @@ export default function Expenses() {
                 <Label>Título</Label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Mercado Mensal" maxLength={200} />
               </div>
-
+              
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Valor Total (R$)</Label>
@@ -1132,9 +1148,7 @@ export default function Expenses() {
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
+                      {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
