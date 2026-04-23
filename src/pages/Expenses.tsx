@@ -401,7 +401,7 @@ export default function Expenses() {
           return <p>Você está pagando a despesa inteira.</p>;
         }
         if (isPaid) {
-          return <p>Você marcou que já recebeu o reembolso de todos os participantes.</p>;
+          return <p>Você já recebeu o reembolso de todos os participantes.</p>;
         }
         return (
           <p>
@@ -432,18 +432,24 @@ export default function Expenses() {
           const names = paid
             .map((s) => participantOptions.find((p) => p.id === s.user_id)?.name)
             .filter(Boolean);
-          summaryElements.push(<p key="paid">{names.join(", ")} te pagou.</p>);
+          if (names.length > 0) {
+            summaryElements.push(<p key="paid">{names.join(", ")} te pagou.</p>);
+          }
         }
         if (pending.length > 0) {
           const names = pending
             .map((s) => participantOptions.find((p) => p.id === s.user_id)?.name)
             .filter(Boolean);
-          summaryElements.push(
-            <p key="pending">
-              {names.join(", ")} te deve{" "}
-              <strong className="text-primary">R$ {perPersonQuota.toFixed(2)}</strong> cada.
-            </p>
-          );
+          if (names.length > 0) {
+            const verb = names.length > 1 ? "devem" : "deve";
+            summaryElements.push(
+              <p key="pending">
+                {names.join(", ")} te {verb}{" "}
+                <strong className="text-primary">R$ {perPersonQuota.toFixed(2)}</strong>
+                {names.length > 1 ? " cada" : ""}.
+              </p>
+            );
+          }
         }
         return <div className="space-y-1">{summaryElements}</div>;
       }
@@ -451,7 +457,7 @@ export default function Expenses() {
       // Scenario 2: Another member is the payer
       if (!editingId) {
         // New expense
-        if (!effectiveParticipantIds.includes(user?.id ?? '')) {
+        if (!effectiveParticipantIds.includes(user?.id ?? "")) {
           return <p>Você não participa do rateio desta despesa.</p>;
         }
         if (isPaid) {
@@ -1287,15 +1293,11 @@ export default function Expenses() {
                 <div className="rounded-lg border bg-primary/5 p-3 space-y-2">
                   <Label className="text-sm font-semibold">Resumo instantâneo</Label>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <p>
-                      <strong>Participantes:</strong> {effectiveParticipantIds.length}
-                    </p>
-                    <p>
-                      <strong>Cota por pessoa:</strong> R$ {perPersonQuota.toFixed(2)}
-                    </p>
-                    <p>
-                      <strong>Quem será reembolsado:</strong> {payerLabel}
-                    </p>
+                    {instantSummary || (
+                      <p>
+                        <strong>Participantes:</strong> {effectiveParticipantIds.length}, <strong>Cota:</strong> R$ {perPersonQuota.toFixed(2)}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
