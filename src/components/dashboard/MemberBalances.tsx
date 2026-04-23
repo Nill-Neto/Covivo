@@ -19,8 +19,8 @@ export function MemberBalances() {
   const { activeGroupId, user } = useAuth();
 
   const { data: balances, isLoading, error } = useQuery<MemberBalance[]>(
-    ["member_balances", activeGroupId],
-    async () => {
+    queryKey: ["member_balances", activeGroupId],
+    queryFn: async () => {
       if (!activeGroupId) return [];
       const { data, error } = await supabase.rpc("get_member_balances", {
         _group_id: activeGroupId,
@@ -30,10 +30,9 @@ export function MemberBalances() {
         throw new Error(error.message);
       }
       // Filter out the current user from the list
-      return data.filter((b: MemberBalance) => b.user_id !== user?.id);
+      return data.filter((b) => b.user_id !== user?.id);
     },
-    {
-      enabled: !!activeGroupId && !!user?.id,
+    enabled: !!activeGroupId && !!user?.id,
     }
   );
 

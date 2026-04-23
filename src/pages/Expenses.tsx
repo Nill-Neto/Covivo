@@ -383,7 +383,7 @@ export default function Expenses() {
   }, [amount, effectiveParticipantIds.length, splitMode]);
 
   const exactSplitSum = useMemo(() => {
-    return Object.values(exactSplitAmounts).reduce((sum, current) => sum + (Number(current) || 0), 0);
+    return Object.values(exactSplitAmounts).reduce((sum: number, current) => sum + (Number(current) || 0), 0);
   }, [exactSplitAmounts]);
 
   const exactSplitRemaining = useMemo(() => {
