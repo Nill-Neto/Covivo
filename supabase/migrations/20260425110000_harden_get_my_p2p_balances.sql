@@ -30,12 +30,15 @@ BEGIN
         ELSE -es.amount
       END AS signed_amount
     FROM public.expense_splits es
+    JOIN public.expenses e
+      ON e.id = es.expense_id
     JOIN public.group_members gm_caller
-      ON gm_caller.group_id = es.group_id
+      -- expense_splits has no group_id; use expenses.group_id for membership checks
+      ON gm_caller.group_id = e.group_id
      AND gm_caller.user_id = _caller_id
      AND gm_caller.active = true
     JOIN public.group_members gm_other
-      ON gm_other.group_id = es.group_id
+      ON gm_other.group_id = e.group_id
      AND gm_other.user_id = CASE
        WHEN es.user_id = _caller_id THEN es.credor_user_id
        ELSE es.user_id
