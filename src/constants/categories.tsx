@@ -1,4 +1,4 @@
-import { Rent, Home, Lightbulb, Wifi, Sparkles, Wrench, ShoppingCart, HelpCircle, Car, Utensils, HeartPulse, Film, GraduationCap } from 'lucide-react';
+import { Home, Lightbulb, Wifi, Sparkles, Wrench, ShoppingCart, HelpCircle, Car, Utensils, HeartPulse, Film, GraduationCap } from 'lucide-react';
 import React from 'react';
 
 export const CATEGORY_LABELS: Record<string, string> = {
