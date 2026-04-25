@@ -50,6 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { CardsTabProps, CreditCard as CreditCardType, GroupInstallmentItem, PersonalInstallmentItem } from "@/types/dashboard";
+import type { Tables } from "@/integrations/supabase/types";
 
 const cardSchema = z.object({
   label: z.string().min(3, "Informe o apelido do cartão"),
@@ -206,7 +207,7 @@ export function CardsTab({
   const { data: rawLastMonthsData, isLoading: isLoadingLastMonthsCardsData } = useQuery<{
     groupInstallments: GroupInstallmentItem[];
     personalInstallments: PersonalInstallmentItem[];
-  }>({
+  } | null>({
     queryKey: [
       "cards-last-months-raw",
       user?.id,
@@ -222,18 +223,15 @@ export function CardsTab({
       const [groupRes, personalRes] = await Promise.all([
         supabase
           .from("expense_installments")
-          .select(
-            "*, expenses(expense_type, group_id, credit_card_id)"
-          )
+          .select("amount, bill_month, bill_year, expenses!inner(expense_type, group_id, credit_card_id)")
           .eq("user_id", user!.id)
+          .eq("expenses.group_id", membership!.group_id)
           .in("bill_month", months)
           .in("bill_year", years)
           .limit(5000),
         supabase
           .from("personal_expense_installments")
-          .select(
-            "*, personal_expenses(credit_card_id)"
-          )
+          .select("amount, bill_month, bill_year, personal_expenses(credit_card_id)")
           .eq("user_id", user!.id)
           .in("bill_month", months)
           .in("bill_year", years)
@@ -243,12 +241,8 @@ export function CardsTab({
       if (groupRes.error) throw groupRes.error;
       if (personalRes.error) throw personalRes.error;
 
-      const filteredGroupData = (groupRes.data || []).filter(
-        item => item.expenses?.group_id === membership!.group_id
-      );
-
       return {
-        groupInstallments: (filteredGroupData as GroupInstallmentItem[]) || [],
+        groupInstallments: (groupRes.data as GroupInstallmentItem[]) || [],
         personalInstallments: (personalRes.data as PersonalInstallmentItem[]) || [],
       };
     },
