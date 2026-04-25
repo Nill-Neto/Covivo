@@ -16,13 +16,16 @@ GRANT EXECUTE ON FUNCTION public.is_current_user_member_of_group(uuid) TO servic
 CREATE TABLE IF NOT EXISTS public.report_access_attempts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  group_id uuid REFERENCES public.groups(id) ON DELETE SET NULL,
+  group_id uuid,
   allowed boolean NOT NULL,
   reason text,
   ip_address text,
   user_agent text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.report_access_attempts
+  DROP CONSTRAINT IF EXISTS report_access_attempts_group_id_fkey;
 
 ALTER TABLE public.report_access_attempts ENABLE ROW LEVEL SECURITY;
 
