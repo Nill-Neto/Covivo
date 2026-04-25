@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, CreditCard, Home } from "lucide-react";
+import { User, CreditCard as CreditCardIcon, Home } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +24,15 @@ import {
   sortPendingItemsByDateDesc,
 } from "@/lib/collectivePending";
 import { UnpaidBills } from "@/components/dashboard/UnpaidBills";
+import type {
+  P2PBalance,
+  IndividualPendingItem,
+  PersonalExpenseItem,
+  ChartDataPoint,
+  CreditCard,
+  BillInstallment,
+  PendingSplit,
+} from "@/types/dashboard";
 
 export default function Dashboard() {
   const { profile, membership, user } = useAuth();
@@ -54,6 +63,7 @@ export default function Dashboard() {
   const { data: expensesInCycle = [] } = useQuery({
     queryKey: ["expenses-dashboard", membership?.group_id, currentCompetenceKey],
     queryFn: async () => {
+      if (!membership?.group_id) return [];
       const { data, error } = await supabase
         .from("expenses")
         .select(`
@@ -73,15 +83,16 @@ export default function Dashboard() {
     staleTime: 60_000,
   });
 
-  const { data: pendingSplits = [] } = useQuery({
+  const { data: pendingSplits = [] } = useQuery<PendingSplit[]>({
     queryKey: ["my-pending-splits-dashboard", membership?.group_id, user?.id],
     queryFn: async () => {
+      if (!user?.id || !membership?.group_id) return [];
       const { data, error } = await supabase
         .from("expense_splits")
         .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method, credit_card_id, installments, competence_key, credit_cards:credit_card_id(closing_day)), payments(id, status)")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return (data ?? []).filter((s: any) => s.expenses?.group_id === membership!.group_id);
+      return (data ?? []).filter((s: any) => s.expenses?.group_id === membership!.group_id) as PendingSplit[];
     },
     enabled: !!membership?.group_id && !!user?.id,
     staleTime: 30_000,
@@ -103,16 +114,16 @@ export default function Dashboard() {
     enabled: !!membership?.group_id && !!user?.id,
   });
 
-  const { data: creditCards = [], isLoading: isLoadingCreditCards } = useQuery({
+  const { data: creditCards = [], isLoading: isLoadingCreditCards } = useQuery<CreditCard[]>({
     queryKey: ["my-credit-cards", user?.id],
     queryFn: async () => {
       const { data } = await supabase.from("credit_cards").select("*").eq("user_id", user!.id);
-      return data ?? [];
+      return (data as CreditCard[]) ?? [];
     },
     enabled: !!user,
   });
 
-  const { data: billInstallments = [], isLoading: isLoadingBillInstallments } = useQuery({
+  const { data: billInstallments = [], isLoading: isLoadingBillInstallments } = useQuery<BillInstallment[]>({
     queryKey: ["bill-installments-dashboard", user?.id, membership?.group_id, currentDate.getMonth(), currentDate.getFullYear()],
     queryFn: async () => {
       const targetMonth = currentDate.getMonth() + 1;
@@ -159,7 +170,7 @@ export default function Dashboard() {
     staleTime: 60_000,
   });
 
-  const { data: p2pBalances = [] } = useQuery({
+  const { data: p2pBalances = [] } = useQuery<P2PBalance[]>({
     queryKey: ["get_my_p2p_balances", user?.id, membership?.group_id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -177,12 +188,12 @@ export default function Dashboard() {
   const totalMonthExpenses = collectiveExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
   const myCollectiveShare = collectiveExpenses.reduce((sum, e) => {
-    const splits = (e.expense_splits as unknown as { user_id: string; amount: number }[]) || [];
+    const splits = (e.expense_splits as { user_id: string; amount: number }[]) || [];
     const mySplit = splits.find((s) => s.user_id === user?.id);
     return sum + (mySplit ? Number(mySplit.amount) : 0);
   }, 0);
 
-  const republicChartData = useMemo(() => {
+  const republicChartData: ChartDataPoint[] = useMemo(() => {
     const categories: Record<string, number> = {};
     collectiveExpenses.forEach(e => {
       const label = getCategoryLabel(e.category);
@@ -198,13 +209,13 @@ export default function Dashboard() {
   );
 
   const currentMonthIndividualInstallments = billInstallments
-    .filter((i: any) => i.expenses?.expense_type === "individual" || i.expenses?.expense_type === "personal")
-    .map((i: any) => ({
+    .filter((i) => i.expenses?.expense_type === "individual" || i.expenses?.expense_type === "personal")
+    .map((i) => ({
       id: i.id,
-      title: i.expenses?.title,
-      category: i.expenses?.category,
+      title: i.expenses?.title || "Despesa",
+      category: i.expenses?.category || "other",
       amount: i.amount,
-      purchase_date: i.expenses?.purchase_date,
+      purchase_date: i.expenses?.purchase_date || new Date().toISOString(),
       payment_method: "credit_card",
       expense_type: i.expenses?.expense_type,
       created_by: user?.id,
@@ -212,7 +223,7 @@ export default function Dashboard() {
       installments: i.expenses?.installments || 1,
     }));
 
-  const myPersonalExpenses = [
+  const myPersonalExpenses: PersonalExpenseItem[] = [
     ...currentCycleCashIndividualExpenses,
     ...currentMonthIndividualInstallments,
   ];
@@ -221,9 +232,9 @@ export default function Dashboard() {
     .filter(e => e.payment_method !== "credit_card")
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
-  const totalBill = billInstallments.reduce((sum: number, i: any) => sum + Number(i.amount), 0);
+  const totalBill = billInstallments.reduce((sum, i) => sum + Number(i.amount), 0);
 
-  const personalChartData = useMemo(() => {
+  const personalChartData: ChartDataPoint[] = useMemo(() => {
     const categories: Record<string, number> = {};
     myPersonalExpenses.forEach(e => {
       const label = getCategoryLabel(e.category);
@@ -235,12 +246,12 @@ export default function Dashboard() {
   }, [myPersonalExpenses]);
 
   const collectivePending = pendingSplits
-    .filter((s: any) => {
+    .filter((s) => {
       if (s.expenses?.expense_type !== "collective") return false;
-      const hasPayment = (s.payments || []).some((p: any) => p.status === 'pending' || p.status === 'confirmed');
+      const hasPayment = (s.payments || []).some((p) => p.status === 'pending' || p.status === 'confirmed');
       return !hasPayment;
     })
-    .map((split: any) => {
+    .map((split) => {
       const compKey = resolvePendingCompetenceKey({
         competenceKey: split.expenses?.competence_key,
         purchaseDate: split.expenses?.purchase_date,
@@ -254,23 +265,23 @@ export default function Dashboard() {
     });
 
   const totalBulkPayments = useMemo(() => {
-    return myBulkPayments.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+    return myBulkPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
   }, [myBulkPayments]);
 
   const collectivePendingCurrent = collectivePending
-    .filter((s: any) => s.competenceKey === currentCompetenceKey)
+    .filter((s) => s.competenceKey === currentCompetenceKey)
     .sort(sortPendingItemsByDateDesc);
     
-  const collectivePendingPrevious = collectivePending.filter((s: any) => !s.competenceKey || s.competenceKey < currentCompetenceKey);
-  const rawTotalCollectivePendingPrevious = collectivePendingPrevious.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
-  const rawTotalCollectivePendingCurrent = collectivePendingCurrent.reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+  const collectivePendingPrevious = collectivePending.filter((s) => !s.competenceKey || s.competenceKey < currentCompetenceKey);
+  const rawTotalCollectivePendingPrevious = collectivePendingPrevious.reduce((sum, s) => sum + Number(s.amount), 0);
+  const rawTotalCollectivePendingCurrent = collectivePendingCurrent.reduce((sum, s) => sum + Number(s.amount), 0);
   
   const bulkAppliedToPrevious = Math.min(totalBulkPayments, rawTotalCollectivePendingPrevious);
   const bulkRemainder = totalBulkPayments - bulkAppliedToPrevious;
   const totalCollectivePendingPrevious = Math.max(0, rawTotalCollectivePendingPrevious - bulkAppliedToPrevious);
   const totalCollectivePendingCurrent = Math.max(0, rawTotalCollectivePendingCurrent - bulkRemainder);
   
-  const applyBulkToItems = (items: any[], amountToApply: number) => {
+  const applyBulkToItems = (items: PendingSplit[], amountToApply: number) => {
     if (amountToApply <= 0.01) return items;
     
     const sortedItems = [...items].sort((a, b) => {
@@ -280,7 +291,7 @@ export default function Dashboard() {
     });
 
     let remainingBulkCents = Math.round(amountToApply * 100);
-    const result = [];
+    const result: PendingSplit[] = [];
 
     for (const item of sortedItems) {
       const itemAmountCents = Math.round(Number(item.amount) * 100);
@@ -319,10 +330,10 @@ export default function Dashboard() {
     return groupPendingByCompetence(displayCollectivePendingCurrent);
   }, [displayCollectivePendingCurrent, totalCollectivePendingCurrent]);
 
-  const manualIndividualPending = pendingSplits.filter((s: any) => {
+  const manualIndividualPending = pendingSplits.filter((s) => {
     const isIndividual = s.expenses?.expense_type === "individual";
     const isNotCreditCard = s.expenses?.payment_method !== "credit_card";
-    const hasNoPayment = !(s.payments || []).some((p: any) => p.status === 'pending' || p.status === 'confirmed');
+    const hasNoPayment = !(s.payments || []).some((p) => p.status === 'pending' || p.status === 'confirmed');
     
     const compKey = resolvePendingCompetenceKey({
       competenceKey: s.expenses?.competence_key,
@@ -335,26 +346,26 @@ export default function Dashboard() {
     return isIndividual && isNotCreditCard && hasNoPayment && isInCycle;
   });
 
-  const installmentIndividualPending = billInstallments.filter((i: any) => 
+  const installmentIndividualPending = billInstallments.filter((i) => 
     i.expenses?.expense_type === "individual" || i.expenses?.expense_type === "personal"
-  ).map((i: any) => ({
+  ).map((i) => ({
     id: i.id,
     amount: i.amount,
     installment_number: i.installment_number,
     expenses: i.expenses
   }));
 
-  const individualPending = [...manualIndividualPending, ...installmentIndividualPending]
-    .sort((a: any, b: any) => (b.expenses?.purchase_date || "").localeCompare(a.expenses?.purchase_date || ""));
+  const individualPending: IndividualPendingItem[] = [...manualIndividualPending, ...installmentIndividualPending]
+    .sort((a, b) => (b.expenses?.purchase_date || "").localeCompare(a.expenses?.purchase_date || ""));
     
-  const totalIndividualPending = individualPending.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+  const totalIndividualPending = individualPending.reduce((sum, item) => sum + Number(item.amount), 0);
   const totalUserExpensesCompetence = myCollectiveShare + totalIndividualPending;
   const totalUserExpensesCurrentBalance = totalUserExpensesCompetence + totalCollectivePendingPrevious;
 
   const cardsBreakdown = useMemo(() => {
     const map: Record<string, number> = {};
     creditCards.forEach(c => map[c.id] = 0);
-    billInstallments.forEach((i: any) => {
+    billInstallments.forEach((i) => {
       const cId = i.expenses?.credit_card_id;
       if (cId && map[cId] !== undefined) {
         map[cId] += Number(i.amount);
@@ -363,9 +374,9 @@ export default function Dashboard() {
     return map;
   }, [creditCards, billInstallments]);
 
-  const cardsChartData = useMemo(() => {
+  const cardsChartData: ChartDataPoint[] = useMemo(() => {
     const categories: Record<string, number> = {};
-    billInstallments.forEach((i: any) => {
+    billInstallments.forEach((i) => {
       const rawCat = i.expenses?.category || "other";
       const label = getCategoryLabel(rawCat);
       categories[label] = (categories[label] || 0) + Number(i.amount);
@@ -484,7 +495,7 @@ export default function Dashboard() {
         <User className="h-3.5 w-3.5 mr-1.5" /> Geral
       </TabsTrigger>
       <TabsTrigger value="cards" className={tabTriggerClass}>
-        <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
+        <CreditCardIcon className="h-3.5 w-3.5 mr-1.5" /> Cartões
       </TabsTrigger>
     </TabsList>
   );
@@ -516,7 +527,7 @@ export default function Dashboard() {
               <User className="h-3.5 w-3.5 mr-1.5" /> Geral
             </TabsTrigger>
             <TabsTrigger value="cards" className={tabTriggerClass}>
-              <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Cartões
+              <CreditCardIcon className="h-3.5 w-3.5 mr-1.5" /> Cartões
             </TabsTrigger>
           </TabsList>
         )}

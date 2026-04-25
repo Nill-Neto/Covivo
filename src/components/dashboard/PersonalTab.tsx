@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Info, Plus, FileText, Banknote, Landmark, AlertCircle } from "lucide-react";
@@ -19,6 +18,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomLoader } from "../ui/custom-loader";
+import type { PersonalTabProps } from "@/types/dashboard";
+import type { PendingByCompetenceGroup } from "@/lib/collectivePending";
 
 type AdminDashboardData = {
   pending_payments_count: number;
@@ -49,7 +50,7 @@ function AdminDashboard() {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <Card className="border-destructive/50 bg-destructive/5">
         <CardHeader>
@@ -63,7 +64,7 @@ function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground bg-destructive/10 p-2 rounded">
-            Detalhes técnicos (dev): {(error as any).message}
+            Detalhes técnicos (dev): {(error as any)?.message || "No data returned"}
           </p>
         </CardContent>
       </Card>
@@ -110,7 +111,6 @@ function AdminDashboard() {
 export function PersonalTab({
   modoGestao,
   p2pBalances,
-  closingDay,
   currentDate,
   totalIndividualPending,
   totalCollectivePendingPrevious,
@@ -128,7 +128,7 @@ export function PersonalTab({
   republicChartData,
   totalMonthExpenses,
   onPayRateio,
-}) {
+}: PersonalTabProps) {
   const { isAdmin } = useAuth();
 
   if (isAdmin && modoGestao === 'centralized') {
@@ -270,7 +270,7 @@ export function PersonalTab({
                         <div>
                           <p className="font-medium line-clamp-1">{item.expenses?.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            {format(parseISO(item.expenses?.purchase_date), "'Comprado em' dd/MM/yy")}
+                            {item.expenses?.purchase_date ? format(parseISO(item.expenses.purchase_date), "'Comprado em' dd/MM/yy") : ""}
                           </p>
                         </div>
                       </div>
@@ -278,7 +278,7 @@ export function PersonalTab({
                         <p className="font-semibold">{formatCurrency(item.amount)}</p>
                         {item.installment_number && (
                           <p className="text-xs text-muted-foreground">
-                            {item.installment_number}/{item.expenses.installments}
+                            {item.installment_number}/{item.expenses?.installments}
                           </p>
                         )}
                       </div>
@@ -343,7 +343,7 @@ export function PersonalTab({
 }
 
 
-function PendingList({ itemsByCompetence }) {
+function PendingList({ itemsByCompetence }: { itemsByCompetence: PendingByCompetenceGroup[] }) {
   return (
     <ScrollArea className="h-60">
       <div className="space-y-2 pr-4">
@@ -355,7 +355,7 @@ function PendingList({ itemsByCompetence }) {
                   <ChevronsUpDown className="h-4 w-4" />
                   <div className="flex flex-col">
                     <span className="font-semibold capitalize">
-                      {format(parseISO(`${competenceKey}-02`), "MMMM yyyy", { locale: ptBR })}
+                      {competenceKey ? format(parseISO(`${competenceKey}-02`), "MMMM yyyy", { locale: ptBR }) : "Sem Competência"}
                     </span>
                     <span className="text-xs text-muted-foreground">{items.length} itens</span>
                   </div>
@@ -373,7 +373,7 @@ function PendingList({ itemsByCompetence }) {
                     <div>
                       <p className="font-medium line-clamp-1">{item.expenses?.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(parseISO(item.expenses?.purchase_date), "'Em' dd/MM/yy")}
+                        {item.expenses?.purchase_date ? format(parseISO(item.expenses.purchase_date), "'Em' dd/MM/yy") : ""}
                       </p>
                     </div>
                   </div>

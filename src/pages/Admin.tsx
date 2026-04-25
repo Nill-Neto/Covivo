@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { AdminTab } from "@/components/dashboard/AdminTab";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { useCycleDates } from "@/hooks/useCycleDates";
 import { formatCompetenceKey } from "@/lib/cycleDates";
+import type { AdminDashboardData } from "@/types/admin";
 
 export default function Admin() {
   const { membership, isAdmin, profile } = useAuth();
@@ -52,7 +53,7 @@ export default function Admin() {
     isLoading,
     error,
     refetch,
-  } = useQuery({
+  } = useQuery<AdminDashboardData | null>({
     queryKey: adminDashboardQueryKey,
     queryFn: async () => {
       if (!isAdmin || !membership?.group_id) return null;
@@ -67,7 +68,7 @@ export default function Admin() {
         if (p2pMatrixRes.error) throw p2pMatrixRes.error;
   
         return {
-          members: membersRes.data || [],
+          members: (membersRes.data || []).map(m => ({ ...m, balance: 0, accrued_debt: 0, current_cycle_owed: 0, current_cycle_paid: 0, previous_debt: 0, total_owed: 0, total_paid: 0, active: true, profile: m, role: 'morador' })),
           p2pMatrix: p2pMatrixRes.data || [],
           pendingPaymentsCount: 0, exMembersDebt: 0, departuresCount: 0, redistributedCount: 0, lowStockCount: 0, cycleSplits: [], pendingSplits: [], memberPaymentsByCompetence: {}, nonCriticalWarnings: [],
         };
@@ -92,15 +93,15 @@ export default function Admin() {
         throw new Error("Falha ao carregar dados administrativos para o modo centralizado.");
       }
 
-      const cycleSplits = cycleSplitsRes.data || [];
-      const pendingSplits = pendingSplitsRes.data || [];
+      const cycleSplits = (cycleSplitsRes.data || []) as any[];
+      const pendingSplits = (pendingSplitsRes.data || []) as any[];
       const payments = allPaymentsRes.data || [];
 
       const memberPaymentsByCompetence = payments
-        .filter((p: any) => p.status === "confirmed" && p.paid_by && p.competence_key)
-        .reduce((acc: Record<string, Record<string, number>>, payment: any) => {
-          const userId = payment.paid_by;
-          const competenceKey = payment.competence_key;
+        .filter((p) => p.status === "confirmed" && p.paid_by && p.competence_key)
+        .reduce((acc: Record<string, Record<string, number>>, payment) => {
+          const userId = payment.paid_by!;
+          const competenceKey = payment.competence_key!;
           const amount = Number(payment.amount || 0);
           if (!acc[userId]) acc[userId] = {};
           acc[userId][competenceKey] = (acc[userId][competenceKey] || 0) + amount;
@@ -122,17 +123,17 @@ export default function Admin() {
 
       const members = cycleBalances.map(m => ({
         ...m,
-        profile: (profilesRes.data || []).find(p => p.id === m.user_id),
+        profile: (profilesRes.data || []).find(p => p.id === m.user_id) || null,
         role: (rolesRes.data || []).find(r => r.user_id === m.user_id)?.role ?? 'morador'
       }));
 
       const pendingPaymentsCount = payments.filter(p => p.status === 'pending').length;
       const departuresCount = (departuresRes.data || []).length;
       const redistributedCount = (departuresRes.data || []).reduce((sum: number, log: any) => sum + (Number(log?.details?.redistributed_pending_splits || 0)), 0);
-      const lowStockCount = (inventoryRes.data || []).filter((i: any) => Number(i.quantity) <= Number(i.min_quantity)).length;
+      const lowStockCount = (inventoryRes.data || []).filter((i) => Number(i.quantity) <= Number(i.min_quantity)).length;
       
       const activeUserIds = new Set(members.map(m => m.user_id));
-      const exMembersDebt = (pendingSplits || []).filter((s: any) => !activeUserIds.has(s.user_id)).reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
+      const exMembersDebt = (pendingSplits || []).filter((s) => !activeUserIds.has(s.user_id)).reduce((sum, s) => sum + Number(s.amount || 0), 0);
 
       return {
         members,
@@ -191,6 +192,7 @@ export default function Admin() {
             cycleSplits={adminData.cycleSplits}
             pendingSplits={adminData.pendingSplits}
             memberPaymentsByCompetence={adminData.memberPaymentsByCompetence}
+            nonCriticalWarnings={adminData.nonCriticalWarnings}
           />
         </div>
       ) : (
