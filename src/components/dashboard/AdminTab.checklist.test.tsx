@@ -47,6 +47,15 @@ function renderAdminTab() {
         cycleEnd={new Date("2026-05-01T00:00:00.000Z")}
         currentDate={baseDate}
         closingDay={10}
+        groupId="group-1"
+        pendingPaymentsCount={0}
+        exMembersDebt={0}
+        departuresCount={0}
+        redistributedCount={0}
+        lowStockCount={0}
+        cycleSplits={[]}
+        pendingSplits={[]}
+        memberPaymentsByCompetence={{}}
       />
     </MemoryRouter>
   );
