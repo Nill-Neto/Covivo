@@ -100,6 +100,7 @@ export type Database = {
         Row: {
           brand: string
           closing_day: number
+          color: string | null
           created_at: string
           due_day: number
           id: string
@@ -110,6 +111,7 @@ export type Database = {
         Insert: {
           brand: string
           closing_day: number
+          color?: string | null
           created_at?: string
           due_day: number
           id?: string
@@ -120,6 +122,7 @@ export type Database = {
         Update: {
           brand?: string
           closing_day?: number
+          color?: string | null
           created_at?: string
           due_day?: number
           id?: string

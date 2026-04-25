@@ -68,7 +68,7 @@ export default function Admin() {
         if (p2pMatrixRes.error) throw p2pMatrixRes.error;
   
         return {
-          members: (membersRes.data || []).map(m => ({ ...m, balance: 0, accrued_debt: 0, current_cycle_owed: 0, current_cycle_paid: 0, previous_debt: 0, total_owed: 0, total_paid: 0, active: true, profile: m, role: 'morador' })),
+          members: (membersRes.data || []).map(m => ({ ...m, user_id: m.id, balance: 0, accrued_debt: 0, current_cycle_owed: 0, current_cycle_paid: 0, previous_debt: 0, total_owed: 0, total_paid: 0, active: true, profile: m, role: 'morador' })),
           p2pMatrix: p2pMatrixRes.data || [],
           pendingPaymentsCount: 0, exMembersDebt: 0, departuresCount: 0, redistributedCount: 0, lowStockCount: 0, cycleSplits: [], pendingSplits: [], memberPaymentsByCompetence: {}, nonCriticalWarnings: [],
         };

@@ -49,7 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { CardsTabProps, CreditCard as CreditCardType } from "@/types/dashboard";
+import type { CardsTabProps, CreditCard as CreditCardType, GroupInstallmentItem, PersonalInstallmentItem } from "@/types/dashboard";
 import type { Tables } from "@/integrations/supabase/types";
 
 const cardSchema = z.object({
@@ -87,19 +87,6 @@ const CARD_COLORS = [
   "#0891b2", // cyan-600
   "#d946ef", // fuchsia-500
 ];
-
-type GroupInstallmentItem = Tables<"expense_installments"> & {
-  expenses: {
-    expense_type: string;
-    group_id: string;
-    credit_card_id: string | null;
-  } | null;
-};
-type PersonalInstallmentItem = Tables<"personal_expense_installments"> & {
-  personal_expenses: {
-    credit_card_id: string | null;
-  } | null;
-};
 
 export function CardsTab({
   totalBill,
@@ -235,7 +222,7 @@ export function CardsTab({
 
       const [groupRes, personalRes] = await Promise.all([
         supabase
-          .from("expense_installments" as any)
+          .from("expense_installments")
           .select("amount, bill_month, bill_year, expenses!inner(expense_type, group_id, credit_card_id)")
           .eq("user_id", user!.id)
           .eq("expenses.group_id", membership!.group_id)
