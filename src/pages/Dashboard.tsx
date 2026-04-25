@@ -52,7 +52,7 @@ export default function Dashboard() {
   const currentCompetenceKey = formatCompetenceKey(currentDate);
 
   const { data: expensesInCycle = [] } = useQuery({
-    queryKey: ["expenses-dashboard", membership?.group_id, currentCompetenceKey],
+    queryKey: ["dashboard-expenses", membership?.group_id, currentCompetenceKey],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")

@@ -29,7 +29,7 @@ export default function Admin() {
   const adminDashboardQueryKey = ["admin-dashboard-data", membership?.group_id, currentCompetenceKey, modoGestao] as const;
 
   const { data: expensesInCycle = [] } = useQuery({
-    queryKey: ["expenses-dashboard", membership?.group_id, currentCompetenceKey],
+    queryKey: ["admin-expenses", membership?.group_id, currentCompetenceKey],
     queryFn: async () => {
       if (!membership?.group_id) return [];
       const { data, error } = await supabase
