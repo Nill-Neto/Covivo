@@ -96,10 +96,18 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_set_expense_competence ON public.expenses;
-CREATE TRIGGER trg_set_expense_competence
-BEFORE INSERT OR UPDATE ON public.expenses
-FOR EACH ROW EXECUTE FUNCTION public.set_expense_competence();
+DO $$
+BEGIN
+  IF to_regclass('public.expenses') IS NOT NULL THEN
+    DROP TRIGGER IF EXISTS trg_set_expense_competence ON public.expenses;
+    CREATE TRIGGER trg_set_expense_competence
+    BEFORE INSERT OR UPDATE ON public.expenses
+    FOR EACH ROW EXECUTE FUNCTION public.set_expense_competence();
+  ELSE
+    RAISE NOTICE 'Skipping trg_set_expense_competence: public.expenses does not exist yet.';
+  END IF;
+END;
+$$;
 
 -- Trigger function for payments competence
 CREATE OR REPLACE FUNCTION public.set_payment_competence_fields()
@@ -127,10 +135,18 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_set_payment_competence_fields ON public.payments;
-CREATE TRIGGER trg_set_payment_competence_fields
-BEFORE INSERT OR UPDATE ON public.payments
-FOR EACH ROW EXECUTE FUNCTION public.set_payment_competence_fields();
+DO $$
+BEGIN
+  IF to_regclass('public.payments') IS NOT NULL THEN
+    DROP TRIGGER IF EXISTS trg_set_payment_competence_fields ON public.payments;
+    CREATE TRIGGER trg_set_payment_competence_fields
+    BEFORE INSERT OR UPDATE ON public.payments
+    FOR EACH ROW EXECUTE FUNCTION public.set_payment_competence_fields();
+  ELSE
+    RAISE NOTICE 'Skipping trg_set_payment_competence_fields: public.payments does not exist yet.';
+  END IF;
+END;
+$$;
 
 -- Additional trigger for payments to ensure competence_date is set and validated (from 20260417120000_add_payment_competence_date.sql)
 CREATE OR REPLACE FUNCTION public.set_payment_competence_date()
@@ -140,7 +156,6 @@ SET search_path TO 'public'
 AS $function$
 DECLARE
   _normalized_competence date;
-  _membership_valid boolean;
   _group_created_on date;
 BEGIN
   _normalized_competence := public.normalize_payment_competence_date(
@@ -159,17 +174,20 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Relaxed check for legacy data if needed, but for new data it's important
-  -- IF NEW.competence_date < _group_created_on THEN
-  --   RAISE EXCEPTION 'Payment competence % cannot be before group creation date %', NEW.competence_date, _group_created_on;
-  -- END IF;
-
   RETURN NEW;
 END;
 $function$;
 
-DROP TRIGGER IF EXISTS trg_set_payment_competence_date ON public.payments;
-CREATE TRIGGER trg_set_payment_competence_date
-BEFORE INSERT OR UPDATE OF group_id, paid_by, created_at, competence_date
-ON public.payments
-FOR EACH ROW EXECUTE FUNCTION public.set_payment_competence_date();
+DO $$
+BEGIN
+  IF to_regclass('public.payments') IS NOT NULL THEN
+    DROP TRIGGER IF EXISTS trg_set_payment_competence_date ON public.payments;
+    CREATE TRIGGER trg_set_payment_competence_date
+    BEFORE INSERT OR UPDATE OF group_id, paid_by, created_at, competence_date
+    ON public.payments
+    FOR EACH ROW EXECUTE FUNCTION public.set_payment_competence_date();
+  ELSE
+    RAISE NOTICE 'Skipping trg_set_payment_competence_date: public.payments does not exist yet.';
+  END IF;
+END;
+$$;
