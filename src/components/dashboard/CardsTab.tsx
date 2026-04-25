@@ -223,16 +223,17 @@ export function CardsTab({
         supabase
           .from("expense_installments")
           .select(
-            "*, expenses(expense_type, group_id, credit_card_id)"
+            "*, expenses!inner(expense_type, group_id, credit_card_id)"
           )
           .eq("user_id", user!.id)
+          .eq("expenses.group_id", membership!.group_id)
           .in("bill_month", months)
           .in("bill_year", years)
           .limit(5000),
         supabase
           .from("personal_expense_installments")
           .select(
-            "*, personal_expenses(credit_card_id)"
+            "*, personal_expenses!inner(credit_card_id)"
           )
           .eq("user_id", user!.id)
           .in("bill_month", months)
@@ -243,12 +244,8 @@ export function CardsTab({
       if (groupRes.error) throw groupRes.error;
       if (personalRes.error) throw personalRes.error;
 
-      const filteredGroupData = (groupRes.data || []).filter(
-        item => item.expenses?.group_id === membership!.group_id
-      );
-
       return {
-        groupInstallments: (filteredGroupData as GroupInstallmentItem[]) || [],
+        groupInstallments: (groupRes.data as GroupInstallmentItem[]) || [],
         personalInstallments: (personalRes.data as PersonalInstallmentItem[]) || [],
       };
     },
@@ -663,7 +660,7 @@ export function CardsTab({
                     </div>
 
                     <div className="mb-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-md border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-2">
+                      <div className="rounded-md border border-emerald-500/40 bg-emerald-500/15 px-2 py-1.5">
                         <span className="block text-[10px] font-bold text-emerald-800 dark:text-emerald-300">Individuais</span>
                         <span className="block text-xs font-extrabold text-foreground mt-0.5">R$ {formatCurrency(individualTotal)}</span>
                       </div>
