@@ -223,7 +223,7 @@ export function CardsTab({
       const [groupRes, personalRes] = await Promise.all([
         supabase
           .from("expense_installments")
-          .select("amount, bill_month, bill_year, expenses!inner(expense_type, group_id, credit_card_id)")
+          .select("id, amount, bill_month, bill_year, expenses:expense_id!inner(expense_type, group_id, credit_card_id)")
           .eq("user_id", user!.id)
           .eq("expenses.group_id", membership!.group_id)
           .in("bill_month", months)

@@ -84,7 +84,7 @@ export default function Admin() {
         supabase.from("expense_splits").select("*, expenses!inner(*)").eq("expenses.group_id", membership.group_id).eq("expenses.expense_type", "collective"),
         supabase.from("audit_log").select("created_at, details").eq("group_id", membership.group_id).eq("action", "remove_member").gte("created_at", cycleStart.toISOString()).lt("created_at", cycleEnd.toISOString()),
         supabase.from("inventory_items").select("quantity, min_quantity").eq("group_id", membership.group_id),
-        supabase.from("payments").select("*, expense_splits(expenses(expense_type))").eq("group_id", membership.group_id).in("status", ["pending", "confirmed"]),
+        supabase.from("payments").select("*").eq("group_id", membership.group_id).in("status", ["pending", "confirmed"]),
       ]);
 
       const errors = [membersRes, rolesRes, cycleSplitsRes, balancesRes, profilesRes, pendingSplitsRes, departuresRes, inventoryRes, allPaymentsRes].filter(res => res.error);
