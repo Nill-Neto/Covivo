@@ -176,8 +176,8 @@ export function AdminTab({
     return { label: "Neutro", className: "text-muted-foreground", badgeClass: "outline" as const };
   };
 
-  const totalReceivable = sortedMembers.reduce(
-    (acc, m) => acc + ((m.accumulated_balance ?? m.balance) < -0.01 ? Math.abs(m.accumulated_balance ?? m.balance) : 0), 0
+  const totalReceivable = memberBalances.reduce(
+    (acc, m) => acc + (m.netBalance < -0.01 ? Math.abs(m.netBalance) : 0), 0
   );
 
   const recentExpenses = useMemo(() =>
@@ -218,6 +218,11 @@ export function AdminTab({
         pendingPaymentsCount={pendingPaymentsCount}
         exMembersDebt={exMembersDebt}
       />
+
+      <Button onClick={() => setIsSimplifyModalOpen(true)} variant="outline" className="w-full justify-center gap-2">
+        <Scale className="h-4 w-4"/>
+        Simplificar Dívidas do Grupo
+      </Button>
 
       {/* Quick Actions */}
       <Card>
@@ -440,95 +445,146 @@ export function AdminTab({
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader className="px-5 pt-5 pb-4 shrink-0 border-b">
             <DialogTitle className="text-lg font-semibold text-foreground">
-              Detalhamento da Competência
+              Auditoria P2P
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-0.5 capitalize">
-              {selectedMember?.profile?.full_name} • {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
+              {selectedMember?.profile?.full_name}
             </p>
           </DialogHeader>
 
           <div className="px-5 py-3 bg-muted/10 grid grid-cols-2 gap-4 border-b shrink-0">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total competência atual</p>
-              <p className="text-sm font-semibold tabular-nums">R$ {selectedHeaderTotals.currentCompetenceTotal.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Pendências anteriores</p>
-              <p className="text-sm font-semibold tabular-nums text-destructive">R$ {selectedHeaderTotals.previousPendingTotal.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total pago (comp. atual)</p>
-              <p className="text-sm font-semibold tabular-nums text-success">R$ {selectedHeaderTotals.currentCompetencePaid.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total acumulado</p>
-              <p className={`text-sm font-semibold tabular-nums ${getBalanceStyle(selectedMember?.accumulated_balance ?? selectedMember?.balance ?? 0).className}`}>
-                R$ {Math.abs(selectedMember?.accumulated_balance ?? selectedMember?.balance ?? 0).toFixed(2)}
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Saldo Líquido</p>
+              <p className={`text-lg font-semibold tabular-nums ${getBalanceStyle(selectedMember?.netBalance ?? 0).className}`}>
+                R$ {selectedMember?.netBalance.toFixed(2)}
               </p>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto bg-muted/5 divide-y divide-border/50">
             <div className="px-5 py-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pendências anteriores</p>
-                <Badge variant="outline" className="text-[10px]">
-                  {selectedPreviousByCompetence.length} competência{selectedPreviousByCompetence.length !== 1 ? "s" : ""}
-                </Badge>
-              </div>
-              {selectedPreviousByCompetence.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sem pendências anteriores.</p>
+              <h3 className="text-sm font-medium text-destructive flex items-center gap-2">
+                <ArrowUpRight className="h-4 w-4" />
+                Dívidas com outros membros
+              </h3>
+              {selectedMember?.debts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Sem dívidas com outros membros.</p>
               ) : (
-                <div className="space-y-3">
-                  {selectedPreviousByCompetence.map(group => (
-                    <div key={group.competenceKey} className="rounded-lg border bg-background/70">
-                      <div className="px-3 py-2 border-b">
-                        <p className="text-xs font-medium capitalize text-muted-foreground">
-                          {group.synthetic ? "Saldo anterior consolidado" : `Competência ${formatCompetenceLabel(group.competenceKey)}`}
-                        </p>
+                <div className="space-y-2">
+                  {selectedMember?.debts.map((debt: any) => (
+                    <div key={debt.user.id} className="flex items-center justify-between p-2 rounded-md bg-background">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={debt.user.avatar_url} />
+                          <AvatarFallback>{debt.user.full_name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{debt.user.full_name}</span>
                       </div>
-                      <div className="px-3 py-2.5 grid grid-cols-3 gap-2 text-[11px] border-b">
-                        <div>
-                          <p className="text-muted-foreground">Total competência</p>
-                          <p className="font-semibold tabular-nums">R$ {group.totalCompetence.toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Total pago</p>
-                          <p className="font-semibold tabular-nums text-success">R$ {group.totalPaid.toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Total pendente</p>
-                          <p className="font-semibold tabular-nums text-destructive">R$ {group.totalPending.toFixed(2)}</p>
-                        </div>
-                      </div>
-                      {group.items.length > 0 ? (
-                        <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value={`pending-${group.competenceKey}`} className="border-b-0">
-                            <AccordionTrigger className="px-3 py-2 text-xs font-medium hover:no-underline">
-                              Itens da competência ({group.items.length})
-                            </AccordionTrigger>
-                            <AccordionContent className="divide-y">
-                              {group.items.map((split: any) => (
-                                <div key={split.id} className="px-3 py-2.5">
-                                  <div className="flex justify-between gap-2">
-                                    <p className="text-sm">{split.expenses?.title || "Despesa sem título"}</p>
-                                    <span className="text-sm font-semibold tabular-nums text-destructive">R$ {Number(split.amount).toFixed(2)}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      ) : (
-                        <div className="px-3 py-2 text-xs text-muted-foreground">
-                          Sem detalhamento por item para este saldo anterior.
-                        </div>
-                      )}
+                      <span className="text-sm font-semibold text-destructive">
+                        R$ {debt.amount.toFixed(2)}
+                      </span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
+
+            <div className="px-5 py-4 space-y-3">
+              <h3 className="text-sm font-medium text-success flex items-center gap-2">
+                <ArrowDownLeft className="h-4 w-4" />
+                Créditos com outros membros
+              </h3>
+              {selectedMember?.credits.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum membro te deve.</p>
+              ) : (
+                <div className="space-y-2">
+                  {selectedMember?.credits.map((credit: any) => (
+                    <div key={credit.user.id} className="flex items-center justify-between p-2 rounded-md bg-background">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={credit.user.avatar_url} />
+                          <AvatarFallback>{credit.user.full_name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{credit.user.full_name}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-success">
+                        R$ {credit.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function QuickActionLink({
+  to,
+  icon: Icon,
+  label,
+  desc,
+  state
+}: {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  desc: string;
+  state?: any;
+}) {
+  return (
+    <Link
+      to={to}
+      state={state}
+      className="flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors group outline-none focus-visible:bg-muted/50"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{desc}</p>
+      </div>
+    </Link>
+  );
+}DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function QuickActionLink({
+  to,
+  icon: Icon,
+  label,
+  desc,
+  state
+}: {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  desc: string;
+  state?: any;
+}) {
+  return (
+    <Link
+      to={to}
+      state={state}
+      className="flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors group outline-none focus-visible:bg-muted/50"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{desc}</p>
+      </div>
+    </Link>
+  );
+}/div>
 
             <div className="px-5 py-4 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -602,6 +658,46 @@ function QuickActionLink({
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{desc}</p>
+      </div>
+    </Link>
+  );
+}DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function QuickActionLink({
+  to,
+  icon: Icon,
+  label,
+  desc,
+  state
+}: {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  desc: string;
+  state?: any;
+}) {
+  return (
+    <Link
+      to={to}
+      state={state}
+      className="flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors group outline-none focus-visible:bg-muted/50"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{desc}</p>
+      </div>
+    </Link>
+  );
+}Name="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{desc}</p>
       </div>

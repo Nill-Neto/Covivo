@@ -159,6 +159,19 @@ export default function Dashboard() {
     staleTime: 60_000,
   });
 
+  const { data: p2pBalances = [] } = useQuery({
+    queryKey: ["get_my_p2p_balances", user?.id, membership?.group_id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase.rpc("get_my_p2p_balances", {
+        _user_id: user.id,
+      });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && !!membership && (membership as any).group_modo_gestao === 'p2p',
+  });
+
   const collectiveExpenses = expensesInCycle.filter(e => e.expense_type === "collective");
 
   const totalMonthExpenses = collectiveExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -491,7 +504,9 @@ export default function Dashboard() {
         onCompactChange={setHeroCompact}
       />
 
-      <div className="space-y-4">
+      <div className="px-4 space-y-4 md:px-6">
+        <UnpaidBills />
+
         {!heroCompact && (
           <TabsList className={tabListClass}>
             <TabsTrigger value="home" className={tabTriggerClass}>

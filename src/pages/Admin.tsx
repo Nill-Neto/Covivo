@@ -358,8 +358,9 @@ export default function Admin() {
               </ul>
             </div>
           )}
-          <AdminTab 
-            members={adminData.members} 
+          <AdminTab
+            members={adminData.members}
+            p2pMatrix={adminData.p2pMatrix}
             pendingPaymentsCount={adminData.pendingPaymentsCount}
             collectiveExpenses={collectiveExpenses}
             totalMonthExpenses={totalMonthExpenses}
@@ -370,10 +371,6 @@ export default function Admin() {
             departuresCount={adminData.departuresCount}
             redistributedCount={adminData.redistributedCount}
             lowStockCount={adminData.lowStockCount}
-            cycleSplits={adminData.cycleSplits}
-            pendingSplits={adminData.pendingSplits}
-            memberPaymentsByCompetence={adminData.memberPaymentsByCompetence}
-            closingDay={closingDay}
           />
         </div>
       ) : (
@@ -386,6 +383,21 @@ export default function Admin() {
             className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
             Atualizar dados
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+          >
+            Atualizar dados
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
           </button>
         </div>
       )}

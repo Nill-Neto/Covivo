@@ -48,6 +48,8 @@ interface PersonalTabProps {
 }
 
 export function PersonalTab({
+  modoGestao,
+  p2pBalances,
   totalIndividualPending,
   totalCollectivePendingPrevious,
   totalCollectivePendingCurrent,
@@ -221,12 +223,100 @@ export function PersonalTab({
   }, [rawData, chartDataTemplate, user?.id, closingDay]);
 
 
-  return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+  function P2PBalanceView({ balances }: { balances: PersonalTabProps['p2pBalances'] }) {
+        const debts = balances.filter(b => b.net_balance < 0).sort((a, b) => a.net_balance - b.net_balance);
+        const credits = balances.filter(b => b.net_balance > 0).sort((a, b) => b.net_balance - a.net_balance);
       
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Total Comprometido (Saldo Atual Consolidado) - DESTAQUE PREMIUM */}
-        <Card className="relative overflow-hidden border-0 sm:col-span-2 lg:col-span-1 flex flex-col justify-between bg-primary shadow-xl shadow-primary/20 min-h-[220px]">
+        const totalDebt = debts.reduce((sum, b) => sum + b.net_balance, 0);
+        const totalCredit = credits.reduce((sum, b) => sum + b.net_balance, 0);
+        const netBalance = totalDebt + totalCredit;
+  
+        return (
+          <Card className="sm:col-span-2 lg:col-span-3 bg-card shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Balanço Pessoal (P2P)</span>
+                <Badge variant={netBalance === 0 ? "outline" : netBalance > 0 ? "secondary" : "destructive"}>
+                  Saldo Final: R$ {netBalance.toFixed(2)}
+                </Badge>
+              </CardTitle>
+              <CardDescription>Seu balanço de dívidas e créditos com outros membros do grupo.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Coluna de Dívidas */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-destructive flex items-center gap-2">
+                  <ArrowUpRight className="h-4 w-4" />
+                  Para Quem Você Deve (R$ {Math.abs(totalDebt).toFixed(2)})
+                </h3>
+                <div className="space-y-2">
+                  {debts.length > 0 ? debts.map(debt => (
+                    <div key={debt.other_user_id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={debt.other_user_avatar_url} />
+                          <AvatarFallback>{debt.other_user_full_name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{debt.other_user_full_name}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-destructive">
+                        R$ {Math.abs(debt.net_balance).toFixed(2)}
+                      </span>
+                    </div>
+                  )) : <p className="text-xs text-muted-foreground text-center py-4">Nenhuma dívida. Você está em dia!</p>}
+                </div>
+              </div>
+      
+              {/* Coluna de Créditos */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-success flex items-center gap-2">
+                  <ArrowDownLeft className="h-4 w-4" />
+                  Quem Te Deve (R$ {totalCredit.toFixed(2)})
+                </h3>
+                <div className="space-y-2">
+                  {credits.length > 0 ? credits.map(credit => (
+                    <div key={credit.other_user_id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={credit.other_user_avatar_url} />
+                          <AvatarFallback>{credit.other_user_full_name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{credit.other_user_full_name}</span>
+                      </div>
+                      <span className="text-sm font-semibold text-success">
+                        R$ {credit.net_balance.toFixed(2)}
+                      </span>
+                    </div>
+                  )) : <p className="text-xs text-muted-foreground text-center py-4">Ninguém te deve nada.</p>}
+                </div>
+              </div>
+              <div className="md:col-span-2 flex justify-end gap-2">
+                  <Button variant="outline" disabled>
+                      <Scale className="h-4 w-4 mr-2"/>
+                      Simplificar Dívidas (Em Breve)
+                  </Button>
+                  <Button disabled>
+                      <DollarSign className="h-4 w-4 mr-2"/>
+                      Acertar Contas
+                  </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+  
+  // ... (rest of the component)
+  
+    return (
+      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {modoGestao === 'p2p' ? (
+            <P2PBalanceView balances={p2pBalances} />
+          ) : (
+            <>
+              {/* Total Comprometido (Saldo Atual Consolidado) - DESTAQUE PREMIUM */}
+              <Card className="relative overflow-hidden border-0 sm:col-span-2 lg:col-span-1 flex flex-col justify-between bg-primary shadow-xl shadow-primary/20 min-h-[220px]">
           {/* Premium Background Effects */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent mix-blend-overlay pointer-events-none" />
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/20 blur-3xl pointer-events-none" />
@@ -319,6 +409,8 @@ export function PersonalTab({
             </div>
           </DialogContent>
         </Dialog>
+          </>
+        )}
 
         {/* Rateio pendente (competências anteriores) */}
         <Card className={`border-l-4 ${totalCollectivePendingPrevious > 0.01 ? "border-l-destructive" : "border-l-success"} bg-card shadow-sm`}>
@@ -1082,6 +1174,138 @@ export function PersonalTab({
                   strokeWidth={3}
                   dot={{ r: 4, strokeWidth: 2 }}
                   activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+    </div>
+  );
+}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+    </div>
+  );
+}>
+  );
+}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+    </div>
+  );
+}me="h-5 w-5 text-primary" />
+                Evolução de Gastos
+              </CardTitle>
+              <CardDescription>
+                Acompanhe o total da casa, a sua parte no rateio e seus gastos individuais, já considerando as parcelas futuras de cartões de crédito.
+              </CardDescription>
+            </div>
+            <Select value={String(monthsCount)} onValueChange={(v) => setMonthsCount(Number(v) as 6 | 12)}>
+              <SelectTrigger className="w-[140px] h-8 text-xs shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="6">Últimos 6 meses</SelectItem>
+                <SelectItem value="12">Últimos 12 meses</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent className="h-[340px] w-full pt-4">
+          {isLoading ? (
+            <div className="h-full flex items-center justify-center">
+              <CustomLoader className="h-6 w-6 text-primary" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={populatedData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis 
+                  dataKey="label" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} 
+                  dy={10} 
+                />
+                <YAxis 
+                  width={75}
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} 
+                  tickFormatter={(val) => `R$ ${val}`} 
+                />
+                <RechartsTooltip
+                  cursor={{ stroke: "hsl(var(--muted))", strokeWidth: 2, strokeDasharray: "3 3" }}
+                  contentStyle={{ 
+                    borderRadius: "8px", 
+                    border: "1px solid hsl(var(--border))", 
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)", 
+                    fontSize: "12px", 
+                    backgroundColor: "hsl(var(--background))", 
+                    color: "hsl(var(--foreground))" 
+                  }}
+                  formatter={(val: number) => `R$ ${val.toFixed(2)}`}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }} />
+                
+                <Line 
+                  type="monotone"
+                  dataKey="Coletivo" 
+                  name="Total Casa (Referência)" 
+                  stroke="hsl(var(--muted-foreground))" 
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line 
+                  type="monotone"
+                  dataKey="MeuRateio" 
+                  name="Meu Rateio" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  dot={{ r: 4, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line 
+                  type="monotone"
+                  dataKey="Individual" 
+                  name="Meus Gastos (Individuais)" 
+                  stroke="#0ea5e9"
+                  strokeWidth={3}
+                  dot={{ r: 4, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line 
+                  type="monotone"
+                  dataKey="TotalPessoal" 
+                  name="Total Pessoal (Individual + Rateio)" 
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={3}
+                  dot={{ r: 4, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+    </div>
+  );
+}
                 />
               </LineChart>
             </ResponsiveContainer>

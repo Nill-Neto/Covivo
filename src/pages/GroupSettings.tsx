@@ -516,6 +516,7 @@ function GroupTab() {
         name: name.trim(),
         description: description.trim() || null,
         splitting_rule: splittingRule as any,
+        modo_gestao: modoGestao,
         closing_day: parseInt(closingDay),
         due_day: parseInt(dueDay),
         street: street.trim() || null,
@@ -777,6 +778,98 @@ function GroupTab() {
                     </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteGroup}
+                    disabled={confirmGroupName !== name || deleteGroup.isPending}
+                  >
+                    {deleteGroup.isPending ? <CustomLoader className="h-4 w-4 mr-2" /> : null}
+                    Excluir Permanentemente
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </CardContent>
+      </Card>
+    </ScrollRevealGroup>
+  );
+}
+
+export default function GroupSettings() {
+  const { isAdmin } = useAuth();
+  const location = useLocation();
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return location.state?.tab === "group" && isAdmin ? "group" : "account";
+  });
+  
+  const [heroCompact, setHeroCompact] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      if (location.state.tab === "group" && !isAdmin) {
+        setActiveTab("account");
+      } else {
+        setActiveTab(location.state.tab);
+      }
+    }
+  }, [location.state, isAdmin]);
+
+  const tabItems = (
+    <>
+      <TabsTrigger value="account" className={tabTriggerClass}>
+        <User className="h-3.5 w-3.5 mr-1.5" /> Conta
+      </TabsTrigger>
+      {isAdmin && (
+        <TabsTrigger value="group" className={tabTriggerClass}>
+          <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" /> Grupo
+        </TabsTrigger>
+      )}
+    </>
+  );
+
+  const compactTabsList = (
+    <TabsList className={tabListClass}>{tabItems}</TabsList>
+  );
+
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 animate-in fade-in duration-500">
+      <PageHero
+        title="Configurações"
+        subtitle={isAdmin ? "Gerencie sua conta e o grupo." : "Gerencie sua conta."}
+        tone="primary"
+        icon={<SlidersHorizontal className="h-4 w-4" />}
+        compactTabs={compactTabsList}
+        onCompactChange={setHeroCompact}
+      />
+
+      <div className="space-y-4">
+        {!heroCompact && (
+          <TabsList className={tabListClass}>{tabItems}</TabsList>
+        )}
+
+        <TabsContent value="account" className="space-y-4 mt-4">
+          <AccountTab />
+        </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="group" className="space-y-4 mt-4">
+            <GroupTab />
+          </TabsContent>
+        )}
+      </div>
+    </Tabs>
+  );
+}          <GroupTab />
+          </TabsContent>
+        )}
+      </div>
+    </Tabs>
+  );
+}        </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <Button

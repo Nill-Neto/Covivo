@@ -106,6 +106,7 @@ export default function NewGroup() {
           zip_code: address.zipCode.replace(/\D/g, "") || null,
           closing_day: closingDay,
           due_day: dueDay,
+          modo_gestao: modoGestao,
         })
         .eq("id", newGroupId);
       if (updateErr) throw updateErr;
@@ -192,6 +193,40 @@ export default function NewGroup() {
                 <SelectItem value="percentage">Por peso/percentual</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Dia de Fechamento</Label>
+              <Input type="number" min={1} max={31} value={closingDay} onChange={(e) => setClosingDay(parseInt(e.target.value) || 1)} />
+              <p className="text-[10px] text-muted-foreground">
+                Lançamentos após este dia entram na competência do mês seguinte.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Dia de Vencimento</Label>
+              <Input type="number" min={1} max={31} value={dueDay} onChange={(e) => setDueDay(parseInt(e.target.value) || 10)} />
+              <p className="text-[10px] text-muted-foreground font-medium">
+                Data limite para pagamento será <strong>um dia antes</strong> (Dia {(dueDay - 1) || 30}).
+                No dia {dueDay} já será considerado atraso.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => navigate(-1)} className="gap-1">
+              <ChevronLeft className="h-4 w-4" /> Voltar
+            </Button>
+            <Button onClick={handleCreate} disabled={saving} className="flex-1">
+              {saving && <CustomLoader className="h-4 w-4 mr-2" />}
+              Criar Grupo
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
