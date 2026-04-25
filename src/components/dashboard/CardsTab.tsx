@@ -223,10 +223,11 @@ export function CardsTab({
         supabase
           .from("expense_installments")
           .select(
-            "*, expenses!inner(expense_type, group_id, credit_card_id)"
+            "*, expenses(expense_type, group_id, credit_card_id)"
           )
           .eq("user_id", user!.id)
           .eq("expenses.group_id", membership!.group_id)
+          .not("expenses", "is", null)
           .in("bill_month", months)
           .in("bill_year", years)
           .limit(5000),
@@ -236,6 +237,7 @@ export function CardsTab({
             "*, personal_expenses(credit_card_id)"
           )
           .eq("user_id", user!.id)
+          .not("personal_expenses", "is", null)
           .in("bill_month", months)
           .in("bill_year", years)
           .limit(5000),
