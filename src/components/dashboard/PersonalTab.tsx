@@ -20,17 +20,23 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomLoader } from "../ui/custom-loader";
 
+type AdminDashboardData = {
+  pending_payments_count: number;
+  total_debt: number;
+  members_in_debt_count: number;
+};
+
 function AdminDashboard() {
   const { membership } = useAuth();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<AdminDashboardData | null>({
     queryKey: ["admin-dashboard-data", membership?.group_id],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_admin_dashboard_data", {
+      const { data, error } = await supabase.rpc("get_admin_dashboard_data" as any, {
         _group_id: membership!.group_id,
       });
       if (error) throw error;
-      return data;
+      return data?.[0] || null;
     },
     enabled: !!membership?.group_id,
   });
@@ -93,7 +99,7 @@ function AdminDashboard() {
           <CardDescription>Total de pessoas devendo</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold">{data.members_in_debt_count}</div>
+          <div className="text-3xl font-bold">{data?.members_in_debt_count}</div>
         </CardContent>
       </Card>
     </div>

@@ -79,8 +79,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("expense_splits")
         .select("id, amount, status, expense_id, expenses:expense_id(title, category, group_id, expense_type, created_at, purchase_date, payment_method, credit_card_id, installments, competence_key, credit_cards:credit_card_id(closing_day)), payments(id, status)")
-        .eq("user_id", user!.id)
-        .eq("status", "pending");
+        .eq("user_id", user!.id);
       if (error) throw error;
       return (data ?? []).filter((s: any) => s.expenses?.group_id === membership!.group_id);
     },
@@ -545,7 +544,6 @@ export default function Dashboard() {
             myCollectiveShare={myCollectiveShare}
             personalChartData={personalChartData}
             myPersonalExpenses={myPersonalExpenses}
-            collectiveExpenses={collectiveExpenses}
             republicChartData={republicChartData}
             totalMonthExpenses={totalMonthExpenses}
             onPayRateio={(scope) => {
