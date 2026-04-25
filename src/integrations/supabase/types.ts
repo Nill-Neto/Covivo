@@ -227,7 +227,6 @@ export type Database = {
           group_id: string
           id: string
           installments: number
-          instantallments: number | null
           paid_to_provider: boolean
           payment_method: string
           purchase_date: string
@@ -251,7 +250,6 @@ export type Database = {
           group_id: string
           id?: string
           installments?: number
-          instantallments?: number | null
           paid_to_provider?: boolean
           payment_method?: string
           purchase_date?: string
@@ -275,7 +273,6 @@ export type Database = {
           group_id?: string
           id?: string
           installments?: number
-          instantallments?: number | null
           paid_to_provider?: boolean
           payment_method?: string
           purchase_date?: string
@@ -1197,6 +1194,10 @@ export type Database = {
     Functions: {
       accept_invite: { Args: { _token: string }; Returns: Json }
       admin_read_cpf: { Args: { _target_user_id: string }; Returns: string }
+      claim_expense_payment: {
+        Args: { _expense_id: string }
+        Returns: undefined
+      }
       confirm_payment: {
         Args: { _payment_id: string; _status?: string }
         Returns: undefined
@@ -1284,6 +1285,14 @@ export type Database = {
           split_percentage: number
         }[]
       }
+      get_admin_dashboard_data: {
+        Args: { _group_id: string }
+        Returns: {
+          members_in_debt_count: number
+          pending_payments_count: number
+          total_debt: number
+        }[]
+      }
       get_admin_member_competence_balances: {
         Args: { _competence_key: string; _group_id: string }
         Returns: {
@@ -1341,6 +1350,14 @@ export type Database = {
       remove_group_member: {
         Args: { _group_id: string; _reason?: string; _target_user_id: string }
         Returns: Json
+      }
+      simplify_group_debts: {
+        Args: { _group_id: string }
+        Returns: {
+          amount: number
+          payer_id: string | null
+          receiver_id: string | null
+        }[]
       }
       user_has_split_on_expense: {
         Args: { _expense_id: string; _user_id: string }
