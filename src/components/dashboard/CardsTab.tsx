@@ -50,7 +50,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { CardsTabProps, CreditCard as CreditCardType, GroupInstallmentItem, PersonalInstallmentItem } from "@/types/dashboard";
-import type { Tables } from "@/integrations/supabase/types";
 
 const cardSchema = z.object({
   label: z.string().min(3, "Informe o apelido do cartão"),
@@ -223,7 +222,9 @@ export function CardsTab({
       const [groupRes, personalRes] = await Promise.all([
         supabase
           .from("expense_installments")
-          .select("id, amount, bill_month, bill_year, expenses:expense_id!inner(expense_type, group_id, credit_card_id)")
+          .select(
+            "id, user_id, expense_id, installment_number, amount, bill_month, bill_year, competence_month, competence_year, created_at, expenses!inner(expense_type, group_id, credit_card_id)"
+          )
           .eq("user_id", user!.id)
           .eq("expenses.group_id", membership!.group_id)
           .in("bill_month", months)
@@ -231,7 +232,9 @@ export function CardsTab({
           .limit(5000),
         supabase
           .from("personal_expense_installments")
-          .select("amount, bill_month, bill_year, personal_expenses(credit_card_id)")
+          .select(
+            "id, user_id, personal_expense_id, installment_number, amount, bill_month, bill_year, competence_month, competence_year, created_at, personal_expenses!inner(credit_card_id)"
+          )
           .eq("user_id", user!.id)
           .in("bill_month", months)
           .in("bill_year", years)

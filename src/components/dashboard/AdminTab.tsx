@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AdminFinancialSummary } from "./AdminFinancialSummary";
 import { DebtSimplificationModal } from "./DebtSimplificationModal";
-import type { AdminTabProps, AdminMember, P2PMatrixEntry } from "@/types/admin";
+import type { AdminTabProps, AdminMember } from "@/types/admin";
 
 type ProcessedP2PMember = AdminMember & {
   debts: { user: { id: string; full_name: string | null; avatar_url: string | null }; amount: number }[];

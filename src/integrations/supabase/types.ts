@@ -407,6 +407,7 @@ export type Database = {
           id: string
           name: string
           neighborhood: string | null
+          modo_gestao: "centralized" | "p2p"
           splitting_rule: Database["public"]["Enums"]["splitting_rule"]
           state: string | null
           street: string | null
@@ -425,6 +426,7 @@ export type Database = {
           id?: string
           name: string
           neighborhood?: string | null
+          modo_gestao?: "centralized" | "p2p"
           splitting_rule?: Database["public"]["Enums"]["splitting_rule"]
           state?: string | null
           street?: string | null
@@ -443,6 +445,7 @@ export type Database = {
           id?: string
           name?: string
           neighborhood?: string | null
+          modo_gestao?: "centralized" | "p2p"
           splitting_rule?: Database["public"]["Enums"]["splitting_rule"]
           state?: string | null
           street?: string | null
@@ -1292,6 +1295,24 @@ export type Database = {
           current_cycle_paid: number
           previous_debt: number
           user_id: string
+        }[]
+      }
+      get_group_p2p_matrix: {
+        Args: { _group_id: string }
+        Returns: {
+          net_balance_a_to_b: number
+          person_a_id: string
+          person_b_id: string
+        }[]
+      }
+      get_my_p2p_balances: {
+        Args: { _user_id: string }
+        Returns: {
+          amount: number
+          counterparty_avatar_url: string | null
+          counterparty_id: string
+          counterparty_name: string
+          direction: string
         }[]
       }
       get_member_balances: {
