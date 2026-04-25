@@ -223,9 +223,7 @@ export function CardsTab({
       const [groupRes, personalRes] = await Promise.all([
         supabase
           .from("expense_installments")
-          .select(
-            "*, expenses(expense_type, group_id, credit_card_id)"
-          )
+          .select("*, expenses!inner(expense_type, group_id, credit_card_id)")
           .eq("user_id", user!.id)
           .eq("expenses.group_id", membership!.group_id)
           .in("bill_month", months)
@@ -233,9 +231,7 @@ export function CardsTab({
           .limit(5000),
         supabase
           .from("personal_expense_installments")
-          .select(
-            "*, personal_expenses(credit_card_id)"
-          )
+          .select("amount, bill_month, bill_year, personal_expenses(credit_card_id)")
           .eq("user_id", user!.id)
           .in("bill_month", months)
           .in("bill_year", years)
@@ -977,7 +973,7 @@ export function CardsTab({
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div className="flex items-center justify-between rounded-md border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-2">
-                  <span className="block text-[10px] font-bold text-emerald-800 dark:text-emerald-300">Individuais</span>
+                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Individuais</span>
                   <div className="text-right">
                     <p className="text-sm font-extrabold text-foreground">R$ {formatCurrency(selectedCardIndividualTotal)}</p>
                     <p className="text-[10px] font-semibold text-emerald-800/80 dark:text-emerald-200">{selectedCardIndividualPercentage.toFixed(1)}% da fatura</p>
@@ -985,7 +981,7 @@ export function CardsTab({
                 </div>
 
                 <div className="flex items-center justify-between rounded-md border border-blue-500/40 bg-blue-500/15 px-2.5 py-2">
-                  <span className="block text-[10px] font-bold text-blue-800 dark:text-blue-300">Coletivos</span>
+                  <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Coletivos</span>
                   <div className="text-right">
                     <p className="text-sm font-extrabold text-foreground">R$ {formatCurrency(selectedCardCollectiveTotal)}</p>
                     <p className="text-[10px] font-semibold text-blue-800/80 dark:text-blue-200">{selectedCardCollectivePercentage.toFixed(1)}% da fatura</p>
