@@ -1286,12 +1286,18 @@ export type Database = {
         }[]
       }
       get_admin_dashboard_data: {
-        Args: { _group_id: string }
-        Returns: {
-          members_in_debt_count: number
-          pending_payments_count: number
-          total_debt: number
-        }[]
+        Args: {
+          _group_id: string
+          _competence_key: string
+        }
+        Returns: Json
+      }
+      get_admin_dashboard_data_v2: {
+        Args: {
+          _group_id: string
+          _competence_key: string
+        }
+        Returns: Json
       }
       get_admin_member_competence_balances: {
         Args: { _competence_key: string; _group_id: string }

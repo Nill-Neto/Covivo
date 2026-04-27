@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Info, Plus, FileText, Banknote, Landmark, AlertCircle } from "lucide-react";
@@ -19,6 +18,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomLoader } from "../ui/custom-loader";
+import { useCycleDates } from "@/hooks/useCycleDates";
+import { formatCompetenceKey } from "@/lib/cycleDates";
 
 type AdminDashboardData = {
   pending_payments_count: number;
@@ -28,15 +29,18 @@ type AdminDashboardData = {
 
 function AdminDashboard() {
   const { membership } = useAuth();
+  const { currentDate } = useCycleDates(membership?.group_id);
+  const currentCompetenceKey = formatCompetenceKey(currentDate);
 
   const { data, isLoading, error } = useQuery<AdminDashboardData | null>({
-    queryKey: ["admin-dashboard-data", membership?.group_id],
+    queryKey: ["admin-dashboard-data", membership?.group_id, currentCompetenceKey],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_admin_dashboard_data", {
         _group_id: membership!.group_id,
+        _competence_key: currentCompetenceKey,
       });
       if (error) throw error;
-      return data?.[0] || null;
+      return data || null;
     },
     enabled: !!membership?.group_id,
   });

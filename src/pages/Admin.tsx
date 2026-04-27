@@ -49,13 +49,13 @@ export default function Admin() {
       }
 
       // Lógica para o modo CENTRALIZADO
-      const { data, error } = await supabase.rpc("get_admin_dashboard_data", { 
+      const { data, error } = await supabase.rpc("get_admin_dashboard_data_v2", { 
         _group_id: membership.group_id,
         _competence_key: currentCompetenceKey
       });
 
       if (error) {
-        console.error('Error calling get_admin_dashboard_data RPC:', error);
+        console.error('Error calling get_admin_dashboard_data_v2 RPC:', error);
         throw new Error(`Erro ao chamar a função do banco de dados: ${error.message}`);
       }
       if (!data) return null;
