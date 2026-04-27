@@ -8,7 +8,7 @@ import { AdminTab } from "@/components/dashboard/AdminTab";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { useCycleDates } from "@/hooks/useCycleDates";
 import { formatCompetenceKey } from "@/lib/cycleDates";
-import type { AdminDashboardData, AdminTabProps } from "@/types/admin";
+import type { AdminDashboardData } from "@/types/admin";
 import type { RpcReturns } from "@/integrations/supabase/rpc-types";
 
 type NonCriticalWarning = {
@@ -65,67 +65,79 @@ export default function Admin() {
       if (!isAdmin || !membership?.group_id) return null;
 
       if (modoGestao === 'p2p') {
-        const [membersRes, p2pMatrixRes] = await Promise.all([
-          supabase.from("group_member_profiles").select("id, full_name, avatar_url").eq("group_id", membership.group_id),
-          supabase.rpc("get_group_p2p_matrix", { _group_id: membership.group_id }),
-        ]);
+        try {
+          console.log('[AdminP2P] Start');
+          const [membersRes, p2pMatrixRes] = await Promise.all([
+              supabase.from("group_member_profiles").select("id, full_name, avatar_url").eq("group_id", membership.group_id),
+              supabase.rpc("get_group_p2p_matrix", { _group_id: membership.group_id }),
+          ]);
+          console.log('[AdminP2P] Fetched data:', { 
+              membersError: membersRes.error, 
+              p2pError: p2pMatrixRes.error,
+              membersCount: membersRes.data?.length,
+              p2pMatrixCount: p2pMatrixRes.data?.length
+          });
 
-        console.log('[AdminP2P] Fetched data:', { membersRes, p2pMatrixRes });
-  
-        if (membersRes.error) throw membersRes.error;
-        if (p2pMatrixRes.error) throw p2pMatrixRes.error;
-  
-        const rawP2PMatrix = (p2pMatrixRes.data || []) as RpcReturns<"get_group_p2p_matrix">;
-        console.log('[AdminP2P] Raw P2P Matrix:', rawP2PMatrix);
+          if (membersRes.error) throw membersRes.error;
+          if (p2pMatrixRes.error) throw p2pMatrixRes.error;
 
-        const p2pMatrix = rawP2PMatrix.map((row) => ({
-          from_user_id: row.person_a_id,
-          to_user_id: row.person_b_id,
-          amount: Number(row.net_balance_a_to_b || 0),
-        }));
-        console.log('[AdminP2P] Parsed P2P Matrix:', p2pMatrix);
+          const rawP2PMatrix = p2pMatrixRes.data || [];
+          console.log('[AdminP2P] Raw P2P Matrix:', rawP2PMatrix);
 
-        const memberBalances = new Map<string, number>();
-        p2pMatrix.forEach(({ from_user_id, to_user_id, amount }) => {
-          memberBalances.set(from_user_id, (memberBalances.get(from_user_id) || 0) - amount);
-          memberBalances.set(to_user_id, (memberBalances.get(to_user_id) || 0) + amount);
-        });
-        console.log('[AdminP2P] Calculated Member Balances:', memberBalances);
+          const p2pMatrix = rawP2PMatrix.map((row) => {
+              if (!row) return null;
+              return {
+                  from_user_id: row.person_a_id,
+                  to_user_id: row.person_b_id,
+                  amount: Number(row.net_balance_a_to_b || 0),
+              };
+          }).filter(Boolean) as { from_user_id: string; to_user_id: string; amount: number }[];
+          console.log('[AdminP2P] Parsed P2P Matrix:', p2pMatrix);
 
-        const membersData = membersRes.data || [];
-        console.log('[AdminP2P] Members Data:', membersData);
+          const memberBalances = new Map<string, number>();
+          p2pMatrix.forEach(({ from_user_id, to_user_id, amount }) => {
+              if (from_user_id) {
+                  memberBalances.set(from_user_id, (memberBalances.get(from_user_id) || 0) - amount);
+              }
+              if (to_user_id) {
+                  memberBalances.set(to_user_id, (memberBalances.get(to_user_id) || 0) + amount);
+              }
+          });
+          console.log('[AdminP2P] Calculated Member Balances:', Array.from(memberBalances.entries()));
 
-        const members = membersData.map(m => {
-          if (!m) {
-            console.warn('[AdminP2P] Null member found in membersData array');
-            return null; // Skip null members
-          }
-          const balance = memberBalances.get(m.id) || 0;
-          const memberResult = {
-            ...m,
-            user_id: m.id,
-            balance: balance,
-            accrued_debt: balance < 0 ? Math.abs(balance) : 0,
-            current_cycle_owed: balance < 0 ? Math.abs(balance) : 0,
-            current_cycle_paid: 0, // P2P model might not track payments this way
-            previous_debt: 0,
-            total_owed: balance < 0 ? Math.abs(balance) : 0,
-            total_paid: 0,
-            active: true,
-            profile: m,
-            role: 'morador'
+          const membersData = membersRes.data || [];
+          const members = membersData.map(m => {
+              if (!m || !m.id) {
+                  console.warn('[AdminP2P] Skipping invalid member data:', m);
+                  return null;
+              }
+              const balance = memberBalances.get(m.id) || 0;
+              return {
+                  user_id: m.id,
+                  balance: balance,
+                  accrued_debt: balance < 0 ? Math.abs(balance) : 0,
+                  current_cycle_owed: balance < 0 ? Math.abs(balance) : 0,
+                  current_cycle_paid: 0,
+                  previous_debt: 0,
+                  total_owed: balance < 0 ? Math.abs(balance) : 0,
+                  total_paid: 0,
+                  active: true,
+                  profile: m as any,
+                  role: 'morador'
+              };
+          }).filter(Boolean) as AdminDashboardData['members'];
+          console.log('[AdminP2P] Final processed members:', members);
+
+          return {
+              members,
+              p2pMatrix,
+              pendingPaymentsCount: 0, exMembersDebt: 0, departuresCount: 0, redistributedCount: 0, lowStockCount: 0, cycleSplits: [], pendingSplits: [], memberPaymentsByCompetence: {}, nonCriticalWarnings: [],
           };
-          console.log(`[AdminP2P] Processing member ${m.id}:`, memberResult);
-          return memberResult;
-        }).filter(Boolean); // Remove any nulls
-
-        console.log('[AdminP2P] Final processed members:', members);
-  
-        return {
-          members,
-          p2pMatrix,
-          pendingPaymentsCount: 0, exMembersDebt: 0, departuresCount: 0, redistributedCount: 0, lowStockCount: 0, cycleSplits: [], pendingSplits: [], memberPaymentsByCompetence: {}, nonCriticalWarnings: [],
-        };
+        } catch (err) {
+            console.error('[AdminP2P] CRITICAL ERROR in p2p logic:', err);
+            throw err;
+        }
+      }
 
       // --- Centralized Mode Logic ---
       type AdminFetchTask = {
