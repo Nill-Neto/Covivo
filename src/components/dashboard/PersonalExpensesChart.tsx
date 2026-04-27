@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { CATEGORY_COLORS, CHART_COLORS } from "@/constants/categories";
+import { CHART_COLORS, CATEGORY_COLORS } from "@/constants/categories";
 
 interface PersonalExpensesChartProps {
   data: { name: string; value: number }[];
