@@ -2,13 +2,12 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { subMonths, format, startOfMonth, endOfMonth } from "date-fns";
+import { subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CustomLoader } from "@/components/ui/custom-loader";
-import { parseLocalDate } from "@/lib/utils";
 
 interface ExpensesEvolutionChartProps {
   currentDate: Date;
@@ -24,64 +23,38 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
   );
 
   const { data: evolutionData, isLoading } = useQuery({
-    queryKey: ["expenses-evolution", user?.id, membership?.group_id, monthsCount, currentDate.toISOString()],
+    queryKey: ["expenses-evolution-rpc", user?.id, membership?.group_id, monthsCount, currentDate.toISOString()],
     queryFn: async () => {
       if (!user?.id || !membership?.group_id) return [];
 
-      const startDate = format(startOfMonth(subMonths(currentDate, monthsCount - 1)), "yyyy-MM-dd");
-      const endDate = format(endOfMonth(currentDate), "yyyy-MM-dd");
+      const startKey = format(lastMonths[0], "yyyy-MM");
+      const endKey = format(lastMonths[lastMonths.length - 1], "yyyy-MM");
 
-      const [personalRes, collectiveRes] = await Promise.all([
-        supabase
-          .from("expenses")
-          .select("amount, purchase_date")
-          .eq("created_by", user.id)
-          .eq("expense_type", "individual")
-          .gte("purchase_date", startDate)
-          .lte("purchase_date", endDate),
-        supabase
-          .from("expense_splits")
-          .select("amount, expenses!inner(purchase_date, group_id)")
-          .eq("user_id", user.id)
-          .eq("expenses.group_id", membership.group_id)
-          .gte("expenses.purchase_date", startDate)
-          .lte("expenses.purchase_date", endDate),
-      ]);
-
-      if (personalRes.error) throw personalRes.error;
-      if (collectiveRes.error) throw collectiveRes.error;
-
-      const totalsByMonth: Record<string, { personal: number; collective: number }> = {};
-      lastMonths.forEach(date => {
-        const key = format(date, "yyyy-MM");
-        totalsByMonth[key] = { personal: 0, collective: 0 };
+      const { data, error } = await supabase.rpc("get_expenses_evolution", {
+        _group_id: membership.group_id,
+        _start_key: startKey,
+        _end_key: endKey,
       });
 
-      personalRes.data?.forEach(expense => {
-        const key = format(parseLocalDate(expense.purchase_date), "yyyy-MM");
-        if (totalsByMonth[key]) {
-          totalsByMonth[key].personal += expense.amount;
-        }
-      });
+      if (error) throw error;
 
-      collectiveRes.data?.forEach(split => {
-        if (split.expenses) {
-          const key = format(parseLocalDate(split.expenses.purchase_date), "yyyy-MM");
-          if (totalsByMonth[key]) {
-            totalsByMonth[key].collective += split.amount;
-          }
-        }
-      });
+      const dataMap = new Map((data || []).map(d => [d.competence_key, d]));
 
       return lastMonths.map(date => {
         const key = format(date, "yyyy-MM");
-        const personal = Number(totalsByMonth[key].personal.toFixed(2));
-        const collective = Number(totalsByMonth[key].collective.toFixed(2));
+        const monthData = dataMap.get(key);
+        
+        const meusGastosIndividuais = monthData?.meus_gastos_individuais ?? 0;
+        const meuRateio = monthData?.meu_rateio ?? 0;
+        const totalCasa = monthData?.total_casa ?? 0;
+        const totalPessoal = meusGastosIndividuais + meuRateio;
+
         return {
           monthLabel: format(date, "MMM/yy", { locale: ptBR }),
-          pessoal: personal,
-          coletivo: collective,
-          total: Number((personal + collective).toFixed(2)),
+          meusGastosIndividuais: Number(meusGastosIndividuais.toFixed(2)),
+          meuRateio: Number(meuRateio.toFixed(2)),
+          totalPessoal: Number(totalPessoal.toFixed(2)),
+          totalCasa: Number(totalCasa.toFixed(2)),
         };
       });
     },
@@ -90,10 +63,15 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Evolução de Gastos</CardTitle>
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div>
+          <CardTitle>Evolução de Gastos</CardTitle>
+          <CardDescription className="text-xs text-muted-foreground mt-1 max-w-md">
+            Acompanhe o total da casa, a sua parte no rateio e seus gastos individuais.
+          </CardDescription>
+        </div>
         <Select value={String(monthsCount)} onValueChange={(v) => setMonthsCount(Number(v) as 6 | 12)}>
-          <SelectTrigger className="w-[130px] h-8 text-xs">
+          <SelectTrigger className="w-[130px] h-8 text-xs shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -123,9 +101,10 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <Line type="monotone" dataKey="pessoal" name="Pessoal" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="coletivo" name="Coletivo" stroke="hsl(var(--secondary-foreground))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="total" name="Total" stroke="hsl(var(--destructive))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="totalCasa" name="Total Casa (Referência)" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="meuRateio" name="Meu Rateio" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="meusGastosIndividuais" name="Meus Gastos (Individuais)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="totalPessoal" name="Total Pessoal (Individual + Rateio)" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
