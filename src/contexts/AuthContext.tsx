@@ -89,35 +89,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchMemberships = async (userId: string): Promise<GroupMembership[]> => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("user_roles")
-      .select("role, group_id, groups!inner(name, modo_gestao)")
+      // Selecionando todos os campos (*) em groups garante que não quebre mesmo que a coluna não exista ainda
+      .select("role, group_id, groups:group_id(*)")
       .eq("user_id", userId);
 
-    if (error) {
-      console.error("Erro ao buscar grupos:", error);
-      return [];
-    }
-    if (!data) {
-      return [];
-    }
+    if (!data || data.length === 0) return [];
 
-    const memberships = data.map((row) => {
-      const groupData = row.groups;
-      if (!groupData) {
-        console.warn(`Dados do grupo ausentes para o group_id: ${row.group_id}. Pulando.`);
-        return null;
-      }
-      
+    return data.map((row) => {
+      const groupData = row.groups as unknown as {
+        name: string;
+        avatar_url?: string | null;
+        modo_gestao?: "centralized" | "p2p" | null;
+      } | null;
       return {
         group_id: row.group_id,
         role: row.role as "admin" | "morador",
-        group_name: groupData.name,
-        group_modo_gestao: (groupData.modo_gestao ?? 'centralized') as "centralized" | "p2p",
+        group_name: groupData?.name ?? "",
+        group_modo_gestao: groupData?.modo_gestao ?? "centralized",
+        avatar_url: groupData?.avatar_url ?? null,
       };
-    }).filter((m): m is GroupMembership => m !== null);
-
-    return memberships;
+    });
   };
 
   const ensureProfile = async (user: User): Promise<Profile> => {

@@ -1274,6 +1274,13 @@ export type Database = {
         }
         Returns: string
       }
+      fetch_admin_dashboard_metrics: {
+        Args: {
+          _group_id: string
+          _competence_key: string
+        }
+        Returns: Json
+      }
       get_group_member_public_profiles: {
         Args: { _group_id: string }
         Returns: {
@@ -1283,14 +1290,6 @@ export type Database = {
           group_id: string
           id: string
           split_percentage: number
-        }[]
-      }
-      get_admin_dashboard_data: {
-        Args: { _group_id: string }
-        Returns: {
-          members_in_debt_count: number
-          pending_payments_count: number
-          total_debt: number
         }[]
       }
       get_admin_member_competence_balances: {
