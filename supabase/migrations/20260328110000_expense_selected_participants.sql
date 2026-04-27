@@ -3,11 +3,6 @@ DROP FUNCTION IF EXISTS public.create_expense_with_splits(
     uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date
 );
 
--- Drop the other old function signature with participant_user_ids
-DROP FUNCTION IF EXISTS public.create_expense_with_splits(
-    uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date, uuid[]
-);
-
 -- Create the new function with participant_user_ids and payer_id
 CREATE OR REPLACE FUNCTION public.create_expense_with_splits(
     _group_id uuid,
