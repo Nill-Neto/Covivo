@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { addMonths, subMonths } from "date-fns";
-import { getCycleDates, getInitialCycleReferenceDate } from "@/lib/cycleDates";
+import { getCycleDates } from "@/lib/cycleDates";
 
 export function useCycleDates(groupId: string | undefined) {
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
@@ -17,11 +17,6 @@ export function useCycleDates(groupId: string | undefined) {
     enabled: !!groupId,
     staleTime: 1000 * 60 * 30,
   });
-
-  useEffect(() => {
-    if (!groupSettings) return;
-    setCurrentDate(getInitialCycleReferenceDate(new Date(), groupSettings.closing_day || 1));
-  }, [groupSettings]);
 
   const closingDay = groupSettings?.closing_day || 1;
   const dueDay = groupSettings?.due_day || 10;

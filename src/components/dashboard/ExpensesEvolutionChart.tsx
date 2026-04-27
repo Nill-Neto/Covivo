@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CustomLoader } from "@/components/ui/custom-loader";
 import { parseLocalDate } from "@/lib/utils";
@@ -24,61 +24,85 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
   );
 
   const { data: evolutionData, isLoading } = useQuery({
-    queryKey: ["expenses-evolution", user?.id, membership?.group_id, monthsCount, currentDate.toISOString()],
+    queryKey: ["expenses-evolution-detailed", user?.id, membership?.group_id, monthsCount, currentDate.toISOString()],
     queryFn: async () => {
       if (!user?.id || !membership?.group_id) return [];
 
       const startDate = format(subMonths(currentDate, monthsCount), "yyyy-MM-dd");
 
-      const [personalRes, collectiveRes] = await Promise.all([
+      const [personalRes, collectiveSplitsRes, groupCollectiveRes] = await Promise.all([
+        // User's individual expenses
         supabase
           .from("expenses")
           .select("amount, purchase_date")
           .eq("created_by", user.id)
           .eq("expense_type", "individual")
           .gte("purchase_date", startDate),
+        // User's share of collective expenses
         supabase
           .from("expense_splits")
           .select("amount, expenses!inner(purchase_date, group_id)")
           .eq("user_id", user.id)
           .eq("expenses.group_id", membership.group_id)
           .gte("expenses.purchase_date", startDate),
+        // Total collective expenses for the group
+        supabase
+          .from("expenses")
+          .select("amount, purchase_date")
+          .eq("group_id", membership.group_id)
+          .eq("expense_type", "collective")
+          .gte("purchase_date", startDate),
       ]);
 
       if (personalRes.error) throw personalRes.error;
-      if (collectiveRes.error) throw collectiveRes.error;
+      if (collectiveSplitsRes.error) throw collectiveSplitsRes.error;
+      if (groupCollectiveRes.error) throw groupCollectiveRes.error;
 
-      const totalsByMonth: Record<string, { personal: number; collective: number }> = {};
+      const totalsByMonth: Record<string, { 
+        meusGastosIndividuais: number; 
+        meuRateio: number;
+        totalCasa: number;
+      }> = {};
+
       lastMonths.forEach(date => {
         const key = format(date, "yyyy-MM");
-        totalsByMonth[key] = { personal: 0, collective: 0 };
+        totalsByMonth[key] = { meusGastosIndividuais: 0, meuRateio: 0, totalCasa: 0 };
       });
 
       personalRes.data?.forEach(expense => {
         const key = format(parseLocalDate(expense.purchase_date), "yyyy-MM");
         if (totalsByMonth[key]) {
-          totalsByMonth[key].personal += expense.amount;
+          totalsByMonth[key].meusGastosIndividuais += expense.amount;
         }
       });
 
-      collectiveRes.data?.forEach(split => {
+      collectiveSplitsRes.data?.forEach(split => {
         if (split.expenses) {
           const key = format(parseLocalDate(split.expenses.purchase_date), "yyyy-MM");
           if (totalsByMonth[key]) {
-            totalsByMonth[key].collective += split.amount;
+            totalsByMonth[key].meuRateio += split.amount;
           }
+        }
+      });
+
+      groupCollectiveRes.data?.forEach(expense => {
+        const key = format(parseLocalDate(expense.purchase_date), "yyyy-MM");
+        if (totalsByMonth[key]) {
+          totalsByMonth[key].totalCasa += expense.amount;
         }
       });
 
       return lastMonths.map(date => {
         const key = format(date, "yyyy-MM");
-        const personal = Number(totalsByMonth[key].personal.toFixed(2));
-        const collective = Number(totalsByMonth[key].collective.toFixed(2));
+        const { meusGastosIndividuais, meuRateio, totalCasa } = totalsByMonth[key];
+        const totalPessoal = meusGastosIndividuais + meuRateio;
+        
         return {
           monthLabel: format(date, "MMM/yy", { locale: ptBR }),
-          pessoal: personal,
-          coletivo: collective,
-          total: Number((personal + collective).toFixed(2)),
+          meusGastosIndividuais: Number(meusGastosIndividuais.toFixed(2)),
+          meuRateio: Number(meuRateio.toFixed(2)),
+          totalPessoal: Number(totalPessoal.toFixed(2)),
+          totalCasa: Number(totalCasa.toFixed(2)),
         };
       });
     },
@@ -87,10 +111,15 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Evolução de Gastos</CardTitle>
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div>
+          <CardTitle>Evolução de Gastos</CardTitle>
+          <CardDescription className="text-xs text-muted-foreground mt-1 max-w-md">
+            Acompanhe o total da casa, a sua parte no rateio e seus gastos individuais, já considerando as parcelas futuras de cartões de crédito.
+          </CardDescription>
+        </div>
         <Select value={String(monthsCount)} onValueChange={(v) => setMonthsCount(Number(v) as 6 | 12)}>
-          <SelectTrigger className="w-[130px] h-8 text-xs">
+          <SelectTrigger className="w-[130px] h-8 text-xs shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -120,9 +149,10 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <Line type="monotone" dataKey="pessoal" name="Pessoal" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="coletivo" name="Coletivo" stroke="hsl(var(--secondary-foreground))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="total" name="Total" stroke="hsl(var(--destructive))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="totalCasa" name="Total Casa (Referência)" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="meuRateio" name="Meu Rateio" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="meusGastosIndividuais" name="Meus Gastos (Individuais)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="totalPessoal" name="Total Pessoal (Individual + Rateio)" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
