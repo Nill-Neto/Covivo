@@ -35,12 +35,12 @@ function AdminDashboard() {
   const { data, isLoading, error } = useQuery<AdminDashboardData | null>({
     queryKey: ["admin-dashboard-data", membership?.group_id, currentCompetenceKey],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_admin_dashboard_data", {
+      const { data, error } = await supabase.rpc("fetch_admin_dashboard_metrics", {
         _group_id: membership!.group_id,
         _competence_key: currentCompetenceKey,
       });
       if (error) throw error;
-      return data as AdminDashboardData | null;
+      return data as unknown as AdminDashboardData | null;
     },
     enabled: !!membership?.group_id,
   });
