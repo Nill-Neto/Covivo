@@ -89,8 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchMemberships = async (userId: string): Promise<GroupMembership[]> => {
-    // O inner join garante que obteremos apenas papéis para grupos que realmente existem
-    // e torna o objeto 'groups' não nulo, simplificando o código.
     const { data, error } = await supabase
       .from("user_roles")
       .select("role, group_id, groups!inner(name, avatar_url, modo_gestao)")
@@ -104,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return [];
     }
 
-    return data.map((row) => {
+    const memberships = data.map((row) => {
       const groupData = row.groups;
       if (!groupData) {
         console.warn(`Dados do grupo ausentes para o group_id: ${row.group_id}. Pulando.`);
@@ -118,8 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         group_modo_gestao: (groupData.modo_gestao ?? 'centralized') as "centralized" | "p2p",
         avatar_url: groupData.avatar_url,
       };
-    }).filter(Boolean) as GroupMembership[];
-    });
+    }).filter((m): m is GroupMembership => m !== null);
+
+    return memberships;
   };
 
   const ensureProfile = async (user: User): Promise<Profile> => {
