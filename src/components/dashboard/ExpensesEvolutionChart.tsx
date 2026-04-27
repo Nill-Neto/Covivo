@@ -32,7 +32,14 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
         .map((date) => `and(competence_year.eq.${date.getFullYear()},competence_month.eq.${date.getMonth() + 1})`)
         .join(",");
 
-      const [cashIndividualRes, myCollectiveSplitsRes, myIndividualInstallmentsRes, myPersonalInstallmentsRes, houseCollectiveRes] = await Promise.all([
+      const [
+        cashIndividualRes,
+        myPersonalInstallmentsRes,
+        myIndividualInstallmentsRes,
+        myCollectiveInstallmentsRes,
+        houseCollectiveInstallmentsRes,
+        houseCollectiveNonCardRes,
+      ] = await Promise.all([
         supabase
           .from("expenses")
           .select("amount, competence_key")
@@ -42,80 +49,100 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
           .neq("payment_method", "credit_card")
           .in("competence_key", competenceKeys),
         supabase
-          .from("expense_splits")
-          .select("amount, expenses!inner(group_id, expense_type, competence_key)")
-          .eq("user_id", user.id)
-          .eq("expenses.group_id", membership.group_id)
-          .eq("expenses.expense_type", "collective")
-          .in("expenses.competence_key", competenceKeys),
-        supabase
-          .from("expense_installments")
-          .select("amount, competence_year, competence_month, expenses!inner(group_id, expense_type)")
-          .eq("user_id", user.id)
-          .eq("expenses.group_id", membership.group_id)
-          .eq("expenses.expense_type", "individual")
-          .or(monthFilters),
-        supabase
           .from("personal_expense_installments")
           .select("amount, competence_year, competence_month")
           .eq("user_id", user.id)
+          .or(monthFilters),
+        supabase
+          .from("expense_installments")
+          .select("amount, competence_year, competence_month, expenses!inner(group_id, expense_type, created_by)")
+          .eq("expenses.group_id", membership.group_id)
+          .eq("expenses.expense_type", "individual")
+          .eq("expenses.created_by", user.id)
+          .or(monthFilters),
+        supabase
+          .from("expense_installments")
+          .select(
+            "amount, competence_year, competence_month, expenses!inner(amount, group_id, expense_type, expense_splits!inner(user_id, amount))"
+          )
+          .eq("expenses.group_id", membership.group_id)
+          .eq("expenses.expense_type", "collective")
+          .eq("expenses.expense_splits.user_id", user.id)
+          .or(monthFilters),
+        supabase
+          .from("expense_installments")
+          .select("amount, competence_year, competence_month, expenses!inner(group_id, expense_type)")
+          .eq("expenses.group_id", membership.group_id)
+          .eq("expenses.expense_type", "collective")
           .or(monthFilters),
         supabase
           .from("expenses")
           .select("amount, competence_key")
           .eq("group_id", membership.group_id)
           .eq("expense_type", "collective")
+          .neq("payment_method", "credit_card")
           .in("competence_key", competenceKeys),
       ]);
 
       if (cashIndividualRes.error) throw cashIndividualRes.error;
-      if (myCollectiveSplitsRes.error) throw myCollectiveSplitsRes.error;
-      if (myIndividualInstallmentsRes.error) throw myIndividualInstallmentsRes.error;
       if (myPersonalInstallmentsRes.error) throw myPersonalInstallmentsRes.error;
-      if (houseCollectiveRes.error) throw houseCollectiveRes.error;
+      if (myIndividualInstallmentsRes.error) throw myIndividualInstallmentsRes.error;
+      if (myCollectiveInstallmentsRes.error) throw myCollectiveInstallmentsRes.error;
+      if (houseCollectiveInstallmentsRes.error) throw houseCollectiveInstallmentsRes.error;
+      if (houseCollectiveNonCardRes.error) throw houseCollectiveNonCardRes.error;
 
       const totalsByMonth: Record<string, { personal: number; myCollective: number; houseCollective: number }> = {};
-      lastMonths.forEach(date => {
+      lastMonths.forEach((date) => {
         const key = format(date, "yyyy-MM");
         totalsByMonth[key] = { personal: 0, myCollective: 0, houseCollective: 0 };
       });
 
-      cashIndividualRes.data?.forEach(expense => {
-        const key = expense.competence_key;
+      cashIndividualRes.data?.forEach((expense) => {
+        if (totalsByMonth[expense.competence_key]) {
+          totalsByMonth[expense.competence_key].personal += expense.amount;
+        }
+      });
+
+      myPersonalInstallmentsRes.data?.forEach((installment) => {
+        const key = `${installment.competence_year}-${String(installment.competence_month).padStart(2, "0")}`;
         if (totalsByMonth[key]) {
-          totalsByMonth[key].personal += expense.amount;
+          totalsByMonth[key].personal += installment.amount;
         }
       });
 
-      myCollectiveSplitsRes.data?.forEach((item) => {
-        const key = item.expenses?.competence_key;
-        if (key && totalsByMonth[key]) {
-          totalsByMonth[key].myCollective += Number(item.amount);
-        }
-      });
-
-      myIndividualInstallmentsRes.data?.forEach((item) => {
-        const key = `${item.competence_year}-${String(item.competence_month).padStart(2, "0")}`;
+      myIndividualInstallmentsRes.data?.forEach((installment) => {
+        const key = `${installment.competence_year}-${String(installment.competence_month).padStart(2, "0")}`;
         if (totalsByMonth[key]) {
-          totalsByMonth[key].personal += Number(item.amount);
+          totalsByMonth[key].personal += installment.amount;
         }
       });
 
-      myPersonalInstallmentsRes.data?.forEach((item) => {
-        const key = `${item.competence_year}-${String(item.competence_month).padStart(2, "0")}`;
+      myCollectiveInstallmentsRes.data?.forEach((installment: any) => {
+        const key = `${installment.competence_year}-${String(installment.competence_month).padStart(2, "0")}`;
+        const expense = installment.expenses;
+        const mySplit = expense?.expense_splits?.[0];
+        const expenseAmount = Number(expense?.amount || 0);
+        const splitAmount = Number(mySplit?.amount || 0);
+        if (totalsByMonth[key] && expenseAmount > 0 && splitAmount > 0) {
+          const shareRatio = splitAmount / expenseAmount;
+          totalsByMonth[key].myCollective += installment.amount * shareRatio;
+        }
+      });
+
+      houseCollectiveInstallmentsRes.data?.forEach((installment) => {
+        const key = `${installment.competence_year}-${String(installment.competence_month).padStart(2, "0")}`;
         if (totalsByMonth[key]) {
-          totalsByMonth[key].personal += Number(item.amount);
+          totalsByMonth[key].houseCollective += installment.amount;
         }
       });
 
-      houseCollectiveRes.data?.forEach((item) => {
-        const key = item.competence_key;
-        if (totalsByMonth[key]) {
-          totalsByMonth[key].houseCollective += Number(item.amount);
+      houseCollectiveNonCardRes.data?.forEach((expense) => {
+        if (totalsByMonth[expense.competence_key]) {
+          totalsByMonth[expense.competence_key].houseCollective += expense.amount;
         }
       });
 
-      return lastMonths.map(date => {
+      return lastMonths.map((date) => {
         const key = format(date, "yyyy-MM");
         const personal = Number(totalsByMonth[key].personal.toFixed(2));
         const myCollective = Number(totalsByMonth[key].myCollective.toFixed(2));
