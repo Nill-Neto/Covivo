@@ -1299,6 +1299,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_admin_test_value: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       get_admin_member_competence_balances: {
         Args: { _competence_key: string; _group_id: string }
         Returns: {
