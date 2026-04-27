@@ -8,6 +8,7 @@ import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CustomLoader } from "@/components/ui/custom-loader";
+import { parseLocalDate } from "@/lib/utils";
 
 export function ExpensesEvolutionChart() {
   const { user, membership } = useAuth();
@@ -51,7 +52,7 @@ export function ExpensesEvolutionChart() {
       });
 
       personalRes.data?.forEach(expense => {
-        const key = format(new Date(expense.purchase_date), "yyyy-MM");
+        const key = format(parseLocalDate(expense.purchase_date), "yyyy-MM");
         if (totalsByMonth[key]) {
           totalsByMonth[key].personal += expense.amount;
         }
@@ -59,7 +60,7 @@ export function ExpensesEvolutionChart() {
 
       collectiveRes.data?.forEach(split => {
         if (split.expenses) {
-          const key = format(new Date(split.expenses.purchase_date), "yyyy-MM");
+          const key = format(parseLocalDate(split.expenses.purchase_date), "yyyy-MM");
           if (totalsByMonth[key]) {
             totalsByMonth[key].collective += split.amount;
           }
