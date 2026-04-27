@@ -105,18 +105,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return data.map((row) => {
-      // Por causa do inner join, row.groups tem a garantia de não ser nulo.
       const groupData = row.groups;
+      if (!groupData) {
+        console.warn(`Dados do grupo ausentes para o group_id: ${row.group_id}. Pulando.`);
+        return null;
+      }
       
       return {
         group_id: row.group_id,
         role: row.role as "admin" | "morador",
         group_name: groupData.name,
-        // A coluna do banco de dados é NOT NULL, então podemos confiar que ela existe.
-        // Chega de padrões perigosos.
-        group_modo_gestao: groupData.modo_gestao as "centralized" | "p2p",
+        group_modo_gestao: (groupData.modo_gestao ?? 'centralized') as "centralized" | "p2p",
         avatar_url: groupData.avatar_url,
       };
+    }).filter(Boolean) as GroupMembership[];
     });
   };
 
