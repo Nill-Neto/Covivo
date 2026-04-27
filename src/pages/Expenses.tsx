@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { parseLocalDate, cn } from "@/lib/utils";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,6 +91,8 @@ type InstallmentRow = {
 export default function Expenses() {
   const { membership, isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const highlightedId = useRef<string | null>(null);
 
   const [activeTab, setActiveTab] = useState("all");
   const [heroCompact, setHeroCompact] = useState(false);
@@ -899,6 +901,27 @@ export default function Expenses() {
   const finalFilteredCollective = filteredCollective.filter(filterBySearch);
   const finalRecurring = recurringExpenses?.filter(filterBySearch);
 
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.substring(1);
+      const element = document.getElementById(`expense-${id}`);
+      if (element) {
+        if (highlightedId.current) {
+          const prevElement = document.getElementById(highlightedId.current);
+          prevElement?.classList.remove("ring-2", "ring-primary", "ring-offset-2", "transition-all", "duration-300");
+        }
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add("ring-2", "ring-primary", "ring-offset-2", "transition-all", "duration-300");
+        highlightedId.current = `expense-${id}`;
+        const timer = setTimeout(() => {
+          element.classList.remove("ring-2", "ring-primary", "ring-offset-2");
+          highlightedId.current = null;
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [location.hash, finalFilteredAll, finalFilteredCollective, finalFilteredMine]);
+
   const handleEditClick = (expense: ExpenseRow) => {
     if (expense._is_installment && expense.installments > 1) {
       setEditConfirmExpense(expense);
@@ -1588,7 +1611,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
   const displayAmount = isInstallment ? expense._installment_amount : expense.amount;
 
   return (
-    <Card>
+    <Card id={`expense-${expense.id}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
