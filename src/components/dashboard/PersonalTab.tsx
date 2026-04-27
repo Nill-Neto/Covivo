@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Info, Plus, FileText, Banknote, Landmark, AlertCircle } from "lucide-react";
+import { ArrowRight, Info, Plus, FileText, Banknote, Landmark, AlertCircle, CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -226,7 +226,10 @@ export function PersonalTab({
             </>
           ) : (
             <CardContent>
-              <p className="text-sm text-muted-foreground py-4 text-center">✅ Sem pendências anteriores.</p>
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-4 text-center">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <span>Sem pendências anteriores.</span>
+              </div>
             </CardContent>
           )}
         </Card>
