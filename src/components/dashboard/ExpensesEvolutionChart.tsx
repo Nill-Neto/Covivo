@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { subMonths, format } from "date-fns";
+import { subMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,8 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
     queryFn: async () => {
       if (!user?.id || !membership?.group_id) return [];
 
-      const startDate = format(subMonths(currentDate, monthsCount), "yyyy-MM-dd");
+      const startDate = format(startOfMonth(subMonths(currentDate, monthsCount - 1)), "yyyy-MM-dd");
+      const endDate = format(endOfMonth(currentDate), "yyyy-MM-dd");
 
       const [personalRes, collectiveRes] = await Promise.all([
         supabase
@@ -36,13 +37,15 @@ export function ExpensesEvolutionChart({ currentDate }: ExpensesEvolutionChartPr
           .select("amount, purchase_date")
           .eq("created_by", user.id)
           .eq("expense_type", "individual")
-          .gte("purchase_date", startDate),
+          .gte("purchase_date", startDate)
+          .lte("purchase_date", endDate),
         supabase
           .from("expense_splits")
           .select("amount, expenses!inner(purchase_date, group_id)")
           .eq("user_id", user.id)
           .eq("expenses.group_id", membership.group_id)
-          .gte("expenses.purchase_date", startDate),
+          .gte("expenses.purchase_date", startDate)
+          .lte("expenses.purchase_date", endDate),
       ]);
 
       if (personalRes.error) throw personalRes.error;
