@@ -1235,24 +1235,23 @@ export type Database = {
         }
         Returns: string
       }
-      create_expense_with_splits_v2: {
+      create_expense_with_splits: {
         Args: {
-          _group_id: string
-          _created_by: string
-          _title: string
-          _description?: string | null
           _amount?: number
           _category?: string
+          _credit_card_id?: string
+          _description?: string
+          _due_date?: string
           _expense_type?: string
-          _due_date?: string | null
-          _receipt_url?: string | null
-          _recurring_expense_id?: string | null
-          _target_user_id?: string | null
-          _payment_method?: string
-          _credit_card_id?: string | null
+          _group_id: string
           _installments?: number
-          _purchase_date?: string | null
-          _participant_user_ids?: string[] | null
+          _payment_method?: string
+          _participant_user_ids?: string[]
+          _purchase_date?: string
+          _receipt_url?: string
+          _recurring_expense_id?: string
+          _target_user_id?: string
+          _title: string
         }
         Returns: string
       }
