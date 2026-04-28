@@ -51,6 +51,7 @@ import { useCycleDates } from "@/hooks/useCycleDates";
 import { getCompetenceKeyFromDate, formatCompetenceKey } from "@/lib/cycleDates";
 import { PageHero } from "@/components/layout/PageHero";
 import type { Tables } from "@/integrations/supabase/types";
+import { Separator } from "@/components/ui/separator";
 
 const CATEGORIES = [
   { value: "rent", label: "Aluguel" },
@@ -121,7 +122,6 @@ export default function Expenses() {
   const [deleteConfirmExpense, setDeleteConfirmExpense] = useState<ExpenseRow | null>(null);
   const [editConfirmExpense, setEditConfirmExpense] = useState<ExpenseRow | null>(null);
 
-  const [isPaid, setIsPaid] = useState(false);
   const [statusWithProvider, setStatusWithProvider] = useState<"pending" | "paid">("pending");
   const [splitMode, setSplitMode] = useState<"all" | "manual">("all");
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
@@ -140,6 +140,8 @@ export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const [paidParticipantIds, setPaidParticipantIds] = useState<string[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -367,6 +369,30 @@ export default function Expenses() {
     return participantOptions.find((p) => p.id === payerUserId)?.name || "Não definido";
   }, [payerUserId, participantOptions]);
 
+  const actualPayerId = payerUserId === "me" ? user?.id : payerUserId;
+  const otherParticipantsForPaidSelection = useMemo(() => {
+    if (expenseType !== 'collective' || actualPayerId !== user?.id) {
+        return [];
+    }
+    return participantOptions.filter(p => p.id !== actualPayerId && effectiveParticipantIds.includes(p.id));
+  }, [expenseType, actualPayerId, user?.id, participantOptions, effectiveParticipantIds]);
+
+  const handleTogglePaidParticipant = (participantId: string) => {
+    setPaidParticipantIds(prev => 
+        prev.includes(participantId) 
+            ? prev.filter(id => id !== participantId)
+            : [...prev, participantId]
+    );
+  };
+
+  const handleToggleAllPaidParticipants = () => {
+      if (paidParticipantIds.length === otherParticipantsForPaidSelection.length) {
+          setPaidParticipantIds([]);
+      } else {
+          setPaidParticipantIds(otherParticipantsForPaidSelection.map(p => p.id));
+      }
+  };
+
   const instantSummary = useMemo(() => {
     if (expenseType !== "collective" || perPersonQuota <= 0) {
       return null;
@@ -383,7 +409,7 @@ export default function Expenses() {
         if (otherParticipantsCount <= 0) {
           return <p>Você está pagando a despesa inteira.</p>;
         }
-        if (isPaid) {
+        if (statusWithProvider === 'paid') {
           return <p>Você já recebeu o reembolso de todos os participantes.</p>;
         }
         return (
@@ -443,7 +469,7 @@ export default function Expenses() {
         if (!effectiveParticipantIds.includes(user?.id ?? "")) {
           return <p>Você não participa do rateio desta despesa.</p>;
         }
-        if (isPaid) {
+        if (statusWithProvider === 'paid') {
           return (
             <p>
               Você será marcado como tendo pago{" "}
@@ -489,7 +515,7 @@ export default function Expenses() {
     payerUserId,
     user?.id,
     editingId,
-    isPaid,
+    statusWithProvider,
     effectiveParticipantIds,
     allExpenses,
     participantOptions,
@@ -576,7 +602,7 @@ export default function Expenses() {
   
       const categoryToSend = category === "other" ? customCategory.trim() : category;
       const finalCreditCardId = creditCardId === "none" ? null : creditCardId;
-      const providerPaid = paymentMethod === "credit_card" || statusWithProvider === "paid" || isPaid;
+      const providerPaid = paymentMethod === "credit_card" || statusWithProvider === "paid";
   
       let uploadedReceiptUrl = receiptUrl;
   
@@ -729,11 +755,12 @@ export default function Expenses() {
           await applyManualSplitSelection(newExpenseId as string, parseFloat(amount), effectiveParticipantIds, actualPayerId);
         }
   
-        if (isPaid && paymentMethod !== "credit_card" && newExpenseId) {
+        if (paidParticipantIds.length > 0 && newExpenseId) {
           await supabase
-            .from("expense_splits")
-            .update({ status: "paid", paid_at: new Date().toISOString() })
-            .eq("expense_id", newExpenseId);
+              .from("expense_splits")
+              .update({ status: "paid", paid_at: new Date().toISOString() })
+              .eq("expense_id", newExpenseId)
+              .in("user_id", paidParticipantIds);
         }
   
         if (isRecurring) {
@@ -793,7 +820,6 @@ export default function Expenses() {
     setInstallments("1");
     setIsRecurring(false);
     setRecurrenceDay("5");
-    setIsPaid(false);
     setStatusWithProvider("pending");
     setSplitMode("all");
     setPayerUserId("me");
@@ -801,6 +827,7 @@ export default function Expenses() {
     setReceiptFile(null);
     setReceiptUrl(null);
     setEditingOriginalAmount(null);
+    setPaidParticipantIds([]);
   };
 
   const openEditExpense = (expense: ExpenseRow) => {
@@ -1186,111 +1213,130 @@ export default function Expenses() {
                             </p>
                         </div>
                     )}
-
-                    {paymentMethod !== "credit_card" && !editingId && (
-                        <div className="pt-3 border-t space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
-                            <Label htmlFor="paid-switch" className="cursor-pointer text-sm">Marcar rateio como pago</Label>
-                        </div>
-                        <p className="text-xs text-muted-foreground pl-11">
-                            Ative se os participantes já te reembolsaram. Isso marcará a parte de todos como 'paga' no sistema.
-                        </p>
-                        </div>
-                    )}
                   </div>
 
                   {statusWithProvider === 'paid' && (
-                    <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
-                      <Label className="text-base font-medium">4. Pagamento</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Forma</Label>
-                          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {PAYMENT_METHODS.map((p) => (
-                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Quem pagou</Label>
-                          <Select value={payerUserId} onValueChange={setPayerUserId}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="me">Você</SelectItem>
-                              {participantOptions.map((participant) => (
-                                <SelectItem key={participant.id} value={participant.id}>
-                                  {participant.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Data da Compra</Label>
-                          <Input
-                            type="date"
-                            value={dateValue}
-                            onChange={(e) => setDateValue(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Comprovante</Label>
-                          <Input
-                            type="file"
-                            accept="image/*,.pdf"
-                            onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                          />
-                          {receiptUrl && (
-                            <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
-                              Ver comprovante atual
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                      {editingType === "expense" && editingId && (
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Competência</Label>
-                          <Input
-                            type="month"
-                            value={editCompetence}
-                            onChange={(e) => setEditCompetence(e.target.value)}
-                          />
-                        </div>
-                      )}
-
-                      {paymentMethod === "credit_card" && (
+                    <>
+                      <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                        <Label className="text-base font-medium">4. Pagamento</Label>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">Cartão</Label>
-                            <Select value={creditCardId} onValueChange={setCreditCardId}>
-                              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                            <Label className="text-xs text-muted-foreground">Forma</Label>
+                            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                {cards.length === 0 && <SelectItem value="none" disabled>Nenhum cartão</SelectItem>}
-                                {cards.map((c) => (
-                                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                {PAYMENT_METHODS.map((p) => (
+                                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">Parcelas</Label>
-                            <div className="flex items-center gap-2">
-                              <Input type="number" min="1" max="36" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-24" />
-                              <span className="text-sm text-muted-foreground">
-                                x de R$ {(Number(amount) / (parseInt(installments) || 1)).toFixed(2)}
-                              </span>
-                            </div>
+                            <Label className="text-xs text-muted-foreground">Quem pagou</Label>
+                            <Select value={payerUserId} onValueChange={setPayerUserId}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="me">Você</SelectItem>
+                                {participantOptions.map((participant) => (
+                                  <SelectItem key={participant.id} value={participant.id}>
+                                    {participant.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Data da Compra</Label>
+                            <Input
+                              type="date"
+                              value={dateValue}
+                              onChange={(e) => setDateValue(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Comprovante</Label>
+                            <Input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                            />
+                            {receiptUrl && (
+                              <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
+                                Ver comprovante atual
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        {editingType === "expense" && editingId && (
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Competência</Label>
+                            <Input
+                              type="month"
+                              value={editCompetence}
+                              onChange={(e) => setEditCompetence(e.target.value)}
+                            />
+                          </div>
+                        )}
+
+                        {paymentMethod === "credit_card" && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Cartão</Label>
+                              <Select value={creditCardId} onValueChange={setCreditCardId}>
+                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent>
+                                  {cards.length === 0 && <SelectItem value="none" disabled>Nenhum cartão</SelectItem>}
+                                  {cards.map((c) => (
+                                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Parcelas</Label>
+                              <div className="flex items-center gap-2">
+                                <Input type="number" min="1" max="36" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-24" />
+                                <span className="text-sm text-muted-foreground">
+                                  x de R$ {(Number(amount) / (parseInt(installments) || 1)).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {expenseType === 'collective' && actualPayerId === user?.id && !editingId && otherParticipantsForPaidSelection.length > 0 && (
+                        <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                            <Label className="text-base font-medium">5. Reembolsos Recebidos</Label>
+                            <p className="text-xs text-muted-foreground">
+                                Selecione os participantes que já pagaram a parte deles para você.
+                            </p>
+                            <div className="space-y-2 border rounded-md p-2 max-h-40 overflow-y-auto">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                        id="select-all-paid"
+                                        checked={paidParticipantIds.length === otherParticipantsForPaidSelection.length}
+                                        onCheckedChange={handleToggleAllPaidParticipants}
+                                    />
+                                    <Label htmlFor="select-all-paid" className="font-semibold">Selecionar Todos</Label>
+                                </div>
+                                <Separator />
+                                {otherParticipantsForPaidSelection.map(participant => (
+                                    <div key={participant.id} className="flex items-center gap-2 text-sm">
+                                        <Checkbox
+                                            id={`paid-${participant.id}`}
+                                            checked={paidParticipantIds.includes(participant.id)}
+                                            onCheckedChange={() => handleTogglePaidParticipant(participant.id)}
+                                        />
+                                        <Label htmlFor={`paid-${participant.id}`}>{participant.name}</Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               )}
