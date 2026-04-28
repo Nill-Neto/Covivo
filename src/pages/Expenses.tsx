@@ -688,6 +688,7 @@ export default function Expenses() {
       } else {
         const baseCreateExpenseArgs = {
           _group_id: membership!.group_id,
+          _created_by: user!.id,
           _title: title.trim(),
           _description: description.trim() || null,
           _amount: parseFloat(amount),
@@ -704,7 +705,7 @@ export default function Expenses() {
         };
   
         const { data: newExpenseId, error: createError } = await supabase.rpc(
-          "create_expense_with_splits",
+          "v2_create_expense_with_splits" as any,
           {
             ...baseCreateExpenseArgs,
             _participant_user_ids: expenseType === "collective" ? collectiveParticipantIds : individualParticipantIds,
@@ -1120,9 +1121,36 @@ export default function Expenses() {
                     </Select>
                   </div>
 
+                  {expenseType === 'collective' && (
+                    <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                      <Label className="text-base font-medium">2. Participantes do rateio</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button type="button" variant={splitMode === "all" ? "default" : "outline"} onClick={() => setSplitMode("all")}>
+                          Todos
+                        </Button>
+                        <Button type="button" variant={splitMode === "manual" ? "default" : "outline"} onClick={() => setSplitMode("manual")}>
+                          Seleção manual
+                        </Button>
+                      </div>
+                      {splitMode === "manual" && (
+                        <div className="space-y-2 border rounded-md p-2 max-h-32 overflow-y-auto">
+                          {participantOptions.map((participant) => (
+                            <label key={participant.id} className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={selectedParticipantIds.includes(participant.id)}
+                                onCheckedChange={() => toggleParticipant(participant.id)}
+                              />
+                              <span>{participant.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
                     <div>
-                      <Label className="text-base font-medium">2. Status com fornecedor</Label>
+                      <Label className="text-base font-medium">3. Status com fornecedor</Label>
                       <p className="text-xs text-muted-foreground">
                         Indica se a conta principal (ex: boleto de luz) já foi paga à empresa.
                       </p>
@@ -1143,7 +1171,7 @@ export default function Expenses() {
                         Paga
                         </Button>
                     </div>
-                    
+
                     {statusWithProvider === 'pending' && (
                         <div className="pt-3 border-t space-y-2">
                             <Label htmlFor="due-date">Data de Vencimento</Label>
@@ -1158,7 +1186,7 @@ export default function Expenses() {
                             </p>
                         </div>
                     )}
-                    
+
                     {paymentMethod !== "credit_card" && !editingId && (
                         <div className="pt-3 border-t space-y-2">
                         <div className="flex items-center gap-2">
@@ -1172,131 +1200,98 @@ export default function Expenses() {
                     )}
                   </div>
 
-                                    {statusWithProvider === 'paid' && (
-                                      <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
-                                        <Label className="text-base font-medium">3. Pagamento</Label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                          <div className="space-y-2">
-                                            <Label className="text-xs text-muted-foreground">Forma</Label>
-                                            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                                              <SelectTrigger><SelectValue /></SelectTrigger>
-                                              <SelectContent>
-                                                {PAYMENT_METHODS.map((p) => (
-                                                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                          <div className="space-y-2">
-                                            <Label className="text-xs text-muted-foreground">Quem pagou</Label>
-                                            <Select value={payerUserId} onValueChange={setPayerUserId}>
-                                              <SelectTrigger><SelectValue /></SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="me">Você</SelectItem>
-                                                {participantOptions.map((participant) => (
-                                                  <SelectItem key={participant.id} value={participant.id}>
-                                                    {participant.name}
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                        </div>
-                  
-                                        <div className="grid grid-cols-2 gap-3">
-                                          <div className="space-y-2">
-                                              <Label className="text-xs text-muted-foreground">Data da Compra</Label>
-                                              <Input
-                                              type="date"
-                                              value={dateValue}
-                                              onChange={(e) => setDateValue(e.target.value)}
-                                              />
-                                          </div>
-                                          <div className="space-y-2">
-                                            <Label className="text-xs text-muted-foreground">Comprovante</Label>
-                                            <Input
-                                              type="file"
-                                              accept="image/*,.pdf"
-                                              onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                                            />
-                                            {receiptUrl && (
-                                              <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
-                                                Ver comprovante atual
-                                              </a>
-                                            )}
-                                          </div>
-                                        </div>
-                                        {editingType === "expense" && editingId && (
-                                          <div className="space-y-2">
-                                            <Label className="text-xs text-muted-foreground">Competência</Label>
-                                            <Input
-                                              type="month"
-                                              value={editCompetence}
-                                              onChange={(e) => setEditCompetence(e.target.value)}
-                                            />
-                                          </div>
-                                        )}
-                  
-                                        {paymentMethod === "credit_card" && (
-                                          <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-2">
-                                              <Label className="text-xs text-muted-foreground">Cartão</Label>
-                                              <Select value={creditCardId} onValueChange={setCreditCardId}>
-                                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                                <SelectContent>
-                                                  {cards.length === 0 && <SelectItem value="none" disabled>Nenhum cartão</SelectItem>}
-                                                  {cards.map((c) => (
-                                                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                                                  ))}
-                                                </SelectContent>
-                                              </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                              <Label className="text-xs text-muted-foreground">Parcelas</Label>
-                                              <div className="flex items-center gap-2">
-                                                <Input type="number" min="1" max="36" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-24" />
-                                                <span className="text-sm text-muted-foreground">
-                                                  x de R$ {(Number(amount) / (parseInt(installments) || 1)).toFixed(2)}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-
-                  <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
-                    <Label className="text-base font-medium">4. Participantes do rateio</Label>
-                    {expenseType === "individual" ? (
-                      <p className="text-sm text-muted-foreground">
-                        Despesa individual: somente você participa do rateio.
-                      </p>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button type="button" variant={splitMode === "all" ? "default" : "outline"} onClick={() => setSplitMode("all")}>
-                            Todos
-                          </Button>
-                          <Button type="button" variant={splitMode === "manual" ? "default" : "outline"} onClick={() => setSplitMode("manual")}>
-                            Seleção manual
-                          </Button>
+                  {statusWithProvider === 'paid' && (
+                    <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                      <Label className="text-base font-medium">4. Pagamento</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Forma</Label>
+                          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {PAYMENT_METHODS.map((p) => (
+                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        {splitMode === "manual" && (
-                          <div className="space-y-2 border rounded-md p-2 max-h-32 overflow-y-auto">
-                            {participantOptions.map((participant) => (
-                              <label key={participant.id} className="flex items-center gap-2 text-sm">
-                                <Checkbox
-                                  checked={selectedParticipantIds.includes(participant.id)}
-                                  onCheckedChange={() => toggleParticipant(participant.id)}
-                                />
-                                <span>{participant.name}</span>
-                              </label>
-                            ))}
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Quem pagou</Label>
+                          <Select value={payerUserId} onValueChange={setPayerUserId}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="me">Você</SelectItem>
+                              {participantOptions.map((participant) => (
+                                <SelectItem key={participant.id} value={participant.id}>
+                                  {participant.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Data da Compra</Label>
+                          <Input
+                            type="date"
+                            value={dateValue}
+                            onChange={(e) => setDateValue(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Comprovante</Label>
+                          <Input
+                            type="file"
+                            accept="image/*,.pdf"
+                            onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                          />
+                          {receiptUrl && (
+                            <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
+                              Ver comprovante atual
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      {editingType === "expense" && editingId && (
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Competência</Label>
+                          <Input
+                            type="month"
+                            value={editCompetence}
+                            onChange={(e) => setEditCompetence(e.target.value)}
+                          />
+                        </div>
+                      )}
+
+                      {paymentMethod === "credit_card" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Cartão</Label>
+                            <Select value={creditCardId} onValueChange={setCreditCardId}>
+                              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                              <SelectContent>
+                                {cards.length === 0 && <SelectItem value="none" disabled>Nenhum cartão</SelectItem>}
+                                {cards.map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        )}
-                      </>
-                    )}
-                  </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Parcelas</Label>
+                            <div className="flex items-center gap-2">
+                              <Input type="number" min="1" max="36" value={installments} onChange={(e) => setInstallments(e.target.value)} className="w-24" />
+                              <span className="text-sm text-muted-foreground">
+                                x de R$ {(Number(amount) / (parseInt(installments) || 1)).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
