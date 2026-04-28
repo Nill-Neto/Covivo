@@ -1128,32 +1128,47 @@ export default function Expenses() {
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
+                        <Button
                         type="button"
                         variant={statusWithProvider === "pending" ? "default" : "outline"}
                         onClick={() => setStatusWithProvider("pending")}
-                      >
+                        >
                         Pendente
-                      </Button>
-                      <Button
+                        </Button>
+                        <Button
                         type="button"
                         variant={statusWithProvider === "paid" ? "default" : "outline"}
                         onClick={() => setStatusWithProvider("paid")}
-                      >
+                        >
                         Paga
-                      </Button>
+                        </Button>
                     </div>
                     
+                    {statusWithProvider === 'pending' && (
+                        <div className="pt-3 border-t space-y-2">
+                            <Label htmlFor="due-date">Data de Vencimento</Label>
+                            <Input
+                                id="due-date"
+                                type="date"
+                                value={paymentDate}
+                                onChange={(e) => setPaymentDate(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Quando esta conta precisa ser paga ao fornecedor.
+                            </p>
+                        </div>
+                    )}
+                    
                     {paymentMethod !== "credit_card" && !editingId && (
-                      <div className="pt-3 border-t space-y-2">
+                        <div className="pt-3 border-t space-y-2">
                         <div className="flex items-center gap-2">
-                          <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
-                          <Label htmlFor="paid-switch" className="cursor-pointer text-sm">Marcar rateio como pago</Label>
+                            <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
+                            <Label htmlFor="paid-switch" className="cursor-pointer text-sm">Marcar rateio como pago</Label>
                         </div>
                         <p className="text-xs text-muted-foreground pl-11">
-                          Ative se os participantes já te reembolsaram. Isso marcará a parte de todos como 'paga' no sistema.
+                            Ative se os participantes já te reembolsaram. Isso marcará a parte de todos como 'paga' no sistema.
                         </p>
-                      </div>
+                        </div>
                     )}
                   </div>
 
@@ -1190,15 +1205,12 @@ export default function Expenses() {
                   
                                         <div className="grid grid-cols-2 gap-3">
                                           <div className="space-y-2">
-                                            <Label className="text-xs text-muted-foreground">Data do pagamento/compra</Label>
-                                            <Input
+                                              <Label className="text-xs text-muted-foreground">Data da Compra</Label>
+                                              <Input
                                               type="date"
                                               value={dateValue}
-                                              onChange={(e) => {
-                                                setDateValue(e.target.value);
-                                                setPaymentDate(e.target.value);
-                                              }}
-                                            />
+                                              onChange={(e) => setDateValue(e.target.value)}
+                                              />
                                           </div>
                                           <div className="space-y-2">
                                             <Label className="text-xs text-muted-foreground">Comprovante</Label>
