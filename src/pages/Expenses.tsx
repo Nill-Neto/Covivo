@@ -375,7 +375,17 @@ export default function Expenses() {
     const payerName = participantOptions.find((p) => p.id === payerUserId)?.name || "um participante";
     const actualPayerId = payerUserId === "me" ? user?.id : payerUserId;
 
-    // Scenario 1: Current user is the payer
+    if (statusWithProvider === 'pending') {
+        const numParticipants = effectiveParticipantIds.length;
+        if (numParticipants === 0) return null;
+        return (
+            <p>
+                Quando a conta for paga, cada um dos {numParticipants} participantes deverá <strong className="text-primary">R$ {perPersonQuota.toFixed(2)}</strong>.
+            </p>
+        );
+    }
+
+    // Logic for 'paid' status
     if (actualPayerId === user?.id) {
       if (!editingId) {
         // New expense
@@ -484,6 +494,7 @@ export default function Expenses() {
       }
     }
   }, [
+    statusWithProvider,
     expenseType,
     perPersonQuota,
     payerUserId,
@@ -1140,7 +1151,7 @@ export default function Expenses() {
                       </Button>
                     </div>
                     
-                    {paymentMethod !== "credit_card" && !editingId && (
+                    {statusWithProvider === 'paid' && paymentMethod !== "credit_card" && !editingId && (
                       <div className="pt-3 border-t space-y-2">
                         <div className="flex items-center gap-2">
                           <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
@@ -1715,8 +1726,8 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <p className="font-medium">{recurring.title}</p>
               <Badge variant="outline" className="text-xs">{catLabel}</Badge>
-              <Badge variant={recurring.expense_type === "collective" ? "default" : "secondary"} className="text-xs">
-                {recurring.expense_type === "collective" ? "Coletiva" : "Individual"}
+              <Badge variant={(recurring as any).expense_type === "collective" ? "default" : "secondary"} className="text-xs">
+                {(recurring as any).expense_type === "collective" ? "Coletiva" : "Individual"}
               </Badge>
               <Badge variant={recurring.active ? "default" : "secondary"} className="text-xs">
                 {recurring.active ? "Ativa" : "Pausada"}

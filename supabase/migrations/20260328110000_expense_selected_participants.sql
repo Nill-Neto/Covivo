@@ -1,12 +1,17 @@
+-- Drop the 16-parameter version (just in case)
+DROP FUNCTION IF EXISTS public.create_expense_with_splits(
+    uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date, uuid[], uuid
+) CASCADE;
+
 -- Drop the 15-parameter version
 DROP FUNCTION IF EXISTS public.create_expense_with_splits(
     uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date, uuid[]
-);
+) CASCADE;
 
 -- Drop the 14-parameter version
 DROP FUNCTION IF EXISTS public.create_expense_with_splits(
     uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date
-);
+) CASCADE;
 
 -- Create the new function with participant_user_ids and payer_id
 CREATE OR REPLACE FUNCTION public.create_expense_with_splits(
