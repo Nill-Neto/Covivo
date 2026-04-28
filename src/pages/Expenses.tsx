@@ -495,7 +495,7 @@ export default function Expenses() {
     participantOptions,
   ]);
 
-  const applyManualSplitSelection = async (expenseId: string, totalAmount: number, participantIds: string[]) => {
+  const applyManualSplitSelection = async (expenseId: string, totalAmount: number, participantIds: string[], credorId: string) => {
     const uniqueParticipantIds = Array.from(new Set(participantIds));
     if (uniqueParticipantIds.length === 0) {
       throw new Error("Selecione pelo menos 1 participante para o rateio manual.");
@@ -535,6 +535,7 @@ export default function Expenses() {
           user_id: userId,
           amount: splitAmount,
           status: "pending",
+          credor_user_id: credorId,
         });
         if (insertErr) throw insertErr;
       }
@@ -556,6 +557,7 @@ export default function Expenses() {
     mutationFn: async () => {
       const collectiveParticipantIds = splitBetweenAll ? activeMemberIds : selectedParticipantIds;
       const individualParticipantIds = user?.id ? [user.id] : [];
+      const actualPayerId = payerUserId === "me" ? user!.id : payerUserId;
   
       if (!title.trim() || !amount || parseFloat(amount) <= 0) {
         throw new Error("Preencha título e valor.");
@@ -678,7 +680,7 @@ export default function Expenses() {
         }
   
         if (expenseType === "collective" && splitMode === "manual") {
-          await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds);
+          await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
         }
       } else {
         const compKey = getCompetenceKeyFromDate(
@@ -725,7 +727,7 @@ export default function Expenses() {
         }
   
         if (newExpenseId && expenseType === "collective" && splitMode === "manual") {
-          await applyManualSplitSelection(newExpenseId as string, parseFloat(amount), effectiveParticipantIds);
+          await applyManualSplitSelection(newExpenseId as string, parseFloat(amount), effectiveParticipantIds, actualPayerId);
         }
   
         if (isPaid && paymentMethod !== "credit_card" && newExpenseId) {
