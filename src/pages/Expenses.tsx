@@ -125,7 +125,6 @@ export default function Expenses() {
   const [paidParticipantIds, setPaidParticipantIds] = useState<string[]>([]);
   const [statusWithProvider, setStatusWithProvider] = useState<"pending" | "paid">("pending");
   const [splitMode, setSplitMode] = useState<"all" | "manual">("all");
-  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
   const [payerUserId, setPayerUserId] = useState<string>("me");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -368,15 +367,14 @@ export default function Expenses() {
     return participantOptions.find((p) => p.id === payerUserId)?.name || "Não definido";
   }, [payerUserId, participantOptions]);
 
-  const actualPayerId = payerUserId === "me" ? user?.id : payerUserId;
-  const participantsToPay = participantOptions.filter(p => effectiveParticipantIds.includes(p.id) && p.id !== actualPayerId);
-
   const instantSummary = useMemo(() => {
     if (expenseType !== "collective" || perPersonQuota <= 0) {
       return null;
     }
   
     const payerName = participantOptions.find((p) => p.id === payerUserId)?.name || "um participante";
+    const actualPayerId = payerUserId === "me" ? user?.id : payerUserId;
+    const participantsToPay = participantOptions.filter(p => effectiveParticipantIds.includes(p.id) && p.id !== actualPayerId);
   
     if (actualPayerId === user?.id) {
       if (!editingId) {
@@ -507,8 +505,6 @@ export default function Expenses() {
     allExpenses,
     participantOptions,
     paidParticipantIds,
-    participantsToPay,
-    actualPayerId,
   ]);
 
   const applyManualSplitSelection = async (expenseId: string, totalAmount: number, participantIds: string[], credorId: string) => {
@@ -810,7 +806,6 @@ export default function Expenses() {
     setInstallments("1");
     setIsRecurring(false);
     setRecurrenceDay("5");
-    setIsPaid(false);
     setPaidParticipantIds([]);
     setStatusWithProvider("pending");
     setSplitMode("all");
@@ -1053,6 +1048,9 @@ export default function Expenses() {
       </TabsTrigger>
     </TabsList>
   );
+
+  const actualPayerId = payerUserId === "me" ? user?.id : payerUserId;
+  const participantsToPay = participantOptions.filter(p => effectiveParticipantIds.includes(p.id) && p.id !== actualPayerId);
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -1297,7 +1295,7 @@ export default function Expenses() {
                         </div>
                       )}
                       {statusWithProvider === 'paid' && paymentMethod !== "credit_card" && !editingId && expenseType === 'collective' && payerUserId === 'me' && (
-                        <div className="pt-3 border-t space-y-3">
+                        <div className="pt-3 border-t space-y-2">
                           <div className="flex items-center gap-2">
                             <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
                             <Label htmlFor="paid-switch" className="cursor-pointer text-sm">Marcar rateio como pago</Label>
@@ -1376,7 +1374,7 @@ export default function Expenses() {
                   </div>
 
                   {isRecurring && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 animate-accordion-down">
                       <Label>Dia do Vencimento (mensal)</Label>
                       <Input type="number" min="1" max="31" value={recurrenceDay} onChange={(e) => setRecurrenceDay(e.target.value)} />
                     </div>
