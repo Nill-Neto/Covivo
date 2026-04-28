@@ -688,6 +688,7 @@ export default function Expenses() {
   
         const baseCreateExpenseArgs = {
           _group_id: membership!.group_id,
+          _created_by: user!.id,
           _title: title.trim(),
           _description: description.trim() || null,
           _amount: parseFloat(amount),
@@ -704,7 +705,7 @@ export default function Expenses() {
         };
   
         const { data: newExpenseId, error: createError } = await supabase.rpc(
-          "create_expense_with_splits",
+          "v2_create_expense_with_splits",
           {
             ...baseCreateExpenseArgs,
             _participant_user_ids: expenseType === "collective" ? collectiveParticipantIds : individualParticipantIds,
