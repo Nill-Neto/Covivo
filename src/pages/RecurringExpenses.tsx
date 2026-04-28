@@ -145,7 +145,7 @@ export default function RecurringExpenses() {
   }, [activeMemberIds, editingId, splitMode]);
 
   const { data: recurring, isLoading } = useQuery({
-    queryKey: ["recurring", membership?.group_id],
+    queryKey: ["recurring-expenses", membership?.group_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_expenses")
@@ -291,7 +291,7 @@ export default function RecurringExpenses() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recurring"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring-expenses"] });
       toast({ title: "Recorrência excluída." });
     },
     onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
@@ -308,8 +308,9 @@ export default function RecurringExpenses() {
 
   const generateMutation = useMutation({
     mutationFn: async ({ rec, finalAmount }: { rec: any, finalAmount: number }) => {
-      const { error } = await supabase.rpc("create_expense_with_splits", {
+      const { error } = await supabase.rpc("create_expense_with_splits_v2", {
         _group_id: rec.group_id,
+        _created_by: user!.id,
         _title: rec.title,
         _description: rec.description || null,
         _amount: finalAmount,
