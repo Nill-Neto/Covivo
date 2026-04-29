@@ -44,18 +44,18 @@ begin
   end if;
 
   _caller_id := _auth_user_id;
-  _effective_creditor_id := coalesce(_payer_user_id, _caller_id);
 
-  if _effective_creditor_id is null then
+  if _caller_id is null then
     raise exception 'Falha de identidade do usuário (credor)';
-  end if;
-
-  if not has_role_in_group(_caller_id, _group_id, 'admin') then
-    raise exception 'Apenas administradores podem criar despesas';
   end if;
 
   _final_purchase_date := coalesce(_purchase_date, current_date);
   _effective_participants := coalesce(_participant_user_ids, array[]::uuid[]);
+  _effective_creditor_id := coalesce(_payer_user_id, _caller_id);
+
+  if _effective_creditor_id is null then
+    raise exception 'Falha de identidade do usuário pagador (credor)';
+  end if;
 
   if not has_role_in_group(_caller_id, _group_id, 'admin') and _expense_type = 'collective' then
     raise exception 'Apenas administradores podem criar despesas coletivas';

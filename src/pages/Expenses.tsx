@@ -773,7 +773,7 @@ export default function Expenses() {
 
           const { error: backfillCreditorError } = await supabase
             .from("expense_splits")
-            .update({ credor_user_id: user.id })
+            .update({ credor_user_id: actualPayerId })
             .eq("expense_id", newExpenseId)
             .is("credor_user_id", null);
           if (backfillCreditorError) throw backfillCreditorError;
