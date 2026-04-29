@@ -1,6 +1,5 @@
 CREATE OR REPLACE FUNCTION public.create_expense_with_splits_v2(
   _group_id uuid,
-  _created_by uuid,
   _title text,
   _description text DEFAULT NULL,
   _amount numeric DEFAULT 0,
@@ -41,9 +40,6 @@ BEGIN
     RAISE EXCEPTION 'Usuário não autenticado';
   END IF;
 
-  IF _created_by IS NOT NULL AND _created_by <> _caller_id THEN
-    RAISE EXCEPTION 'created_by inválido';
-  END IF;
 
   _final_purchase_date := COALESCE(_purchase_date, CURRENT_DATE);
   _effective_participants := COALESCE(_participant_user_ids, ARRAY[]::uuid[]);
