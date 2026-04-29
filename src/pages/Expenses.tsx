@@ -161,6 +161,12 @@ export default function Expenses() {
     }
   }, [category]);
 
+  useEffect(() => {
+    if (expenseType === "individual") {
+      setReceiptFile(null);
+    }
+  }, [expenseType]);
+
   const currentCompetenceKey = formatCompetenceKey(currentDate);
 
   const { data: globalSearchResults = [] } = useQuery({
@@ -1270,33 +1276,21 @@ export default function Expenses() {
                             onChange={(e) => setDateValue(e.target.value)}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Comprovante</Label>
-                          <Input
-                            type="file"
-                            multiple
-                            accept="image/*,.pdf"
-                            onChange={(e) => {
-                              const files = Array.from(e.target.files ?? []);
-                              const validation = validateReceiptFiles(files);
-                              if (!validation.valid) {
-                                toast({ title: "Arquivo inválido", description: validation.message, variant: "destructive" });
-                                e.currentTarget.value = "";
-                                setReceiptFiles([]);
-                                return;
-                              }
-                              setReceiptFiles(files);
-                            }}
-                          />
-                          {receiptFiles.length > 0 && (
-                            <p className="text-xs text-muted-foreground">{receiptFiles.length} arquivo(s) selecionado(s).</p>
-                          )}
-                          {receiptUrl && (
-                            <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
-                              Ver comprovante atual
-                            </a>
-                          )}
-                        </div>
+                        {expenseType === "collective" && (
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Comprovante</Label>
+                            <Input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                            />
+                            {receiptUrl && (
+                              <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">
+                                Ver comprovante atual
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {editingType === "expense" && editingId && (
                         <div className="space-y-2">
