@@ -1054,17 +1054,19 @@ export default function Expenses() {
         icon={<Receipt className="h-4 w-4" />}
         actions={
           <div className="flex w-full flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <div className="flex h-10 w-full sm:w-auto items-center justify-between rounded-lg border bg-card p-1 shadow-sm">
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={prevMonth}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1 px-2 text-center text-sm font-medium capitalize truncate sm:min-w-[140px]">
-                {format(currentDate, "MMMM yyyy", { locale: ptBR })}
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={nextMonth}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+          {/* Month Selector */}
+          <div className="flex h-10 w-full items-center justify-between rounded-lg border bg-card p-1 shadow-sm sm:w-auto">
+             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={prevMonth}>
+               <ChevronLeft className="h-4 w-4" />
+             </Button>
+             <div className="flex-1 px-2 text-center text-sm font-medium capitalize truncate sm:min-w-[140px]">
+               {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+             </div>
+             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={nextMonth}>
+               <ChevronRight className="h-4 w-4" />
+             </Button>
+           </div>
+
             <Button className="h-10 w-full sm:w-auto gap-2" onClick={() => { resetForm(); setOpen(true); }}>
               <Plus className="h-4 w-4" /> Nova Despesa
             </Button>
@@ -1227,11 +1229,14 @@ export default function Expenses() {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Data da Compra</Label>
+                          <Label className="text-xs text-muted-foreground">Data do pagamento/compra</Label>
                           <Input
                             type="date"
                             value={dateValue}
-                            onChange={(e) => setDateValue(e.target.value)}
+                            onChange={(e) => {
+                              setDateValue(e.target.value);
+                              setPaymentDate(e.target.value);
+                            }}
                           />
                         </div>
                         <div className="space-y-2">
@@ -1284,7 +1289,7 @@ export default function Expenses() {
                           </div>
                         </div>
                       )}
-                      {statusWithProvider === 'paid' && paymentMethod !== "credit_card" && !editingId && expenseType === 'collective' && (
+                      {paymentMethod !== "credit_card" && !editingId && expenseType === 'collective' && (
                         <div className="pt-3 border-t space-y-3">
                           <div className="flex items-center gap-2">
                             <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
