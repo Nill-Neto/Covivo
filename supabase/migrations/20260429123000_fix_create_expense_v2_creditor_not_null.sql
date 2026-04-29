@@ -13,7 +13,8 @@ CREATE OR REPLACE FUNCTION public.create_expense_with_splits_v2(
   _credit_card_id uuid default null,
   _installments integer default 1,
   _purchase_date date default null,
-  _participant_user_ids uuid[] default null
+  _participant_user_ids uuid[] default null,
+  _payer_user_id uuid default null
 )
 returns uuid
 language plpgsql
@@ -36,6 +37,7 @@ declare
   _bill_year int;
   _bill_base date;
   _effective_participants uuid[];
+  _effective_creditor_id uuid;
 begin
   if _auth_user_id is null then
     raise exception 'Usuário não autenticado';
@@ -49,6 +51,11 @@ begin
 
   _final_purchase_date := coalesce(_purchase_date, current_date);
   _effective_participants := coalesce(_participant_user_ids, array[]::uuid[]);
+  _effective_creditor_id := coalesce(_payer_user_id, _caller_id);
+
+  if _effective_creditor_id is null then
+    raise exception 'Falha de identidade do usuário pagador (credor)';
+  end if;
 
   if not has_role_in_group(_caller_id, _group_id, 'admin') and _expense_type = 'collective' then
     raise exception 'Apenas administradores podem criar despesas coletivas';
@@ -100,7 +107,7 @@ begin
 
   if _expense_type = 'individual' then
     insert into public.expense_splits (expense_id, user_id, amount, credor_user_id, status)
-    values (_expense_id, _effective_participants[1], _amount, _caller_id, 'pending');
+    values (_expense_id, _effective_participants[1], _amount, _effective_creditor_id, 'pending');
   else
     select count(*) into _member_count
     from unnest(_effective_participants) as participant_id;
@@ -113,7 +120,7 @@ begin
       _split_amount := round(_amount / _member_count, 2);
       foreach _participant_id in array _effective_participants loop
         insert into public.expense_splits (expense_id, user_id, amount, credor_user_id, status)
-        values (_expense_id, _participant_id, _split_amount, _caller_id, 'pending');
+        values (_expense_id, _participant_id, _split_amount, _effective_creditor_id, 'pending');
       end loop;
     else
       select splitting_rule::text into _group_rule from public.groups where id = _group_id;
@@ -121,7 +128,7 @@ begin
         _split_amount := round(_amount / _member_count, 2);
         foreach _participant_id in array _effective_participants loop
           insert into public.expense_splits (expense_id, user_id, amount, credor_user_id, status)
-          values (_expense_id, _participant_id, _split_amount, _caller_id, 'pending');
+          values (_expense_id, _participant_id, _split_amount, _effective_creditor_id, 'pending');
         end loop;
       else
         for _member in
@@ -134,7 +141,7 @@ begin
         loop
           _split_amount := round(_amount * _member.pct / 100, 2);
           insert into public.expense_splits (expense_id, user_id, amount, credor_user_id, status)
-          values (_expense_id, _member.user_id, _split_amount, _caller_id, 'pending');
+          values (_expense_id, _member.user_id, _split_amount, _effective_creditor_id, 'pending');
         end loop;
       end if;
     end if;
@@ -161,7 +168,7 @@ end;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.create_expense_with_splits_v2(
-  uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date, uuid[]
+  uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date, uuid[], uuid
 ) TO authenticated, service_role;
 
 NOTIFY pgrst, 'reload schema';

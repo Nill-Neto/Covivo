@@ -748,6 +748,7 @@ export default function Expenses() {
           _credit_card_id: finalCreditCardId,
           _installments: parseInt(installments) || 1,
           _purchase_date: dateValue,
+          _payer_user_id: actualPayerId,
         };
   
         const { data: newExpenseId, error: createError } = await supabase.rpc(
@@ -772,7 +773,7 @@ export default function Expenses() {
 
           const { error: backfillCreditorError } = await supabase
             .from("expense_splits")
-            .update({ credor_user_id: user.id })
+            .update({ credor_user_id: actualPayerId })
             .eq("expense_id", newExpenseId)
             .is("credor_user_id", null);
           if (backfillCreditorError) throw backfillCreditorError;
