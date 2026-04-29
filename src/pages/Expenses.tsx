@@ -125,6 +125,7 @@ export default function Expenses() {
   const [paidParticipantIds, setPaidParticipantIds] = useState<string[]>([]);
   const [statusWithProvider, setStatusWithProvider] = useState<"pending" | "paid">("pending");
   const [splitMode, setSplitMode] = useState<"all" | "manual">("all");
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
   const [payerUserId, setPayerUserId] = useState<string>("me");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -309,7 +310,7 @@ export default function Expenses() {
   });
 
   const activeMemberIds = useMemo(() => activeMembers.map((member) => member.user_id), [activeMembers]);
-
+  
   useEffect(() => {
     setSelectedParticipantIds(activeMemberIds);
   }, [activeMemberIds]);
