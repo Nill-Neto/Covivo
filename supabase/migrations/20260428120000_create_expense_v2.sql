@@ -42,7 +42,7 @@ BEGIN
   END IF;
 
   IF _created_by IS NOT NULL AND _created_by <> _caller_id THEN
-    RAISE EXCEPTION 'created_by deve corresponder ao usuário autenticado';
+    RAISE EXCEPTION 'created_by inválido';
   END IF;
 
   _final_purchase_date := COALESCE(_purchase_date, CURRENT_DATE);
