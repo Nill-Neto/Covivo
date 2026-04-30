@@ -1208,7 +1208,6 @@ export default function Expenses() {
         icon={<Receipt className="h-4 w-4" />}
         actions={
           <div className="flex w-full flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            {/* Month Selector */}
             <div className="flex h-10 w-full sm:w-auto items-center justify-between rounded-lg border bg-card p-1 shadow-sm">
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={prevMonth}>
                 <ChevronLeft className="h-4 w-4" />
@@ -1707,23 +1706,25 @@ export default function Expenses() {
         <Dialog open={!!viewingReceipts} onOpenChange={(open) => !open && setViewingReceipts(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Comprovantes da Despesa</DialogTitle>
+              <DialogTitle>Comprovantes</DialogTitle>
             </DialogHeader>
             <div className="py-4 space-y-2 max-h-[60vh] overflow-y-auto">
-              {viewingReceipts?.map(receipt => (
+              {(viewingReceipts || []).map(receipt => (
                 <a 
                   key={receipt.id} 
                   href={receipt.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted transition-colors"
+                  className="flex items-center gap-3 p-2 border rounded-md hover:bg-muted transition-colors"
                 >
-                  {receipt.mime_type.startsWith('image/') ? <ImageIcon className="h-5 w-5 text-muted-foreground" /> : <FileText className="h-5 w-5 text-muted-foreground" />}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{receipt.file_name || 'comprovante'}</p>
-                    <p className="text-xs text-muted-foreground">{receipt.mime_type}</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  {receipt.mime_type.startsWith('image/') ? (
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <span className="flex-1 truncate text-sm font-medium text-primary">
+                    {receipt.file_name || 'Ver comprovante'}
+                  </span>
                 </a>
               ))}
             </div>
@@ -1912,20 +1913,12 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
   const displayAmount = isInstallment ? expense._installment_amount : expense.amount;
   const receipts = expense.expense_receipts || [];
 
-  const handleViewReceipts = () => {
-    if (receipts.length === 1) {
-      window.open(receipts[0].url, '_blank', 'noopener,noreferrer');
-    } else if (receipts.length > 1) {
-      onViewReceipts(receipts);
-    }
-  };
-
   return (
     <Card id={`expense-${expense.id}`}>
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="font-medium">{expense.title}</p>
               <Badge variant="outline" className="text-xs">{catLabel}</Badge>
               <Badge
@@ -1940,7 +1933,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
                 </Badge>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> {format(parseLocalDate(expense.purchase_date), "dd/MM/yyyy")}
               </span>
@@ -1948,92 +1941,87 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
                 {expense.paid_to_provider ? "Paga ao fornecedor" : "Pendente com fornecedor"}
               </Badge>
               {expense.payment_method === "credit_card" && (
-                <span>
-                  <CreditCard className="h-3 w-3 inline mr-1" /> {cardLabel}{" "}
+                <span className="flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" /> {cardLabel}{" "}
                   {expense.installments > 1 && `(${expense.installments}x)`}
                 </span>
               )}
             </div>
             {paymentHistory && (
-              <p className="text-xs text-muted-foreground mt-2">
-                {paymentHistory}
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">{paymentHistory}</p>
             )}
-            {expense.expense_receipts && expense.expense_receipts.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 h-7 text-xs gap-1.5"
-                aria-label="Ver comprovantes da despesa"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const receipts = expense.expense_receipts!;
-                  if (receipts.length === 1 && receipts[0].mime_type === 'application/pdf') {
-                    window.open(receipts[0].url, '_blank', 'noopener,noreferrer');
-                  } else {
-                    onViewReceipts(receipts);
-                  }
-                }}
-              >
-                <ImageIcon className="h-3 w-3" />
-                Ver Comprovante{expense.expense_receipts.length > 1 ? 's' : ''}
-              </Button>
-            )}
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-lg font-bold">R$ {Number(displayAmount).toFixed(2)}</p>
-            {isInstallment && (
-              <p className="text-[10px] text-muted-foreground">Total: R$ {Number(expense.amount).toFixed(2)}</p>
-            )}
-            {mySplit && expense.expense_type === "collective" && (
-              <Badge variant="secondary" className="text-[10px]">
-                Sua parte: R$ {Number(mySplit.amount).toFixed(2)}
-              </Badge>
-            )}
-            {!expense.paid_to_provider && canManage && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 h-7 text-xs"
-                onClick={onRegisterPayment}
-              >
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Registrar pagamento
-              </Button>
-            )}
-          </div>
-          {canManage && (
-            <div className="flex flex-col gap-1 ml-2">
-              {receipts.length > 0 && (
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleViewReceipts} aria-label="Ver comprovantes da despesa">
-                  <ImageIcon className="h-4 w-4" />
+            <div className="flex flex-wrap gap-2 items-center">
+              {!expense.paid_to_provider && canManage && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-7 text-xs"
+                  onClick={onRegisterPayment}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Registrar pagamento
                 </Button>
               )}
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit} aria-label="Editar despesa">
-                <Edit className="h-4 w-4" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" aria-label="Excluir despesa">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza que deseja excluir esta despesa? Essa ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {receipts.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-7 text-xs gap-1.5"
+                  aria-label="Ver comprovantes da despesa"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const receipts = expense.expense_receipts!;
+                    if (receipts.length === 1 && receipts[0].mime_type === 'application/pdf') {
+                      window.open(receipts[0].url, '_blank', 'noopener,noreferrer');
+                    } else {
+                      onViewReceipts(receipts);
+                    }
+                  }}
+                >
+                  <ImageIcon className="h-3 w-3" />
+                  Ver Comprovante{receipts.length > 1 ? 's' : ''}
+                </Button>
+              )}
             </div>
-          )}
+          </div>
+          <div className="flex items-start gap-4 shrink-0 w-full sm:w-auto">
+            <div className="text-right flex-1 sm:flex-auto">
+              <p className="text-lg font-bold">R$ {Number(displayAmount).toFixed(2)}</p>
+              {isInstallment && (
+                <p className="text-[10px] text-muted-foreground">Total: R$ {Number(expense.amount).toFixed(2)}</p>
+              )}
+              {mySplit && expense.expense_type === "collective" && (
+                <p className="text-xs text-muted-foreground">Sua parte: R$ {Number(mySplit.amount).toFixed(2)}</p>
+              )}
+            </div>
+            {canManage && (
+              <div className="flex flex-col gap-1">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit} aria-label="Editar despesa">
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" aria-label="Excluir despesa">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir despesa?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir esta despesa? Essa ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
