@@ -1120,6 +1120,46 @@ export default function Expenses() {
     });
   };
 
+  const isSaveDisabled = useMemo(() => {
+    if (createOrUpdateExpense.isPending) return true;
+    if (!title.trim() || !amount || parseFloat(amount) <= 0) return true;
+
+    const providerPaid = paymentMethod === "credit_card" || statusWithProvider === "paid";
+    if (expenseType === "collective" && providerPaid) {
+      const hasExistingReceipts = existingReceipts && existingReceipts.length > 0;
+      if (!editingId && receiptFiles.length === 0) {
+        return true;
+      }
+      if (editingId && receiptFiles.length === 0 && !hasExistingReceipts) {
+        return true;
+      }
+    }
+    
+    if (paymentMethod === "credit_card" && (creditCardId === "none" || !creditCardId) && editingType === "expense") {
+      return true;
+    }
+  
+    if (expenseType === "collective" && splitMode === "manual" && selectedParticipantIds.length === 0) {
+      return true;
+    }
+  
+    return false;
+  }, [
+    createOrUpdateExpense.isPending,
+    title,
+    amount,
+    expenseType,
+    statusWithProvider,
+    editingId,
+    receiptFiles,
+    existingReceipts,
+    paymentMethod,
+    creditCardId,
+    editingType,
+    splitMode,
+    selectedParticipantIds
+  ]);
+
   if (loadingExpenses || loadingRecurring || loading) {
     return (
       <div className="flex justify-center py-12">
@@ -1511,7 +1551,7 @@ export default function Expenses() {
 
             </div>
             <div className="px-6 pb-6 pt-4 shrink-0 border-t bg-background">
-              <Button onClick={() => createOrUpdateExpense.mutate()} disabled={createOrUpdateExpense.isPending} className="w-full">
+              <Button onClick={() => createOrUpdateExpense.mutate()} disabled={isSaveDisabled} className="w-full">
                 {createOrUpdateExpense.isPending ? <CustomLoader className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 {editingId ? "Atualizar" : "Salvar"}
               </Button>
