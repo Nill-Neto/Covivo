@@ -44,6 +44,7 @@ import {
   Settings,
   Search,
   X,
+  Image as ImageIcon,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1075,11 +1076,17 @@ export default function Expenses() {
         .update({
           paid_to_provider: true,
           due_date: paymentDateValue,
-          receipt_url: publicUrlData.publicUrl,
           description: updatedDescription,
         })
         .eq("id", expense.id);
       if (updateError) throw updateError;
+
+      await supabase.from("expense_receipts" as any).insert({
+        expense_id: expense.id,
+        url: publicUrlData.publicUrl,
+        mime_type: proofFile.type,
+        file_name: proofFile.name,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
@@ -1830,6 +1837,16 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
               <p className="text-xs text-muted-foreground mt-2">
                 {paymentHistory}
               </p>
+            )}
+            {expense.expense_receipts && expense.expense_receipts.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {expense.expense_receipts.map(receipt => (
+                  <a key={receipt.id} href={receipt.url} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1.5 bg-muted/50 hover:bg-muted px-2 py-1 rounded-md transition-colors">
+                    <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                    {receipt.file_name || 'Comprovante'}
+                  </a>
+                ))}
+              </div>
             )}
           </div>
           <div className="text-right shrink-0">
