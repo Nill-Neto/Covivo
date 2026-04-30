@@ -1399,68 +1399,72 @@ export default function Expenses() {
                         </div>
                         {expenseType === 'collective' && (
                           <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">Comprovante(s)</Label>
+                            <Label>Comprovante(s)</Label>
                             <Input
+                              id="receipt-upload"
                               type="file"
                               accept="image/*,.pdf"
                               multiple
                               onChange={handleFileChange}
+                              className="hidden"
                             />
+                            <Label
+                              htmlFor="receipt-upload"
+                              className="flex items-center justify-between w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                            >
+                              <span className="border rounded-md px-2 py-1 text-xs font-semibold bg-background">Escolher arquivos</span>
+                              <span className="text-muted-foreground text-sm">
+                                {(receiptFiles.length + existingReceipts.length) > 0 ? `${receiptFiles.length + existingReceipts.length} arq...` : "Nenhum arquivo"}
+                              </span>
+                            </Label>
                             <p className="text-xs text-muted-foreground">Envie 1 PDF ou múltiplas imagens.</p>
                             {receiptError && <p className="text-sm text-destructive">{receiptError}</p>}
-                            
-                            {existingReceipts.length > 0 && (
-                              <div className="mt-2">
-                                <p className="text-xs font-medium text-muted-foreground">Comprovantes atuais:</p>
-                                <div className="space-y-1">
-                                  {existingReceipts.map(receipt => (
-                                    <div key={receipt.id} className="flex items-center justify-between text-xs bg-muted/50 p-1.5 rounded">
-                                      <a href={receipt.url} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate pr-2 flex items-center gap-2">
-                                        <ImageIcon className="h-4 w-4" />
-                                        {receipt.file_name || 'comprovante'}
-                                      </a>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => {
-                                        setExistingReceipts(prev => prev.filter(r => r.id !== receipt.id));
-                                      }}>
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {receiptFiles.length > 0 && (
-                              <div className="mt-2">
-                                <div className="flex justify-between items-center">
-                                  <p className="text-xs font-medium text-muted-foreground">Novos comprovantes:</p>
-                                  {receiptFiles.length > 1 && (
-                                    <Button variant="ghost" size="sm" className="text-xs h-auto py-0" onClick={() => setReceiptFiles([])}>Limpar todos</Button>
-                                  )}
-                                </div>
-                                <div className="space-y-1">
-                                  {receiptFiles.map((file, index) => (
-                                    <div key={index} className="flex items-center justify-between text-xs bg-muted/50 p-1.5 rounded">
-                                      <div className="flex items-center gap-2 truncate">
-                                        {file.type.startsWith('image/') ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                                        <span className="truncate">{file.name}</span>
-                                        <span className="text-muted-foreground/70 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
-                                      </div>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => {
-                                        setReceiptFiles(prev => prev.filter((_, i) => i !== index));
-                                      }} aria-label={`Remover ${file.name}`}>
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {receiptFiles.length === 0 && existingReceipts.length === 0 && (
-                              <p className="text-xs text-muted-foreground text-center py-2">Nenhum arquivo selecionado.</p>
-                            )}
                           </div>
                         )}
                       </div>
+                      
+                      {(existingReceipts.length > 0 || receiptFiles.length > 0) && expenseType === 'collective' && (
+                        <div className="space-y-2 pt-2">
+                          {existingReceipts.map(receipt => (
+                            <div key={receipt.id} className="flex items-center justify-between text-sm bg-background p-2 rounded-md border">
+                              <div className="flex items-center gap-2 truncate">
+                                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                <a href={receipt.url} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate pr-2">
+                                  {receipt.file_name || 'comprovante'}
+                                </a>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground/80 shrink-0">Salvo</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setExistingReceipts(prev => prev.filter(r => r.id !== receipt.id))}>
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {receiptFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between text-sm bg-background p-2 rounded-md border">
+                              <div className="flex items-center gap-2 truncate">
+                                {file.type.startsWith('image/') ? <ImageIcon className="h-4 w-4 text-muted-foreground" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
+                                <span className="truncate">{file.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground/80 shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setReceiptFiles(prev => prev.filter((_, i) => i !== index))} aria-label={`Remover ${file.name}`}>
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {receiptFiles.length > 1 && (
+                            <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setReceiptFiles([])}>
+                              Limpar todos
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
                       {editingType === "expense" && editingId && (
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Competência</Label>
