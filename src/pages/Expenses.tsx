@@ -655,207 +655,211 @@ export default function Expenses() {
         }
       }
 
-      if (editingType === "recurring" && editingId) {
-        const { error } = await supabase
-          .from("recurring_expenses")
-          .update({
+      try {
+        if (editingType === "recurring" && editingId) {
+          const { error } = await supabase.from("recurring_expenses").update({
             title: title.trim(),
+            description: description.trim() || null,
             amount: parseFloat(amount),
             category: categoryToSend,
-            description: description.trim() || null,
-            next_due_date: dateValue,
-            day_of_month: parseInt(dateValue.split("-")[2]),
-          })
-          .eq("id", editingId);
-        if (error) throw error;
-      } else if (editingType === "expense" && editingId) {
-        const originalExpense = allExpenses.find(e => e.id === editingId);
-        const originalReceipts = originalExpense?.expense_receipts || [];
-        const receiptsToDelete = originalReceipts.filter(orig => !existingReceipts.some(curr => curr.id === orig.id));
-
-        if (receiptsToDelete.length > 0) {
-            const idsToDelete = receiptsToDelete.map(r => r.id);
-            const pathsToDelete = receiptsToDelete.map(r => {
-                try {
-                    const url = new URL(r.url);
-                    const path = url.pathname.substring(url.pathname.indexOf('/receipts/') + '/receipts/'.length);
-                    return decodeURIComponent(path);
-                } catch (e) {
-                    console.error("Error parsing receipt URL for deletion:", e);
-                    return null;
-                }
-            }).filter((p): p is string => p !== null);
-
-            if (pathsToDelete.length > 0) {
-                await supabase.storage.from('receipts').remove(pathsToDelete);
-            }
-            await supabase.from('expense_receipts' as any).delete().in('id', idsToDelete);
-        }
-
-        const parsedAmount = parseFloat(amount);
-        const parsedInstallments = parseInt(installments) || 1;
-
-        const compKey = editCompetence?.trim()
-          ? editCompetence
-          : getCompetenceKeyFromDate(
-              new Date(`${dateValue}T12:00:00`),
-              finalCreditCardId && finalCreditCardId !== "none"
-                ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
-                : closingDay,
-            );
-
-        const { error } = await supabase
-          .from("expenses")
-          .update({
-            title: title.trim(),
-            description: description.trim() || null,
-            amount: parsedAmount,
-            category: categoryToSend,
+            expense_type: expenseType,
             payment_method: paymentMethod,
             credit_card_id: finalCreditCardId,
-            installments: parsedInstallments,
-            purchase_date: dateValue,
-            paid_to_provider: providerPaid,
-            due_date: paymentDate || null,
-            competence_key: compKey,
-          })
-          .eq("id", editingId);
-        if (error) throw error;
+            participant_user_ids: expenseType === "collective" && splitMode === "manual" ? effectiveParticipantIds : null,
+          }).eq("id", editingId);
+          if (error) throw error;
+          toast({ title: "Recorrência atualizada!" });
+        } else if (editingType === "expense" && editingId) {
+          const originalExpense = allExpenses.find(e => e.id === editingId);
+          const originalReceipts = originalExpense?.expense_receipts || [];
+          const receiptsToDelete = originalReceipts.filter(orig => !existingReceipts.some(curr => curr.id === orig.id));
 
-        if (uploadedReceipts.length > 0) {
-          const newReceiptRows = uploadedReceipts.map(r => ({ expense_id: editingId, ...r }));
-          await supabase.from("expense_receipts" as any).insert(newReceiptRows);
-        }
+          if (receiptsToDelete.length > 0) {
+              const idsToDelete = receiptsToDelete.map(r => r.id);
+              const pathsToDelete = receiptsToDelete.map(r => {
+                  try {
+                      const url = new URL(r.url);
+                      const path = url.pathname.substring(url.pathname.indexOf('/receipts/') + '/receipts/'.length);
+                      return decodeURIComponent(path);
+                  } catch (e) {
+                      console.error("Error parsing receipt URL for deletion:", e);
+                      return null;
+                  }
+              }).filter((p): p is string => p !== null);
 
-        const savedExpense = await fetchSavedExpense(editingId);
-        setDateValue(savedExpense.purchase_date);
-
-        if (editingOriginalAmount && parsedAmount !== editingOriginalAmount) {
-          const ratio = parsedAmount / editingOriginalAmount;
-          const { data: splits } = await supabase
-            .from("expense_splits")
-            .select("id, amount")
-            .eq("expense_id", editingId);
-          if (splits && splits.length > 0) {
-            for (const split of splits) {
-              await supabase
-                .from("expense_splits")
-                .update({ amount: Math.round(Number(split.amount) * ratio * 100) / 100 })
-                .eq("id", split.id);
-            }
+              if (pathsToDelete.length > 0) {
+                  await supabase.storage.from('receipts').remove(pathsToDelete);
+              }
+              await supabase.from('expense_receipts' as any).delete().in('id', idsToDelete);
           }
-        }
 
-        await supabase.from("expense_installments").delete().eq("expense_id", editingId);
+          const parsedAmount = parseFloat(amount);
+          const parsedInstallments = parseInt(installments) || 1;
 
-        if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
-          const card = cards.find((c) => c.id === finalCreditCardId);
-          if (card) {
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-              billBase.setMonth(billBase.getMonth() + 1);
-            }
+          const compKey = editCompetence?.trim()
+            ? editCompetence
+            : getCompetenceKeyFromDate(
+                new Date(`${dateValue}T12:00:00`),
+                finalCreditCardId && finalCreditCardId !== "none"
+                  ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
+                  : closingDay,
+              );
 
-            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
-            const installmentRows = [];
-            for (let i = 1; i <= parsedInstallments; i++) {
-              const installDate = new Date(billBase);
-              installDate.setMonth(installDate.getMonth() + (i - 1));
-              installmentRows.push({
-                user_id: user.id,
-                expense_id: editingId,
-                installment_number: i,
-                amount: perInstallment,
-                bill_month: installDate.getMonth() + 1,
-                bill_year: installDate.getFullYear(),
-              });
-            }
-            await supabase.from("expense_installments").insert(installmentRows);
-          }
-        }
-
-        if (expenseType === "collective" && splitMode === "manual") {
-          await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
-        }
-      } else {
-        const baseCreateExpenseArgs = {
-          _group_id: membership!.group_id,
-          _created_by: user.id,
-          _title: title.trim(),
-          _description: description.trim() || null,
-          _amount: parseFloat(amount),
-          _category: categoryToSend,
-          _expense_type: expenseType,
-          _due_date: null,
-          _receipt_url: null,
-          _recurring_expense_id: null,
-          _target_user_id: expenseType === "individual" ? user?.id : null,
-          _payment_method: paymentMethod,
-          _credit_card_id: finalCreditCardId,
-          _installments: parseInt(installments) || 1,
-          _purchase_date: dateValue,
-        };
-
-        const { data: newExpenseId, error: createError } = await supabase.rpc(
-          "create_expense_with_splits_v2" as any,
-          {
-            ...baseCreateExpenseArgs,
-            _participant_user_ids: expenseType === "collective" ? collectiveParticipantIds : individualParticipantIds,
-          },
-        );
-
-        if (createError) throw createError;
-
-        if (newExpenseId) {
-          await supabase
+          const { error } = await supabase
             .from("expenses")
             .update({
+              title: title.trim(),
+              description: description.trim() || null,
+              amount: parsedAmount,
+              category: categoryToSend,
+              payment_method: paymentMethod,
+              credit_card_id: finalCreditCardId,
+              installments: parsedInstallments,
+              purchase_date: dateValue,
               paid_to_provider: providerPaid,
               due_date: paymentDate || null,
+              competence_key: compKey,
             })
-            .eq("id", newExpenseId);
+            .eq("id", editingId);
+          if (error) throw error;
 
           if (uploadedReceipts.length > 0) {
-            const newReceiptRows = uploadedReceipts.map(r => ({ expense_id: newExpenseId as string, ...r }));
+            const newReceiptRows = uploadedReceipts.map(r => ({ expense_id: editingId, ...r }));
             await supabase.from("expense_receipts" as any).insert(newReceiptRows);
           }
-        }
 
-        if (newExpenseId && expenseType === "collective" && splitMode === "manual") {
-          await applyManualSplitSelection(newExpenseId as string, parseFloat(amount), effectiveParticipantIds, actualPayerId);
-        }
+          const savedExpense = await fetchSavedExpense(editingId);
+          setDateValue(savedExpense.purchase_date);
 
-        if (paidParticipantIds.length > 0 && paymentMethod !== "credit_card" && newExpenseId) {
-          await supabase
-            .from("expense_splits")
-            .update({ status: "paid", paid_at: new Date().toISOString() })
-            .eq("expense_id", newExpenseId)
-            .in("user_id", paidParticipantIds);
-        }
+          if (editingOriginalAmount && parsedAmount !== editingOriginalAmount) {
+            const ratio = parsedAmount / editingOriginalAmount;
+            const { data: splits } = await supabase
+              .from("expense_splits")
+              .select("id, amount")
+              .eq("expense_id", editingId);
+            if (splits && splits.length > 0) {
+              for (const split of splits) {
+                await supabase
+                  .from("expense_splits")
+                  .update({ amount: Math.round(Number(split.amount) * ratio * 100) / 100 })
+                  .eq("id", split.id);
+              }
+            }
+          }
 
-        if (isRecurring) {
-          const day = parseInt(recurrenceDay);
-          const nextMonthDate = new Date();
-          nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-          nextMonthDate.setDate(day);
+          await supabase.from("expense_installments").delete().eq("expense_id", editingId);
 
-          await supabase.from("recurring_expenses").insert({
-            group_id: membership.group_id,
-            created_by: user.id,
-            title: title.trim(),
-            description: description.trim() || null,
-            amount: parseFloat(amount),
-            category: categoryToSend,
-            frequency: "monthly",
-            day_of_month: day,
-            next_due_date: nextMonthDate.toISOString().split("T")[0],
-            active: true,
-            expense_type: expenseType,
-          } as any);
-          queryClient.invalidateQueries({ queryKey: ["recurring-expenses"] });
+          if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
+            const card = cards.find((c) => c.id === finalCreditCardId);
+            if (card) {
+              const closingDay = card.closing_day;
+              const purchaseDate = new Date(`${dateValue}T12:00:00`);
+              const billBase = new Date(purchaseDate);
+              if (purchaseDate.getDate() >= closingDay) {
+                billBase.setMonth(billBase.getMonth() + 1);
+              }
+
+              const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
+              const installmentRows = [];
+              for (let i = 1; i <= parsedInstallments; i++) {
+                const installDate = new Date(billBase);
+                installDate.setMonth(installDate.getMonth() + (i - 1));
+                installmentRows.push({
+                  user_id: user.id,
+                  expense_id: editingId,
+                  installment_number: i,
+                  amount: perInstallment,
+                  bill_month: installDate.getMonth() + 1,
+                  bill_year: installDate.getFullYear(),
+                });
+              }
+              await supabase.from("expense_installments").insert(installmentRows);
+            }
+          }
+
+          if (expenseType === "collective" && splitMode === "manual") {
+            await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
+          }
+        } else {
+          const baseCreateExpenseArgs = {
+            _group_id: membership!.group_id,
+            _created_by: user.id,
+            _title: title.trim(),
+            _description: description.trim() || null,
+            _amount: parseFloat(amount),
+            _category: categoryToSend,
+            _expense_type: expenseType,
+            _due_date: null,
+            _receipt_url: null,
+            _recurring_expense_id: null,
+            _target_user_id: expenseType === "individual" ? user?.id : null,
+            _payment_method: paymentMethod,
+            _credit_card_id: finalCreditCardId,
+            _installments: parseInt(installments) || 1,
+            _purchase_date: dateValue,
+          };
+
+          const { data: newExpenseId, error: createError } = await supabase.rpc(
+            "create_expense_with_splits_v2" as any,
+            {
+              ...baseCreateExpenseArgs,
+              _participant_user_ids: expenseType === "collective" ? collectiveParticipantIds : individualParticipantIds,
+            },
+          );
+
+          if (createError) throw createError;
+
+          if (newExpenseId) {
+            await supabase
+              .from("expenses")
+              .update({
+                paid_to_provider: providerPaid,
+                due_date: paymentDate || null,
+              })
+              .eq("id", newExpenseId);
+
+            if (uploadedReceipts.length > 0) {
+              const newReceiptRows = uploadedReceipts.map(r => ({ expense_id: newExpenseId as string, ...r }));
+              await supabase.from("expense_receipts" as any).insert(newReceiptRows);
+            }
+          }
+
+          if (newExpenseId && expenseType === "collective" && splitMode === "manual") {
+            await applyManualSplitSelection(newExpenseId as string, parseFloat(amount), effectiveParticipantIds, actualPayerId);
+          }
+
+          if (paidParticipantIds.length > 0 && paymentMethod !== "credit_card" && newExpenseId) {
+            await supabase
+              .from("expense_splits")
+              .update({ status: "paid", paid_at: new Date().toISOString() })
+              .eq("expense_id", newExpenseId)
+              .in("user_id", paidParticipantIds);
+          }
+
+          if (isRecurring) {
+            const day = parseInt(recurrenceDay);
+            const nextMonthDate = new Date();
+            nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+            nextMonthDate.setDate(day);
+
+            await supabase.from("recurring_expenses").insert({
+              group_id: membership.group_id,
+              created_by: user.id,
+              title: title.trim(),
+              description: description.trim() || null,
+              amount: parseFloat(amount),
+              category: categoryToSend,
+              frequency: "monthly",
+              day_of_month: day,
+              next_due_date: nextMonthDate.toISOString().split("T")[0],
+              active: true,
+              expense_type: expenseType,
+            } as any);
+            queryClient.invalidateQueries({ queryKey: ["recurring-expenses"] });
+          }
         }
+      } catch (err: any) {
+        toast({ title: "Erro", description: err.message, variant: "destructive" });
       }
     },
     onSuccess: () => {
@@ -1137,6 +1141,7 @@ export default function Expenses() {
 
   const actualPayerId = payerUserId === "me" ? user?.id : payerUserId;
   const participantsToPay = participantOptions.filter(p => effectiveParticipantIds.includes(p.id) && p.id !== actualPayerId);
+  const isSaveDisabled = createOrUpdateExpense.isPending || !title.trim() || !amount || parseFloat(amount) <= 0;
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
