@@ -46,6 +46,7 @@ import {
   X,
   Image as ImageIcon,
   FileText,
+  ArrowRight,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1207,6 +1208,7 @@ export default function Expenses() {
         icon={<Receipt className="h-4 w-4" />}
         actions={
           <div className="flex w-full flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            {/* Month Selector */}
             <div className="flex h-10 w-full sm:w-auto items-center justify-between rounded-lg border bg-card p-1 shadow-sm">
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={prevMonth}>
                 <ChevronLeft className="h-4 w-4" />
@@ -1705,25 +1707,23 @@ export default function Expenses() {
         <Dialog open={!!viewingReceipts} onOpenChange={(open) => !open && setViewingReceipts(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Comprovantes</DialogTitle>
+              <DialogTitle>Comprovantes da Despesa</DialogTitle>
             </DialogHeader>
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {(viewingReceipts || []).map(receipt => (
+            <div className="py-4 space-y-2 max-h-[60vh] overflow-y-auto">
+              {viewingReceipts?.map(receipt => (
                 <a 
                   key={receipt.id} 
                   href={receipt.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-2 border rounded-md hover:bg-muted transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted transition-colors"
                 >
-                  {receipt.mime_type.startsWith('image/') ? (
-                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                  )}
-                  <span className="flex-1 truncate text-sm font-medium text-primary">
-                    {receipt.file_name || 'Ver comprovante'}
-                  </span>
+                  {receipt.mime_type.startsWith('image/') ? <ImageIcon className="h-5 w-5 text-muted-foreground" /> : <FileText className="h-5 w-5 text-muted-foreground" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{receipt.file_name || 'comprovante'}</p>
+                    <p className="text-xs text-muted-foreground">{receipt.mime_type}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </a>
               ))}
             </div>
@@ -1910,6 +1910,15 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
 
   const isInstallment = expense._is_installment && expense.installments > 1;
   const displayAmount = isInstallment ? expense._installment_amount : expense.amount;
+  const receipts = expense.expense_receipts || [];
+
+  const handleViewReceipts = () => {
+    if (receipts.length === 1) {
+      window.open(receipts[0].url, '_blank', 'noopener,noreferrer');
+    } else if (receipts.length > 1) {
+      onViewReceipts(receipts);
+    }
+  };
 
   return (
     <Card id={`expense-${expense.id}`}>
@@ -1994,6 +2003,11 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
           </div>
           {canManage && (
             <div className="flex flex-col gap-1 ml-2">
+              {receipts.length > 0 && (
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleViewReceipts} aria-label="Ver comprovantes da despesa">
+                  <ImageIcon className="h-4 w-4" />
+                </Button>
+              )}
               <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit} aria-label="Editar despesa">
                 <Edit className="h-4 w-4" />
               </Button>
