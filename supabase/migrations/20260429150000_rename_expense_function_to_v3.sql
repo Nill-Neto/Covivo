@@ -1,0 +1,1 @@
+ALTER FUNCTION public.create_expense_with_splits_v2 RENAME TO v3_create_expense_with_splits;
