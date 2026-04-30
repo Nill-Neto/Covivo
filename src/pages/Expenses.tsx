@@ -1914,35 +1914,25 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
   return (
     <Card id={`expense-${expense.id}`} className="transition-all hover:shadow-md">
       <CardContent className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-4 gap-y-2 items-start">
+        <div className="flex justify-between items-start gap-4">
           {/* Left Column */}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <p className="font-semibold text-base">{expense.title}</p>
-              <Badge variant="outline" className="text-xs">{catLabel}</Badge>
-              <Badge
-                variant={expense.expense_type === "collective" ? "default" : "secondary"}
-                className="text-xs"
-              >
-                {expense.expense_type === "collective" ? "Coletiva" : "Individual"}
-              </Badge>
-              {isInstallment && (
-                <Badge variant="outline" className="text-xs border-primary/50 text-primary">
-                  Parcela {expense._installment_number}/{expense.installments}
-                </Badge>
-              )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <p className="font-semibold text-base truncate" title={expense.title}>{expense.title}</p>
+              <Badge variant="outline" className="text-xs shrink-0">{catLabel}</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" /> {format(parseLocalDate(expense.purchase_date), "dd/MM/yyyy")}
               </span>
-              <Badge variant={expense.paid_to_provider ? "default" : "secondary"} className="text-[10px] font-medium">
-                {expense.paid_to_provider ? "Paga ao fornecedor" : "Pendente com fornecedor"}
-              </Badge>
-              {expense.payment_method === "credit_card" && (
+              {isInstallment && (
+                <Badge variant="outline" className="text-xs border-primary/50 text-primary">
+                  Parcela {expense._installment_number}/{expense.installments}
+                </Badge>
+              )}
+              {expense.payment_method === "credit_card" && cardLabel && (
                 <span className="flex items-center gap-1.5">
-                  <CreditCard className="h-3.5 w-3.5" /> {cardLabel}{" "}
-                  {expense.installments > 1 && `(${expense.installments}x)`}
+                  <CreditCard className="h-3.5 w-3.5" /> {cardLabel}
                 </span>
               )}
             </div>
@@ -1954,20 +1944,14 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
           </div>
 
           {/* Right Column */}
-          <div className="flex flex-col items-stretch sm:items-end gap-2">
-            <div className="text-left sm:text-right">
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="text-right">
               <p className="text-xl font-bold">R$ {Number(displayAmount).toFixed(2)}</p>
               {isInstallment && (
                 <p className="text-xs text-muted-foreground">Total: R$ {Number(expense.amount).toFixed(2)}</p>
               )}
-              {mySplit && expense.expense_type === "collective" && (
-                <Badge variant="secondary" className="text-xs mt-1">
-                  Sua parte: R$ {Number(mySplit.amount).toFixed(2)}
-                </Badge>
-              )}
             </div>
-            
-            <div className="flex items-center justify-start sm:justify-end gap-1">
+            <div className="flex items-center justify-end gap-1">
               {expense.expense_receipts && expense.expense_receipts.length > 0 && (
                 <Button
                   variant="ghost"
@@ -2016,17 +2000,38 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
                 </>
               )}
             </div>
-            {!expense.paid_to_provider && canManage && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-1 h-8 text-xs w-full sm:w-auto"
-                onClick={onRegisterPayment}
-              >
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Registrar pagamento
-              </Button>
-            )}
           </div>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="mt-3 pt-3 border-t flex justify-between items-center text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+                <Badge
+                    variant={expense.expense_type === "collective" ? "default" : "secondary"}
+                >
+                    {expense.expense_type === "collective" ? "Coletiva" : "Individual"}
+                </Badge>
+                {mySplit && expense.expense_type === "collective" && (
+                    <Badge variant="secondary">
+                      Sua parte: R$ {Number(mySplit.amount).toFixed(2)}
+                    </Badge>
+                )}
+            </div>
+            <div className="flex items-center gap-2">
+                <Badge variant={expense.paid_to_provider ? "default" : "secondary"} className="text-[10px] font-medium">
+                    {expense.paid_to_provider ? "Paga ao fornecedor" : "Pendente com fornecedor"}
+                </Badge>
+                {!expense.paid_to_provider && canManage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={onRegisterPayment}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Pagar
+                  </Button>
+                )}
+            </div>
         </div>
       </CardContent>
     </Card>
