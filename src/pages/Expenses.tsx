@@ -45,6 +45,7 @@ import {
   Search,
   X,
   Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -141,6 +142,7 @@ export default function Expenses() {
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
   const [existingReceipts, setExistingReceipts] = useState<ExpenseReceipt[]>([]);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
 
   const [quickPayExpense, setQuickPayExpense] = useState<ExpenseRow | null>(null);
   const [quickPayerUserId, setQuickPayerUserId] = useState<string>("me");
@@ -383,28 +385,35 @@ export default function Expenses() {
     const files = e.target.files ? Array.from(e.target.files) : [];
     if (files.length === 0) {
       setReceiptFiles([]);
+      setReceiptError(null);
       return;
     }
 
-    const pdfFiles = files.filter(file => file.type === 'application/pdf');
-    const imgFiles = files.filter(file => file.type.startsWith('image/'));
+    const uniqueFiles = files.filter((file, index, self) =>
+      index === self.findIndex((f) => (
+        f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+      ))
+    );
+
+    const pdfFiles = uniqueFiles.filter(file => file.type === 'application/pdf');
+    const imgFiles = uniqueFiles.filter(file => file.type.startsWith('image/'));
 
     if (pdfFiles.length > 0) {
-      if (files.length > 1) {
-        toast({ title: "Seleção inválida", description: "Se incluir um PDF, ele deve ser o único arquivo.", variant: "destructive" });
+      if (uniqueFiles.length > 1) {
+        setReceiptError("Se incluir um PDF, ele deve ser o único arquivo.");
         e.target.value = '';
-        setReceiptFiles([]);
         return;
       }
     } else {
-      if (imgFiles.length !== files.length) {
-        toast({ title: "Seleção inválida", description: "Apenas arquivos de imagem ou um único PDF são permitidos.", variant: "destructive" });
+      if (imgFiles.length !== uniqueFiles.length) {
+        setReceiptError("Apenas arquivos de imagem ou um único PDF são permitidos.");
         e.target.value = '';
-        setReceiptFiles([]);
         return;
       }
     }
-    setReceiptFiles(files);
+
+    setReceiptFiles(uniqueFiles);
+    setReceiptError(null);
   };
 
   const instantSummary = useMemo(() => {
@@ -783,7 +792,7 @@ export default function Expenses() {
       } else {
         const baseCreateExpenseArgs = {
           _group_id: membership!.group_id,
-          _created_by: user.id, // Adicionado para corrigir o erro de credor_user_id nulo
+          _created_by: user.id,
           _title: title.trim(),
           _description: description.trim() || null,
           _amount: parseFloat(amount),
@@ -1255,7 +1264,18 @@ export default function Expenses() {
                 <div className="space-y-3">
                   <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
                     <Label className="text-base font-medium">1. Tipo</Label>
-                    <Select value={expenseType} onValueChange={(v) => setExpenseType(v as any)} disabled={!!editingId}>
+                    <Select
+                      value={expenseType}
+                      onValueChange={(v) => {
+                        const newType = v as 'collective' | 'individual';
+                        setExpenseType(newType);
+                        if (newType === 'individual') {
+                          setReceiptFiles([]);
+                          setReceiptError(null);
+                        }
+                      }}
+                      disabled={!!editingId}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {isAdmin && (
@@ -1377,22 +1397,26 @@ export default function Expenses() {
                             onChange={(e) => setDateValue(e.target.value)}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Comprovante(s)</Label>
-                          <Input
-                            type="file"
-                            accept="image/*,.pdf"
-                            multiple
-                            onChange={handleFileChange}
-                          />
-                          <div className="space-y-2 pt-2">
+                        {expenseType === 'collective' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Comprovante(s)</Label>
+                            <Input
+                              type="file"
+                              accept="image/*,.pdf"
+                              multiple
+                              onChange={handleFileChange}
+                            />
+                            <p className="text-xs text-muted-foreground">Envie 1 PDF ou múltiplas imagens.</p>
+                            {receiptError && <p className="text-sm text-destructive">{receiptError}</p>}
+                            
                             {existingReceipts.length > 0 && (
-                              <div>
+                              <div className="mt-2">
                                 <p className="text-xs font-medium text-muted-foreground">Comprovantes atuais:</p>
                                 <div className="space-y-1">
                                   {existingReceipts.map(receipt => (
                                     <div key={receipt.id} className="flex items-center justify-between text-xs bg-muted/50 p-1.5 rounded">
-                                      <a href={receipt.url} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate pr-2">
+                                      <a href={receipt.url} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate pr-2 flex items-center gap-2">
+                                        <ImageIcon className="h-4 w-4" />
                                         {receipt.file_name || 'comprovante'}
                                       </a>
                                       <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => {
@@ -1407,14 +1431,23 @@ export default function Expenses() {
                             )}
                             {receiptFiles.length > 0 && (
                               <div className="mt-2">
-                                <p className="text-xs font-medium text-muted-foreground">Novos comprovantes:</p>
+                                <div className="flex justify-between items-center">
+                                  <p className="text-xs font-medium text-muted-foreground">Novos comprovantes:</p>
+                                  {receiptFiles.length > 1 && (
+                                    <Button variant="ghost" size="sm" className="text-xs h-auto py-0" onClick={() => setReceiptFiles([])}>Limpar todos</Button>
+                                  )}
+                                </div>
                                 <div className="space-y-1">
                                   {receiptFiles.map((file, index) => (
                                     <div key={index} className="flex items-center justify-between text-xs bg-muted/50 p-1.5 rounded">
-                                      <span className="truncate pr-2">{file.name}</span>
+                                      <div className="flex items-center gap-2 truncate">
+                                        {file.type.startsWith('image/') ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                        <span className="truncate">{file.name}</span>
+                                        <span className="text-muted-foreground/70 shrink-0">({(file.size / 1024).toFixed(1)} KB)</span>
+                                      </div>
                                       <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => {
                                         setReceiptFiles(prev => prev.filter((_, i) => i !== index));
-                                      }}>
+                                      }} aria-label={`Remover ${file.name}`}>
                                         <X className="h-3 w-3" />
                                       </Button>
                                     </div>
@@ -1422,8 +1455,11 @@ export default function Expenses() {
                                 </div>
                               </div>
                             )}
+                            {receiptFiles.length === 0 && existingReceipts.length === 0 && (
+                              <p className="text-xs text-muted-foreground text-center py-2">Nenhum arquivo selecionado.</p>
+                            )}
                           </div>
-                        </div>
+                        )}
                       </div>
                       {editingType === "expense" && editingId && (
                         <div className="space-y-2">
