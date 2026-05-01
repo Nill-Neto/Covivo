@@ -180,6 +180,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          credor_user_id: string
           expense_id: string
           id: string
           paid_at: string | null
@@ -189,6 +190,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          credor_user_id: string
           expense_id: string
           id?: string
           paid_at?: string | null
@@ -198,6 +200,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          credor_user_id?: string
           expense_id?: string
           id?: string
           paid_at?: string | null
