@@ -56,6 +56,26 @@ import { PageHero } from "@/components/layout/PageHero";
 import { RegisterPaymentModal } from "@/components/expenses/RegisterPaymentModal";
 import type { Tables } from "@/integrations/supabase/types";
 
+const validateReceiptFiles = (files: File[]) => {
+  if (files.length === 0) return { valid: true as const };
+  const hasPdf = files.some((file) => file.type === "application/pdf");
+  if (hasPdf) {
+    if (files.length !== 1) {
+      return { valid: false as const, message: "Se enviar PDF, selecione apenas 1 arquivo PDF." };
+    }
+    const onlyFile = files[0];
+    if (onlyFile.type !== "application/pdf") {
+      return { valid: false as const, message: "PDF inválido. Use um arquivo com tipo application/pdf." };
+    }
+    return { valid: true as const };
+  }
+  const hasInvalid = files.some((file) => !file.type.startsWith("image/"));
+  if (hasInvalid) {
+    return { valid: false as const, message: "Sem PDF, todos os arquivos devem ser imagens." };
+  }
+  return { valid: true as const };
+};
+
 const CATEGORIES = [
   { value: "rent", label: "Aluguel" },
   { value: "utilities", label: "Contas (Luz/Água/Gás)" },
