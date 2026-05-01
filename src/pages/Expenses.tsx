@@ -154,6 +154,10 @@ export default function Expenses() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [viewingReceipts, setViewingReceipts] = useState<ExpenseReceipt[] | null>(null);
 
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterCard, setFilterCard] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
@@ -1010,6 +1014,49 @@ export default function Expenses() {
   const finalFilteredCollective = filteredCollective.filter(filterBySearch);
   const finalRecurring = recurringExpenses?.filter(filterBySearch);
 
+  const processedExpenses = useMemo(() => {
+    const applyFiltersAndSorting = (expenses: ExpenseRow[]) => {
+      let filtered = expenses;
+
+      if (filterCategory !== "all") {
+        filtered = filtered.filter(e => e.category === filterCategory);
+      }
+
+      if (filterCard !== "all") {
+        if (filterCard === "none") {
+          filtered = filtered.filter(e => e.payment_method !== "credit_card" || !e.credit_card_id);
+        } else {
+          filtered = filtered.filter(e => e.credit_card_id === filterCard);
+        }
+      }
+
+      const sorted = [...filtered].sort((a, b) => {
+        switch (sortOrder) {
+          case "newest":
+            return new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime();
+          case "oldest":
+            return new Date(a.purchase_date).getTime() - new Date(b.purchase_date).getTime();
+          case "amount-desc":
+            return b.amount - a.amount;
+          case "amount-asc":
+            return a.amount - b.amount;
+          case "title-asc":
+            return a.title.localeCompare(b.title);
+          default:
+            return 0;
+        }
+      });
+
+      return sorted;
+    };
+
+    return {
+      all: applyFiltersAndSorting(finalFilteredAll),
+      mine: applyFiltersAndSorting(finalFilteredMine),
+      collective: applyFiltersAndSorting(finalFilteredCollective),
+    };
+  }, [finalFilteredAll, finalFilteredMine, finalFilteredCollective, filterCategory, filterCard, sortOrder]);
+
   useEffect(() => {
     if (location.hash) {
       const id = location.hash.substring(1);
@@ -1623,27 +1670,75 @@ export default function Expenses() {
         </TabsList>
       )}
 
-      <div className="relative z-20">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar despesas..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-            className="pl-9 pr-9 bg-card"
-          />
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      <div className="relative z-20 space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar despesas..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+              className="pl-9 pr-9 bg-card"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Mais recentes</SelectItem>
+                <SelectItem value="oldest">Mais antigas</SelectItem>
+                <SelectItem value="amount-desc">Maior valor</SelectItem>
+                <SelectItem value="amount-asc">Menor valor</SelectItem>
+                <SelectItem value="title-asc">A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+                <Select value={filterCard} onValueChange={setFilterCard}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por cartão" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos os cartões</SelectItem>
+                    <SelectItem value="none">Nenhum (outros pagamentos)</SelectItem>
+                    {cards.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                        {c.label}
+                    </SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+            </div>
+        </div>
+        
         
         {isSearchFocused && debouncedSearch && globalSearchResults.length > 0 && (
           <Card className="absolute top-full left-0 right-0 mt-1 shadow-lg border-border overflow-hidden">
@@ -1719,8 +1814,8 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="collective" className="space-y-3 mt-4">
-        {finalFilteredCollective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
-        {finalFilteredCollective.map((e) => (
+        {processedExpenses.collective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
+        {processedExpenses.collective.map((e) => (
           <ExpenseCard
             key={e.id}
             expense={e}
