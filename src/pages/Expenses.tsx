@@ -2169,35 +2169,3 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
     </Card>
   );
 }
-  const validateReceiptFiles = (files: File[]) => {
-    if (files.length === 0) return { valid: true as const };
-    const hasPdf = files.some((file) => file.type === "application/pdf");
-    if (hasPdf) {
-      if (files.length !== 1) {
-        return { valid: false as const, message: "Se enviar PDF, selecione apenas 1 arquivo PDF." };
-      }
-      const onlyFile = files[0];
-      if (onlyFile.type !== "application/pdf") {
-        return { valid: false as const, message: "PDF inválido. Use um arquivo com tipo application/pdf." };
-      }
-      return { valid: true as const };
-    }
-    const hasInvalid = files.some((file) => !file.type.startsWith("image/"));
-    if (hasInvalid) {
-      return { valid: false as const, message: "Sem PDF, todos os arquivos devem ser imagens." };
-    }
-    return { valid: true as const };
-  };
-
-  const uploadReceiptFiles = async (files: File[], userId: string) => {
-    const uploadedReceipts: Array<{ url: string; mime_type: string; position: number }> = [];
-    for (const [index, file] of files.entries()) {
-      const ext = file.name.split(".").pop() ?? (file.type === "application/pdf" ? "pdf" : "jpg");
-      const path = `${userId}/${Date.now()}_expense_${index}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("receipts").upload(path, file);
-      if (uploadError) throw uploadError;
-      const { data: publicUrlData } = supabase.storage.from("receipts").getPublicUrl(path);
-      uploadedReceipts.push({ url: publicUrlData.publicUrl, mime_type: file.type || "application/octet-stream", position: index });
-    }
-    return uploadedReceipts;
-  };
