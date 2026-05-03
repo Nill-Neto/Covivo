@@ -1896,7 +1896,7 @@ export default function Expenses() {
       </div>
 
       <TabsContent value="all" className="mt-4">
-        <ScrollArea className="h-[60vh] pr-4">
+        <ScrollArea className="h-[45vh] pr-4">
           <div className="space-y-3">
             {processedExpenses.all.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
             {processedExpenses.all.map((e) => (
@@ -1917,7 +1917,7 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="mine" className="mt-4">
-        <ScrollArea className="h-[60vh] pr-4">
+        <ScrollArea className="h-[45vh] pr-4">
           <div className="space-y-3">
             {processedExpenses.mine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
             {processedExpenses.mine.map((e) => (
@@ -1938,7 +1938,7 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="collective" className="mt-4">
-        <ScrollArea className="h-[60vh] pr-4">
+        <ScrollArea className="h-[45vh] pr-4">
           <div className="space-y-3">
             {processedExpenses.collective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
             {processedExpenses.collective.map((e) => (
@@ -1959,7 +1959,7 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="recurring" className="mt-4">
-        <ScrollArea className="h-[60vh] pr-4">
+        <ScrollArea className="h-[45vh] pr-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50">
               <div>
