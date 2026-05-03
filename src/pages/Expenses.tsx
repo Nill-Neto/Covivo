@@ -54,6 +54,7 @@ import { PageHero } from "@/components/layout/PageHero";
 import { RegisterPaymentModal } from "@/components/expenses/RegisterPaymentModal";
 import { MonthNavigator } from "@/components/ui/MonthNavigator";
 import type { Tables } from "@/integrations/supabase/types";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const validateReceiptFiles = (files: File[]) => {
   if (files.length === 0) return { valid: true as const };
@@ -1464,7 +1465,7 @@ export default function Expenses() {
                           </Select>
                         </div>
                       </div>
-
+                      
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Data da Compra</Label>
@@ -1894,75 +1895,91 @@ export default function Expenses() {
         )}
       </div>
 
-      <TabsContent value="all" className="space-y-3 mt-4">
-        {processedExpenses.all.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
-        {processedExpenses.all.map((e) => (
-          <ExpenseCard
-            key={e.id}
-            expense={e}
-            userId={user?.id}
-            isAdmin={isAdmin}
-            cards={cards}
-            onEdit={() => handleEditClick(e)}
-            onDelete={() => handleDeleteClick(e)}
-            onRegisterPayment={() => setQuickPayExpense(e)}
-            onViewReceipts={setViewingReceipts}
-          />
-        ))}
-      </TabsContent>
-
-      <TabsContent value="mine" className="space-y-3 mt-4">
-        {processedExpenses.mine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
-        {processedExpenses.mine.map((e) => (
-          <ExpenseCard
-            key={e.id}
-            expense={e}
-            userId={user?.id}
-            isAdmin={isAdmin}
-            cards={cards}
-            onEdit={() => handleEditClick(e)}
-            onDelete={() => handleDeleteClick(e)}
-            onRegisterPayment={() => setQuickPayExpense(e)}
-            onViewReceipts={setViewingReceipts}
-          />
-        ))}
-      </TabsContent>
-
-      <TabsContent value="collective" className="space-y-3 mt-4">
-        {processedExpenses.collective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
-        {processedExpenses.collective.map((e) => (
-          <ExpenseCard
-            key={e.id}
-            expense={e}
-            userId={user?.id}
-            isAdmin={isAdmin}
-            cards={cards}
-            onEdit={() => handleEditClick(e)}
-            onDelete={() => handleDeleteClick(e)}
-            onRegisterPayment={() => setQuickPayExpense(e)}
-            onViewReceipts={setViewingReceipts}
-          />
-        ))}
-      </TabsContent>
-
-      <TabsContent value="recurring" className="space-y-3 mt-4">
-        <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50 mb-4">
-          <div>
-            <h3 className="text-sm font-medium">Despesas Recorrentes</h3>
-            <p className="text-xs text-muted-foreground">Contas mensais fixas e assinaturas</p>
+      <TabsContent value="all" className="mt-4">
+        <ScrollArea className="h-[60vh] pr-4">
+          <div className="space-y-3">
+            {processedExpenses.all.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
+            {processedExpenses.all.map((e) => (
+              <ExpenseCard
+                key={e.id}
+                expense={e}
+                userId={user?.id}
+                isAdmin={isAdmin}
+                cards={cards}
+                onEdit={() => handleEditClick(e)}
+                onDelete={() => handleDeleteClick(e)}
+                onRegisterPayment={() => setQuickPayExpense(e)}
+                onViewReceipts={setViewingReceipts}
+              />
+            ))}
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/recurring">
-              <Settings className="mr-2 h-3.5 w-3.5" />
-              Gerenciar
-            </Link>
-          </Button>
-        </div>
+        </ScrollArea>
+      </TabsContent>
 
-        {!processedRecurringExpenses?.length && <p className="text-center text-muted-foreground py-8">Nenhuma recorrência configurada.</p>}
-        {processedRecurringExpenses?.map((r) => (
-          <RecurringCard key={r.id} recurring={r} isAdmin={isAdmin} userId={user?.id} onEdit={() => openEditRecurring(r)} onDelete={() => deleteRecurring.mutate(r.id)} />
-        ))}
+      <TabsContent value="mine" className="mt-4">
+        <ScrollArea className="h-[60vh] pr-4">
+          <div className="space-y-3">
+            {processedExpenses.mine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
+            {processedExpenses.mine.map((e) => (
+              <ExpenseCard
+                key={e.id}
+                expense={e}
+                userId={user?.id}
+                isAdmin={isAdmin}
+                cards={cards}
+                onEdit={() => handleEditClick(e)}
+                onDelete={() => handleDeleteClick(e)}
+                onRegisterPayment={() => setQuickPayExpense(e)}
+                onViewReceipts={setViewingReceipts}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      </TabsContent>
+
+      <TabsContent value="collective" className="mt-4">
+        <ScrollArea className="h-[60vh] pr-4">
+          <div className="space-y-3">
+            {processedExpenses.collective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
+            {processedExpenses.collective.map((e) => (
+              <ExpenseCard
+                key={e.id}
+                expense={e}
+                userId={user?.id}
+                isAdmin={isAdmin}
+                cards={cards}
+                onEdit={() => handleEditClick(e)}
+                onDelete={() => handleDeleteClick(e)}
+                onRegisterPayment={() => setQuickPayExpense(e)}
+                onViewReceipts={setViewingReceipts}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      </TabsContent>
+
+      <TabsContent value="recurring" className="mt-4">
+        <ScrollArea className="h-[60vh] pr-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50">
+              <div>
+                <h3 className="text-sm font-medium">Despesas Recorrentes</h3>
+                <p className="text-xs text-muted-foreground">Contas mensais fixas e assinaturas</p>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/recurring">
+                  <Settings className="mr-2 h-3.5 w-3.5" />
+                  Gerenciar
+                </Link>
+              </Button>
+            </div>
+
+            {!processedRecurringExpenses?.length && <p className="text-center text-muted-foreground py-8">Nenhuma recorrência configurada.</p>}
+            {processedRecurringExpenses?.map((r) => (
+              <RecurringCard key={r.id} recurring={r} isAdmin={isAdmin} userId={user?.id} onEdit={() => openEditRecurring(r)} onDelete={() => deleteRecurring.mutate(r.id)} />
+            ))}
+          </div>
+        </ScrollArea>
       </TabsContent>
     </div>
     </Tabs>
