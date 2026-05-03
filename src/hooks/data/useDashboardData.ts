@@ -385,6 +385,7 @@ export function useDashboardData() {
       cycleEnd,
       cycleLimitDate,
       closingDay,
+      currentCompetenceKey,
 
       // Collective data
       totalMonthExpenses,
