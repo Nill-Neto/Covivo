@@ -653,35 +653,28 @@ export default function Expenses() {
     return data as Pick<ExpenseRow, "id" | "purchase_date">;
   };
 
-  const createOrUpdateInstallments = async (expenseId: string, parsedAmount: number, parsedInstallments: number, finalCreditCardId: string | null) => {
+  const createOrUpdateInstallments = async (expenseId: string, parsedAmount: number, parsedInstallments: number, compKey: string) => {
     await supabase.from("expense_installments").delete().eq("expense_id", expenseId);
 
-    if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
-        const card = cards.find((c) => c.id === finalCreditCardId);
-        if (card) {
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-                billBase.setMonth(billBase.getMonth() + 1);
-            }
+    if (paymentMethod === "credit_card" && parsedInstallments > 0) {
+        const [year, month] = compKey.split('-').map(Number);
+        const billBase = new Date(year, month - 1, 1);
 
-            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
-            const installmentRows = [];
-            for (let i = 1; i <= parsedInstallments; i++) {
-                const installDate = new Date(billBase);
-                installDate.setMonth(installDate.getMonth() + (i - 1));
-                installmentRows.push({
-                    user_id: user!.id,
-                    expense_id: expenseId,
-                    installment_number: i,
-                    amount: perInstallment,
-                    bill_month: installDate.getMonth() + 1,
-                    bill_year: installDate.getFullYear(),
-                });
-            }
-            await supabase.from("expense_installments").insert(installmentRows);
+        const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
+        const installmentRows = [];
+        for (let i = 1; i <= parsedInstallments; i++) {
+            const installDate = new Date(billBase);
+            installDate.setMonth(installDate.getMonth() + (i - 1));
+            installmentRows.push({
+                user_id: user!.id,
+                expense_id: expenseId,
+                installment_number: i,
+                amount: perInstallment,
+                bill_month: installDate.getMonth() + 1,
+                bill_year: installDate.getFullYear(),
+            });
         }
+        await supabase.from("expense_installments").insert(installmentRows);
     }
   };
 
