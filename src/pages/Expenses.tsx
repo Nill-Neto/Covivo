@@ -878,37 +878,41 @@ export default function Expenses() {
 
         if (createError) throw createError;
 
-        if (newExpenseId && paymentMethod === "credit_card" && finalCreditCardId && (parseInt(installments) || 1) > 0) {
-          const card = cards.find((c) => c.id === finalCreditCardId);
-          if (card) {
-            const parsedAmount = parseFloat(amount);
-            const parsedInstallments = parseInt(installments) || 1;
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-              billBase.setMonth(billBase.getMonth() + 1);
-            }
-
-            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
-            const installmentRows = [];
-            for (let i = 1; i <= parsedInstallments; i++) {
-              const installDate = new Date(billBase);
-              installDate.setMonth(installDate.getMonth() + (i - 1));
-              installmentRows.push({
-                user_id: user.id,
-                expense_id: newExpenseId,
-                installment_number: i,
-                amount: perInstallment,
-                bill_month: installDate.getMonth() + 1,
-                bill_year: installDate.getFullYear(),
-              });
-            }
-            await supabase.from("expense_installments").insert(installmentRows);
-          }
-        }
-
         if (newExpenseId) {
+          // First, delete any installments potentially created by the RPC
+          await supabase.from("expense_installments").delete().eq("expense_id", newExpenseId);
+
+          // Then, create the correct installments from the frontend
+          if (paymentMethod === "credit_card" && finalCreditCardId && (parseInt(installments) || 1) > 0) {
+            const card = cards.find((c) => c.id === finalCreditCardId);
+            if (card) {
+              const parsedAmount = parseFloat(amount);
+              const parsedInstallments = parseInt(installments) || 1;
+              const closingDay = card.closing_day;
+              const purchaseDate = new Date(`${dateValue}T12:00:00`);
+              const billBase = new Date(purchaseDate);
+              if (purchaseDate.getDate() >= closingDay) {
+                billBase.setMonth(billBase.getMonth() + 1);
+              }
+
+              const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
+              const installmentRows = [];
+              for (let i = 1; i <= parsedInstallments; i++) {
+                const installDate = new Date(billBase);
+                installDate.setMonth(installDate.getMonth() + (i - 1));
+                installmentRows.push({
+                  user_id: user.id,
+                  expense_id: newExpenseId,
+                  installment_number: i,
+                  amount: perInstallment,
+                  bill_month: installDate.getMonth() + 1,
+                  bill_year: installDate.getFullYear(),
+                });
+              }
+              await supabase.from("expense_installments").insert(installmentRows);
+            }
+          }
+          
           await supabase
             .from("expenses")
             .update({
