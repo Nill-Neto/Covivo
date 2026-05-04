@@ -840,6 +840,15 @@ export default function Expenses() {
           await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
         }
       } else {
+        const cardClosingDay = paymentMethod === 'credit_card' && finalCreditCardId
+          ? cards.find(c => c.id === finalCreditCardId)?.closing_day
+          : null;
+
+        const competenceKey = getCompetenceKeyFromDate(
+          new Date(`${dateValue}T12:00:00Z`),
+          cardClosingDay ?? closingDay
+        );
+
         const baseCreateExpenseArgs = {
           _group_id: membership!.group_id,
           _created_by: actualPayerId,
@@ -856,6 +865,7 @@ export default function Expenses() {
           _credit_card_id: finalCreditCardId,
           _installments: parseInt(installments) || 1,
           _purchase_date: dateValue,
+          _competence_key: competenceKey,
         };
 
         const { data: newExpenseId, error: createError } = await supabase.rpc(
