@@ -67,7 +67,14 @@ const validateReceiptFiles = (files: File[]) => {
     if (onlyFile.type !== "application/pdf") {
       return { valid: false as const, message: "PDF inválido. Use um arquivo com tipo application/pdf." };
     }
-    return { valid: true as const };
+    return<think>**Addressing the Errors**
+
+\n\n
+
+I've pinpointed the source of the TypeScript errors: an unintended inclusion of a `<think>` block within the `Checkbox` component's JSX in `src/pages/Expenses.tsx`. My current focus is on safely removing the problematic code, specifically the erroneous `<think>` tags and their content. After this removal, I'll move on to padding and height adjustments for `ScrollArea` instances as previously planned.
+
+
+</think> { valid: true as const };
   }
   const hasInvalid = files.some((file) => !file.type.startsWith("image/"));
   if (hasInvalid) {
@@ -1936,7 +1943,7 @@ export default function Expenses() {
       </div>
 
       <TabsContent value="all" className="mt-4">
-        <ScrollArea className="h-[65vh] pr-4">
+        <ScrollArea className="h-[75vh] pr-4">
           <div className="space-y-3">
             {processedExpenses.all.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada nesta competência.</p>}
             {processedExpenses.all.map((e) => (
@@ -1957,7 +1964,7 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="mine" className="mt-4">
-        <ScrollArea className="h-[65vh] pr-4">
+        <ScrollArea className="h-[75vh] pr-4">
           <div className="space-y-3">
             {processedExpenses.mine.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa individual encontrada nesta competência.</p>}
             {processedExpenses.mine.map((e) => (
@@ -1978,7 +1985,7 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="collective" className="mt-4">
-        <ScrollArea className="h-[65vh] pr-4">
+        <ScrollArea className="h-[75vh] pr-4">
           <div className="space-y-3">
             {processedExpenses.collective.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma despesa coletiva encontrada nesta competência.</p>}
             {processedExpenses.collective.map((e) => (
@@ -1999,7 +2006,7 @@ export default function Expenses() {
       </TabsContent>
 
       <TabsContent value="recurring" className="mt-4">
-        <ScrollArea className="h-[65vh] pr-4">
+        <ScrollArea className="h-[75vh] pr-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50">
               <div>
@@ -2042,7 +2049,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
 
   return (
     <Card id={`expense-${expense.id}`} className="transition-all hover:shadow-md">
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex justify-between items-start gap-4">
           {/* Left Column */}
           <div className="min-w-0 flex-1">
@@ -2173,7 +2180,7 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
 
   return (
     <Card className="border-l-4 border-l-primary">
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
