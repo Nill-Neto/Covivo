@@ -693,7 +693,7 @@ export default function Expenses() {
         if (!editingId && !hasNewReceipt) {
           throw new Error("Anexe o comprovante para despesas coletivas já pagas.");
         }
-        if (editingId && !hasExistingReceipts && !hasNewReceipt) {
+        if (editingId && receiptFiles.length === 0 && !hasExistingReceipts) {
           throw new Error("Anexe novo comprovante ou mantenha o comprovante já existente.");
         }
       }
@@ -839,6 +839,15 @@ export default function Expenses() {
           await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
         }
       } else {
+        const cardClosingDay = paymentMethod === 'credit_card' && finalCreditCardId
+          ? cards.find(c => c.id === finalCreditCardId)?.closing_day
+          : null;
+
+        const competenceKey = getCompetenceKeyFromDate(
+          new Date(`${dateValue}T12:00:00Z`),
+          cardClosingDay ?? closingDay
+        );
+
         const baseCreateExpenseArgs = {
           _group_id: membership!.group_id,
           _created_by: actualPayerId,
@@ -855,6 +864,7 @@ export default function Expenses() {
           _credit_card_id: finalCreditCardId,
           _installments: parseInt(installments) || 1,
           _purchase_date: dateValue,
+          _competence_key: competenceKey,
         };
 
         const { data: newExpenseId, error: createError } = await supabase.rpc(
@@ -866,6 +876,36 @@ export default function Expenses() {
         );
 
         if (createError) throw createError;
+
+        if (newExpenseId && paymentMethod === "credit_card" && finalCreditCardId && (parseInt(installments) || 1) > 0) {
+          const card = cards.find((c) => c.id === finalCreditCardId);
+          if (card) {
+            const parsedAmount = parseFloat(amount);
+            const parsedInstallments = parseInt(installments) || 1;
+            const closingDay = card.closing_day;
+            const purchaseDate = new Date(`${dateValue}T12:00:00`);
+            const billBase = new Date(purchaseDate);
+            if (purchaseDate.getDate() >= closingDay) {
+              billBase.setMonth(billBase.getMonth() + 1);
+            }
+
+            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
+            const installmentRows = [];
+            for (let i = 1; i <= parsedInstallments; i++) {
+              const installDate = new Date(billBase);
+              installDate.setMonth(installDate.getMonth() + (i - 1));
+              installmentRows.push({
+                user_id: user.id,
+                expense_id: newExpenseId,
+                installment_number: i,
+                amount: perInstallment,
+                bill_month: installDate.getMonth() + 1,
+                bill_year: installDate.getFullYear(),
+              });
+            }
+            await supabase.from("expense_installments").insert(installmentRows);
+          }
+        }
 
         if (newExpenseId) {
           await supabase
@@ -1985,11 +2025,11 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
 
   return (
     <Card id={`expense-${expense.id}`} className="transition-all hover:shadow-md">
-      <CardContent className="p-4">
+      <CardContent className="p-5">
         <div className="flex justify-between items-start gap-4">
           {/* Left Column */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
               <p className="font-semibold text-base truncate" title={expense.title}>{expense.title}</p>
               <Badge variant="outline" className="text-xs shrink-0">{catLabel}</Badge>
             </div>
@@ -2076,7 +2116,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
         </div>
 
         {/* Bottom Section */}
-        <div className="mt-3 pt-3 border-t flex justify-between items-center text-xs">
+        <div className="mt-4 pt-4 border-t flex justify-between items-center text-xs">
             <div className="flex items-center gap-2 flex-wrap">
                 <Badge
                     variant={expense.expense_type === "collective" ? "default" : "secondary"}
@@ -2116,10 +2156,10 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
 
   return (
     <Card className="border-l-4 border-l-primary">
-      <CardContent className="p-4">
+      <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
               <p className="font-medium">{recurring.title}</p>
               <Badge variant="outline" className="text-xs">{catLabel}</Badge>
               <Badge variant={recurring.expense_type === "collective" ? "default" : "secondary"} className="text-xs">
@@ -2129,7 +2169,7 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
                 {recurring.active ? "Ativa" : "Pausada"}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               Próximo vencimento: {format(parseLocalDate(recurring.next_due_date), "dd/MM/yyyy", { locale: ptBR })}
             </p>
           </div>
