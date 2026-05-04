@@ -2042,7 +2042,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
 
   return (
     <Card id={`expense-${expense.id}`} className="transition-all hover:shadow-md">
-      <CardContent className="p-5">
+      <CardContent className="p-6">
         <div className="flex justify-between items-start gap-4">
           {/* Left Column */}
           <div className="min-w-0 flex-1">
@@ -2173,7 +2173,7 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
 
   return (
     <Card className="border-l-4 border-l-primary">
-      <CardContent className="p-5">
+      <CardContent className="p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
