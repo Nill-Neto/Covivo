@@ -694,7 +694,7 @@ export default function Expenses() {
         if (!editingId && !hasNewReceipt) {
           throw new Error("Anexe o comprovante para despesas coletivas já pagas.");
         }
-        if (editingId && !hasExistingReceipts && !hasNewReceipt) {
+        if (editingId && receiptFiles.length === 0 && !hasExistingReceipts) {
           throw new Error("Anexe novo comprovante ou mantenha o comprovante já existente.");
         }
       }
@@ -2042,11 +2042,11 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
 
   return (
     <Card id={`expense-${expense.id}`} className="transition-all hover:shadow-md">
-      <CardContent className="p-4">
+      <CardContent className="p-5">
         <div className="flex justify-between items-start gap-4">
           {/* Left Column */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
               <p className="font-semibold text-base truncate" title={expense.title}>{expense.title}</p>
               <Badge variant="outline" className="text-xs shrink-0">{catLabel}</Badge>
             </div>
@@ -2133,7 +2133,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
         </div>
 
         {/* Bottom Section */}
-        <div className="mt-3 pt-3 border-t flex justify-between items-center text-xs">
+        <div className="mt-4 pt-4 border-t flex justify-between items-center text-xs">
             <div className="flex items-center gap-2 flex-wrap">
                 <Badge
                     variant={expense.expense_type === "collective" ? "default" : "secondary"}
@@ -2173,10 +2173,10 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
 
   return (
     <Card className="border-l-4 border-l-primary">
-      <CardContent className="p-4">
+      <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
               <p className="font-medium">{recurring.title}</p>
               <Badge variant="outline" className="text-xs">{catLabel}</Badge>
               <Badge variant={recurring.expense_type === "collective" ? "default" : "secondary"} className="text-xs">
@@ -2186,7 +2186,7 @@ function RecurringCard({ recurring, isAdmin, userId, onEdit, onDelete }: { recur
                 {recurring.active ? "Ativa" : "Pausada"}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               Próximo vencimento: {format(parseLocalDate(recurring.next_due_date), "dd/MM/yyyy", { locale: ptBR })}
             </p>
           </div>
