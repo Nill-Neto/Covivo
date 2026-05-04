@@ -653,31 +653,6 @@ export default function Expenses() {
     return data as Pick<ExpenseRow, "id" | "purchase_date">;
   };
 
-  const createOrUpdateInstallments = async (expenseId: string, parsedAmount: number, parsedInstallments: number, compKey: string) => {
-    await supabase.from("expense_installments").delete().eq("expense_id", expenseId);
-
-    if (paymentMethod === "credit_card" && parsedInstallments > 0) {
-        const [year, month] = compKey.split('-').map(Number);
-        const billBase = new Date(year, month - 1, 1);
-
-        const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
-        const installmentRows = [];
-        for (let i = 1; i <= parsedInstallments; i++) {
-            const installDate = new Date(billBase);
-            installDate.setMonth(installDate.getMonth() + (i - 1));
-            installmentRows.push({
-                user_id: user!.id,
-                expense_id: expenseId,
-                installment_number: i,
-                amount: perInstallment,
-                bill_month: installDate.getMonth() + 1,
-                bill_year: installDate.getFullYear(),
-            });
-        }
-        await supabase.from("expense_installments").insert(installmentRows);
-    }
-  };
-
   const createOrUpdateExpense = useMutation({
     mutationFn: async () => {
       if (!user || !membership) {
@@ -830,19 +805,40 @@ export default function Expenses() {
           }
         }
 
-        await createOrUpdateInstallments(editingId, parsedAmount, parsedInstallments, finalCreditCardId);
+        await supabase.from("expense_installments").delete().eq("expense_id", editingId);
+
+        if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
+          const card = cards.find((c) => c.id === finalCreditCardId);
+          if (card) {
+            const closingDay = card.closing_day;
+            const purchaseDate = new Date(`${dateValue}T12:00:00`);
+            const billBase = new Date(purchaseDate);
+            if (purchaseDate.getDate() >= closingDay) {
+              billBase.setMonth(billBase.getMonth() + 1);
+            }
+
+            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
+            const installmentRows = [];
+            for (let i = 1; i <= parsedInstallments; i++) {
+              const installDate = new Date(billBase);
+              installDate.setMonth(installDate.getMonth() + (i - 1));
+              installmentRows.push({
+                user_id: user.id,
+                expense_id: editingId,
+                installment_number: i,
+                amount: perInstallment,
+                bill_month: installDate.getMonth() + 1,
+                bill_year: installDate.getFullYear(),
+              });
+            }
+            await supabase.from("expense_installments").insert(installmentRows);
+          }
+        }
 
         if (expenseType === "collective" && splitMode === "manual") {
           await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
         }
       } else {
-        const compKey = getCompetenceKeyFromDate(
-          new Date(`${dateValue}T12:00:00`),
-          finalCreditCardId && finalCreditCardId !== "none"
-            ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
-            : closingDay,
-        );
-
         const baseCreateExpenseArgs = {
           _group_id: membership!.group_id,
           _created_by: actualPayerId,
@@ -859,7 +855,6 @@ export default function Expenses() {
           _credit_card_id: finalCreditCardId,
           _installments: parseInt(installments) || 1,
           _purchase_date: dateValue,
-          _competence_key: compKey,
         };
 
         const { data: newExpenseId, error: createError } = await supabase.rpc(
@@ -873,8 +868,6 @@ export default function Expenses() {
         if (createError) throw createError;
 
         if (newExpenseId) {
-          await createOrUpdateInstallments(newExpenseId as string, parseFloat(amount), parseInt(installments) || 1, finalCreditCardId);
-          
           await supabase
             .from("expenses")
             .update({
