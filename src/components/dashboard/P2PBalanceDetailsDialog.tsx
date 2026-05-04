@@ -62,46 +62,46 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
             Saldo líquido: <span className={otherUser && otherUser.net_balance < 0 ? 'text-destructive' : 'text-success'}>R$ {otherUser?.net_balance.toFixed(2)}</span>
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1">
-          <div className="p-5 space-y-6">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-24">
-                <CustomLoader />
-              </div>
-            ) : error ? (
-              <p className="text-destructive text-sm">Erro ao carregar detalhes.</p>
-            ) : (
-              <>
-                <div>
-                  <h3 className="text-sm font-medium text-destructive flex items-center gap-2 mb-3">
-                    <ArrowUpRight className="h-4 w-4" />
-                    Você deve para {otherUser?.other_user_full_name} (R$ {totalDebt.toFixed(2)})
-                  </h3>
-                  <div className="space-y-2">
-                    {data?.debts && data.debts.length > 0 ? (
-                      data.debts.map((item: any) => <DetailItem key={item.id} item={item} />)
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
-                    )}
-                  </div>
+        <div className="flex-1 overflow-hidden p-5">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <CustomLoader />
+            </div>
+          ) : error ? (
+            <p className="text-destructive text-sm">Erro ao carregar detalhes.</p>
+          ) : (
+            <div className="flex flex-col h-full space-y-6">
+              <div className="shrink-0">
+                <h3 className="text-sm font-medium text-destructive flex items-center gap-2 mb-3">
+                  <ArrowUpRight className="h-4 w-4" />
+                  Você deve para {otherUser?.other_user_full_name} (R$ {totalDebt.toFixed(2)})
+                </h3>
+                <div className="space-y-2">
+                  {data?.debts && data.debts.length > 0 ? (
+                    data.debts.map((item: any) => <DetailItem key={item.id} item={item} />)
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
+                  )}
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-success flex items-center gap-2 mb-3">
-                    <ArrowDownLeft className="h-4 w-4" />
-                    {otherUser?.other_user_full_name} te deve (R$ {totalCredit.toFixed(2)})
-                  </h3>
-                  <div className="space-y-2">
+              </div>
+              <div className="flex-1 flex flex-col min-h-0">
+                <h3 className="text-sm font-medium text-success flex items-center gap-2 mb-3 shrink-0">
+                  <ArrowDownLeft className="h-4 w-4" />
+                  {otherUser?.other_user_full_name} te deve (R$ {totalCredit.toFixed(2)})
+                </h3>
+                <ScrollArea className="flex-1">
+                  <div className="space-y-2 pr-4">
                     {data?.credits && data.credits.length > 0 ? (
                       data.credits.map((item: any) => <DetailItem key={item.id} item={item} />)
                     ) : (
                       <p className="text-sm text-muted-foreground">Nenhum crédito com esta pessoa.</p>
                     )}
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        </ScrollArea>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
