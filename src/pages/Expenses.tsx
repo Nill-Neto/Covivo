@@ -837,40 +837,19 @@ export default function Expenses() {
           }
         }
 
-        await supabase.from("expense_installments").delete().eq("expense_id", editingId);
-
-        if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
-          const card = cards.find((c) => c.id === finalCreditCardId);
-          if (card) {
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-              billBase.setMonth(billBase.getMonth() + 1);
-            }
-
-            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
-            const installmentRows = [];
-            for (let i = 1; i <= parsedInstallments; i++) {
-              const installDate = new Date(billBase);
-              installDate.setMonth(installDate.getMonth() + (i - 1));
-              installmentRows.push({
-                user_id: user.id,
-                expense_id: editingId,
-                installment_number: i,
-                amount: perInstallment,
-                bill_month: installDate.getMonth() + 1,
-                bill_year: installDate.getFullYear(),
-              });
-            }
-            await supabase.from("expense_installments").insert(installmentRows);
-          }
-        }
+        await createOrUpdateInstallments(editingId, parsedAmount, parsedInstallments, finalCreditCardId);
 
         if (expenseType === "collective" && splitMode === "manual") {
           await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
         }
       } else {
+        const compKey = getCompetenceKeyFromDate(
+          new Date(`${dateValue}T12:00:00`),
+          finalCreditCardId && finalCreditCardId !== "none"
+            ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
+            : closingDay,
+        );
+
         const baseCreateExpenseArgs = {
           _group_id: membership!.group_id,
           _created_by: actualPayerId,
@@ -887,6 +866,7 @@ export default function Expenses() {
           _credit_card_id: finalCreditCardId,
           _installments: parseInt(installments) || 1,
           _purchase_date: dateValue,
+          _competence_key: compKey,
         };
 
         const { data: newExpenseId, error: createError } = await supabase.rpc(
@@ -900,6 +880,8 @@ export default function Expenses() {
         if (createError) throw createError;
 
         if (newExpenseId) {
+          await createOrUpdateInstallments(newExpenseId as string, parseFloat(amount), parseInt(installments) || 1, finalCreditCardId);
+          
           await supabase
             .from("expenses")
             .update({
