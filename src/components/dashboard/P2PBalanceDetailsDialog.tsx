@@ -87,7 +87,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
             <p className="text-destructive text-sm p-5">Erro ao carregar detalhes.</p>
           ) : (
             <div className="flex flex-col h-full space-y-6 p-5">
-              <Collapsible open={isDebtsOpen} onOpenChange={setIsDebtsOpen}>
+              <Collapsible open={isDebtsOpen} onOpenChange={setIsDebtsOpen} className="shrink-0">
                 <CollapsibleTrigger className="w-full">
                   <h3 className="text-sm font-medium text-destructive flex items-center justify-between gap-2 mb-3">
                     <span className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
                     <ChevronDown className={cn("h-4 w-4 transition-transform", isDebtsOpen && "rotate-180")} />
                   </h3>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="max-h-64 overflow-y-auto">
+                <CollapsibleContent className="max-h-48 overflow-y-auto">
                   <div className="space-y-2 pr-4">
                     {data?.debts && data.debts.length > 0 ? (
                       data.debts.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
@@ -107,7 +107,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
                   </div>
                 </CollapsibleContent>
               </Collapsible>
-              <Collapsible open={isCreditsOpen} onOpenChange={setIsCreditsOpen}>
+              <Collapsible open={isCreditsOpen} onOpenChange={setIsCreditsOpen} className="flex-1 flex flex-col min-h-0">
                 <CollapsibleTrigger className="w-full shrink-0">
                   <h3 className="text-sm font-medium text-success flex items-center justify-between gap-2 mb-3">
                     <span className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
                     <ChevronDown className={cn("h-4 w-4 transition-transform", isCreditsOpen && "rotate-180")} />
                   </h3>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="max-h-64 overflow-y-auto">
+                <CollapsibleContent className="flex-1 min-h-0 overflow-y-auto">
                   <div className="space-y-2 pr-4">
                     {data?.credits && data.credits.length > 0 ? (
                       data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
