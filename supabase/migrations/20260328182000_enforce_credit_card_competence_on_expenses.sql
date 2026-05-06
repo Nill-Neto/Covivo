@@ -44,7 +44,7 @@ BEGIN
   _purchase_day := EXTRACT(DAY FROM NEW.purchase_date)::int;
 
   IF _card_closing_day < _effective_group_closing_day
-     AND _purchase_day > _card_closing_day
+     AND _purchase_day >= _card_closing_day
      AND _purchase_day < _effective_group_closing_day THEN
     NEW.purchase_date := make_date(
       EXTRACT(YEAR FROM NEW.purchase_date)::int,

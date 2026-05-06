@@ -141,7 +141,7 @@ BEGIN
   IF _payment_method = 'credit_card' AND _credit_card_id IS NOT NULL AND _installments > 0 THEN
     SELECT closing_day INTO _closing_day FROM public.credit_cards WHERE id = _credit_card_id;
     _bill_base := _final_purchase_date;
-    IF EXTRACT(DAY FROM _final_purchase_date) > _closing_day THEN
+    IF EXTRACT(DAY FROM _final_purchase_date) >= _closing_day THEN
       _bill_base := _bill_base + interval '1 month';
     END IF;
     _per_installment := round(_amount / _installments, 2);
