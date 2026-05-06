@@ -101,7 +101,10 @@ function BalanceItem({ user, type, onClick }: { user: MyP2PBalance, type: 'debt'
   const colorClass = type === 'debt' ? 'text-destructive' : 'text-success';
 
   return (
-    <button onClick={onClick} className="flex items-center justify-between w-full text-left p-3 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <button 
+      onClick={onClick} 
+      className="flex items-center justify-between w-full text-left p-3 rounded-lg border border-transparent hover:bg-primary/5 hover:border-primary/30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <div className="flex items-center gap-4">
         <Avatar className="h-10 w-10">
           <AvatarImage src={user.other_user_avatar_url ?? undefined} />
