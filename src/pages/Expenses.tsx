@@ -141,6 +141,7 @@ export default function Expenses() {
   const [expenseType, setExpenseType] = useState<"collective" | "individual">(isAdmin ? "collective" : "individual");
   const [dateValue, setDateValue] = useState(format(new Date(), "yyyy-MM-dd"));
   const [editCompetence, setEditCompetence] = useState(format(new Date(), "yyyy-MM"));
+  const [competenceOverrideReason, setCompetenceOverrideReason] = useState("");
   const [description, setDescription] = useState("");
   const [splitBetweenAll, setSplitBetweenAll] = useState(true);
 
@@ -169,6 +170,7 @@ export default function Expenses() {
   const [quickPayExpense, setQuickPayExpense] = useState<ExpenseRow | null>(null);
 
   const [editingOriginalAmount, setEditingOriginalAmount] = useState<number | null>(null);
+  const [editingOriginalAutoCompetence, setEditingOriginalAutoCompetence] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -754,14 +756,20 @@ export default function Expenses() {
         const parsedAmount = parseFloat(amount);
         const parsedInstallments = parseInt(installments) || 1;
 
-        const compKey = editCompetence?.trim()
-          ? editCompetence
-          : getCompetenceKeyFromDate(
-              new Date(`${dateValue}T12:00:00`),
-              finalCreditCardId && finalCreditCardId !== "none"
-                ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
-                : closingDay,
-            );
+        const selectedCardClosingDay =
+          finalCreditCardId && finalCreditCardId !== "none"
+            ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
+            : closingDay;
+
+        const autoCompKey = paymentMethod === "credit_card"
+          ? getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay)
+          : getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay);
+        const normalizedManualComp = editCompetence?.trim();
+        const compKey = normalizedManualComp || autoCompKey;
+        const hasManualOverride = compKey !== autoCompKey;
+        if (hasManualOverride && !competenceOverrideReason.trim()) {
+          throw new Error("Informe o motivo do ajuste manual da competência.");
+        }
 
         const { error } = await supabase
           .from("expenses")
@@ -777,7 +785,12 @@ export default function Expenses() {
             paid_to_provider: providerPaid,
             due_date: paymentDate || null,
             competence_key: compKey,
-          })
+            auto_competence_key: autoCompKey,
+            manual_competence_key: hasManualOverride ? compKey : null,
+            competence_override_reason: hasManualOverride ? competenceOverrideReason.trim() : null,
+            competence_overridden_by: hasManualOverride ? user.id : null,
+            competence_overridden_at: hasManualOverride ? new Date().toISOString() : null,
+          } as any)
           .eq("id", editingId);
         if (error) throw error;
         if (uploadedReceipts.length > 0) {
@@ -810,12 +823,8 @@ export default function Expenses() {
         if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
           const card = cards.find((c) => c.id === finalCreditCardId);
           if (card) {
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-              billBase.setMonth(billBase.getMonth() + 1);
-            }
+            const [compYear, compMonth] = compKey.split("-").map(Number);
+            const billBase = new Date(compYear, compMonth - 1, 1, 12, 0, 0);
 
             const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
             const installmentRows = [];
@@ -839,12 +848,24 @@ export default function Expenses() {
           await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
         }
       } else {
-        const cardClosingDay = paymentMethod === 'credit_card' && finalCreditCardId
-          ? cards.find(c => c.id === finalCreditCardId)?.closing_day
-          : null;
+        let cardClosingDay: number | null = null;
+        if (paymentMethod === "credit_card" && finalCreditCardId && finalCreditCardId !== "none") {
+          cardClosingDay = cards.find((c) => c.id === finalCreditCardId)?.closing_day ?? null;
+          if (cardClosingDay == null) {
+            const { data: cardRow, error: cardError } = await supabase
+              .from("credit_cards")
+              .select("closing_day")
+              .eq("id", finalCreditCardId)
+              .single();
+            if (cardError || !cardRow) {
+              throw new Error("Não foi possível carregar o fechamento do cartão selecionado.");
+            }
+            cardClosingDay = cardRow.closing_day;
+          }
+        }
 
         const competenceKey = getCompetenceKeyFromDate(
-          new Date(`${dateValue}T12:00:00Z`),
+          new Date(`${dateValue}T12:00:00`),
           cardClosingDay ?? closingDay
         );
 
@@ -877,42 +898,43 @@ export default function Expenses() {
 
         if (createError) throw createError;
 
-        if (newExpenseId && paymentMethod === "credit_card" && finalCreditCardId && (parseInt(installments) || 1) > 0) {
-          const card = cards.find((c) => c.id === finalCreditCardId);
-          if (card) {
-            const parsedAmount = parseFloat(amount);
-            const parsedInstallments = parseInt(installments) || 1;
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-              billBase.setMonth(billBase.getMonth() + 1);
-            }
-
-            const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
-            const installmentRows = [];
-            for (let i = 1; i <= parsedInstallments; i++) {
-              const installDate = new Date(billBase);
-              installDate.setMonth(installDate.getMonth() + (i - 1));
-              installmentRows.push({
-                user_id: user.id,
-                expense_id: newExpenseId,
-                installment_number: i,
-                amount: perInstallment,
-                bill_month: installDate.getMonth() + 1,
-                bill_year: installDate.getFullYear(),
-              });
-            }
-            await supabase.from("expense_installments").insert(installmentRows);
-          }
-        }
-
         if (newExpenseId) {
+          // First, delete any installments potentially created by the RPC
+          await supabase.from("expense_installments").delete().eq("expense_id", newExpenseId);
+
+          // Then, create the correct installments from the frontend
+          if (paymentMethod === "credit_card" && finalCreditCardId && (parseInt(installments) || 1) > 0) {
+            const card = cards.find((c) => c.id === finalCreditCardId);
+            if (card) {
+              const parsedAmount = parseFloat(amount);
+              const parsedInstallments = parseInt(installments) || 1;
+              const [compYear, compMonth] = competenceKey.split("-").map(Number);
+              const billBase = new Date(compYear, compMonth - 1, 1, 12, 0, 0);
+
+              const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
+              const installmentRows = [];
+              for (let i = 1; i <= parsedInstallments; i++) {
+                const installDate = new Date(billBase);
+                installDate.setMonth(installDate.getMonth() + (i - 1));
+                installmentRows.push({
+                  user_id: user.id,
+                  expense_id: newExpenseId,
+                  installment_number: i,
+                  amount: perInstallment,
+                  bill_month: installDate.getMonth() + 1,
+                  bill_year: installDate.getFullYear(),
+                });
+              }
+              await supabase.from("expense_installments").insert(installmentRows);
+            }
+          }
+          
           await supabase
             .from("expenses")
             .update({
               paid_to_provider: providerPaid,
               due_date: paymentDate || null,
+              competence_key: competenceKey,
             })
             .eq("id", newExpenseId);
 
@@ -1002,6 +1024,7 @@ export default function Expenses() {
     setExpenseType(isAdmin ? "collective" : "individual");
     setDateValue(format(new Date(), "yyyy-MM-dd"));
     setEditCompetence(format(new Date(), "yyyy-MM"));
+    setCompetenceOverrideReason("");
     setDescription("");
     setSplitBetweenAll(true);
     setSelectedParticipantIds(activeMemberIds);
@@ -1020,6 +1043,7 @@ export default function Expenses() {
     setReceiptUrl(null);
     setExistingReceipts([]);
     setEditingOriginalAmount(null);
+    setEditingOriginalAutoCompetence(null);
   };
 
   const openEditExpense = (expense: ExpenseRow) => {
@@ -1032,6 +1056,8 @@ export default function Expenses() {
     setDescription(expense.description || "");
     setDateValue(expense.purchase_date || format(new Date(), "yyyy-MM-dd"));
     setEditCompetence(expense.competence_key || (expense.purchase_date ? expense.purchase_date.slice(0, 7) : format(new Date(), "yyyy-MM")));
+    setCompetenceOverrideReason(expense.competence_override_reason || "");
+    setEditingOriginalAutoCompetence(expense.auto_competence_key || null);
     setExpenseType(expense.expense_type as "collective" | "individual");
     setPaymentMethod(expense.payment_method || "cash");
     setCreditCardId(expense.credit_card_id || "none");
@@ -1590,6 +1616,12 @@ export default function Expenses() {
                             value={editCompetence}
                             onChange={(e) => setEditCompetence(e.target.value)}
                           />
+                          <Label className="text-xs text-muted-foreground">Motivo do ajuste manual</Label>
+                          <Input
+                            value={competenceOverrideReason}
+                            onChange={(e) => setCompetenceOverrideReason(e.target.value)}
+                            placeholder="Obrigatório quando a competência divergir da automática"
+                          />
                         </div>
                       )}
 
@@ -2022,6 +2054,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
 
   const isInstallment = expense._is_installment && expense.installments > 1;
   const displayAmount = isInstallment ? expense._installment_amount : expense.amount;
+  const manuallyAdjustedCompetence = Boolean(expense.manual_competence_key && expense.manual_competence_key !== expense.auto_competence_key);
 
   return (
     <Card id={`expense-${expense.id}`} className="transition-all hover:shadow-md">
@@ -2046,6 +2079,11 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
                 <span className="flex items-center gap-1.5">
                   <CreditCard className="h-3.5 w-3.5" /> {cardLabel}
                 </span>
+              )}
+              {manuallyAdjustedCompetence && (
+                <Badge variant="secondary" className="text-[10px]">
+                  Competência ajustada manualmente
+                </Badge>
               )}
             </div>
             {paymentHistory && (

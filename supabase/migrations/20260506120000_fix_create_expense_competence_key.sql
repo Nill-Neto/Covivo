@@ -1,3 +1,6 @@
+DROP FUNCTION IF EXISTS public.create_expense_with_splits_v2(
+  uuid, uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date, text, uuid[]
+);
 
 CREATE OR REPLACE FUNCTION public.create_expense_with_splits_v2(
   _group_id uuid,
@@ -100,7 +103,7 @@ BEGIN
     IF _member_count < 1 THEN
       RAISE EXCEPTION 'Despesa coletiva deve ter ao menos 1 participante';
     END IF;
-    
+
     SELECT splitting_rule::text INTO _group_rule FROM public.groups WHERE id = _group_id;
 
     IF _group_rule = 'equal' OR array_length(_participant_user_ids, 1) IS NOT NULL THEN
@@ -109,7 +112,7 @@ BEGIN
         INSERT INTO expense_splits (expense_id, user_id, amount, credor_user_id)
         VALUES (_expense_id, _participant_id, _split_amount, _caller_id);
       END LOOP;
-    ELSE 
+    ELSE
       FOR _member IN
         SELECT gm.user_id, COALESCE(gm.split_percentage, 0) AS pct
         FROM public.group_members gm
@@ -128,7 +131,7 @@ BEGIN
   IF _payment_method = 'credit_card' AND _credit_card_id IS NOT NULL AND _installments > 0 THEN
     SELECT closing_day INTO _closing_day FROM public.credit_cards WHERE id = _credit_card_id;
     _bill_base := _final_purchase_date;
-    IF EXTRACT(DAY FROM _final_purchase_date) >= _closing_day THEN
+    IF EXTRACT(DAY FROM _final_purchase_date) > _closing_day THEN
       _bill_base := _bill_base + interval '1 month';
     END IF;
     _per_installment := round(_amount / _installments, 2);

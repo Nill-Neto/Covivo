@@ -11,6 +11,7 @@ DECLARE
   _actor_id uuid := '00000000-0000-0000-0000-000000000903';
   _expense_between uuid;
   _expense_after_group uuid;
+  _expense_exact_card_closing uuid;
   _expense_year_turn uuid;
   _purchase_date date;
   _paid_to_provider boolean;
@@ -20,7 +21,8 @@ BEGIN
   WHERE id IN (
     '00000000-0000-0000-0000-000000000911',
     '00000000-0000-0000-0000-000000000912',
-    '00000000-0000-0000-0000-000000000913'
+    '00000000-0000-0000-0000-000000000913',
+    '00000000-0000-0000-0000-000000000914'
   );
 
   DELETE FROM public.credit_cards WHERE id = _card_id;
@@ -60,8 +62,8 @@ BEGIN
   )
   RETURNING id INTO _expense_between;
 
-  SELECT purchase_date, paid_to_provider
-    INTO _purchase_date, _paid_to_provider
+  SELECT purchase_date, paid_to_provider, competence_key
+    INTO _purchase_date, _paid_to_provider, _competence_key
   FROM public.expenses
   WHERE id = _expense_between;
 
@@ -71,6 +73,10 @@ BEGIN
 
   IF _paid_to_provider IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'FAILED provider flag for credit card expense: expected true, got %', _paid_to_provider;
+  END IF;
+
+  IF _competence_key <> '2026-09' THEN
+    RAISE EXCEPTION 'FAILED between-closings competence: expected 2026-09, got %', _competence_key;
   END IF;
 
   INSERT INTO public.expenses (
@@ -108,6 +114,52 @@ BEGIN
 
   IF _purchase_date <> DATE '2026-08-25' THEN
     RAISE EXCEPTION 'FAILED test purchase after group closing: expected 2026-08-25, got %', _purchase_date;
+  END IF;
+
+
+  UPDATE public.groups
+  SET closing_day = 30
+  WHERE id = _group_id;
+
+  UPDATE public.credit_cards
+  SET closing_day = 28
+  WHERE id = _card_id;
+
+  INSERT INTO public.expenses (
+    id,
+    group_id,
+    created_by,
+    title,
+    amount,
+    category,
+    expense_type,
+    payment_method,
+    credit_card_id,
+    installments,
+    purchase_date
+  )
+  VALUES (
+    '00000000-0000-0000-0000-000000000914',
+    _group_id,
+    _actor_id,
+    'Teste dia exato do fechamento do cartão',
+    115,
+    'other',
+    'collective',
+    'credit_card',
+    _card_id,
+    1,
+    '2026-09-28'
+  )
+  RETURNING id INTO _expense_exact_card_closing;
+
+  SELECT purchase_date
+    INTO _purchase_date
+  FROM public.expenses
+  WHERE id = _expense_exact_card_closing;
+
+  IF _purchase_date <> DATE '2026-09-30' THEN
+    RAISE EXCEPTION 'FAILED exact card closing day: expected 2026-09-30, got %', _purchase_date;
   END IF;
 
   UPDATE public.groups
@@ -160,7 +212,7 @@ BEGIN
   END IF;
 
   DELETE FROM public.expenses
-  WHERE id IN (_expense_between, _expense_after_group, _expense_year_turn);
+  WHERE id IN (_expense_between, _expense_after_group, _expense_exact_card_closing, _expense_year_turn);
 
   DELETE FROM public.credit_cards WHERE id = _card_id;
   DELETE FROM public.groups WHERE id = _group_id;

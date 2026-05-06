@@ -14,7 +14,8 @@ CREATE OR REPLACE FUNCTION public.create_expense_with_splits_v2(
   _credit_card_id uuid DEFAULT NULL,
   _installments integer DEFAULT 1,
   _purchase_date date DEFAULT NULL,
-  _participant_user_ids uuid[] DEFAULT NULL
+  _participant_user_ids uuid[] DEFAULT NULL,
+  _competence_key text DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -36,6 +37,8 @@ DECLARE
   _bill_year int;
   _bill_base date;
   _effective_participants uuid[];
+  _computed_competence_key text;
+  _comp_base date;
 BEGIN
   IF _caller_id IS NULL THEN
     RAISE EXCEPTION 'Usuário criador da despesa não pode ser nulo';
@@ -43,6 +46,18 @@ BEGIN
 
   _final_purchase_date := COALESCE(_purchase_date, CURRENT_DATE);
   _effective_participants := COALESCE(_participant_user_ids, ARRAY[]::uuid[]);
+
+  IF _payment_method = 'credit_card' AND _credit_card_id IS NOT NULL THEN
+    SELECT closing_day INTO _closing_day FROM public.credit_cards WHERE id = _credit_card_id;
+    _closing_day := COALESCE(_closing_day, 1);
+    _comp_base := date_trunc('month', _final_purchase_date)::date;
+    IF EXTRACT(DAY FROM _final_purchase_date)::int >= _closing_day THEN
+      _comp_base := (_comp_base + interval '1 month')::date;
+    END IF;
+    _computed_competence_key := to_char(_comp_base, 'YYYY-MM');
+  ELSE
+    _computed_competence_key := _competence_key;
+  END IF;
 
   IF NOT has_role_in_group(_caller_id, _group_id, 'admin') AND _expense_type = 'collective' THEN
     RAISE EXCEPTION 'Apenas administradores podem criar despesas coletivas';
@@ -81,11 +96,11 @@ BEGIN
   INSERT INTO public.expenses (
     group_id, created_by, title, description, amount, category,
     expense_type, due_date, receipt_url, recurring_expense_id,
-    payment_method, credit_card_id, installments, purchase_date
+    payment_method, credit_card_id, installments, purchase_date, competence_key
   ) VALUES (
     _group_id, _caller_id, _title, _description, _amount, _category,
     _expense_type, _due_date, _receipt_url, _recurring_expense_id,
-    _payment_method, _credit_card_id, _installments, _final_purchase_date
+    _payment_method, _credit_card_id, _installments, _final_purchase_date, _computed_competence_key
   ) RETURNING id INTO _expense_id;
 
   IF _expense_type = 'individual' THEN
@@ -126,7 +141,7 @@ BEGIN
   IF _payment_method = 'credit_card' AND _credit_card_id IS NOT NULL AND _installments > 0 THEN
     SELECT closing_day INTO _closing_day FROM public.credit_cards WHERE id = _credit_card_id;
     _bill_base := _final_purchase_date;
-    IF EXTRACT(DAY FROM _final_purchase_date) > _closing_day THEN
+    IF EXTRACT(DAY FROM _final_purchase_date) >= _closing_day THEN
       _bill_base := _bill_base + interval '1 month';
     END IF;
     _per_installment := round(_amount / _installments, 2);

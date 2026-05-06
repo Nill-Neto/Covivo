@@ -48,6 +48,28 @@ describe("cycleDates", () => {
     expect(cycleEnd.toISOString()).toBe(new Date(2026, 0, 31, 0, 0, 0).toISOString());
   });
 
+
+  it("trata dia exato do fechamento como próxima competência", () => {
+    expect(getInitialCycleReferenceDate(new Date(2026, 1, 28, 12, 0, 0), 28).toISOString())
+      .toBe(new Date(2026, 2, 28, 0, 0, 0).toISOString());
+
+    expect(getInitialCycleReferenceDate(new Date(2026, 3, 30, 12, 0, 0), 30).toISOString())
+      .toBe(new Date(2026, 4, 30, 0, 0, 0).toISOString());
+
+    expect(getInitialCycleReferenceDate(new Date(2026, 11, 31, 12, 0, 0), 31).toISOString())
+      .toBe(new Date(2027, 0, 31, 0, 0, 0).toISOString());
+  });
+
+  it("valida virada de mês/ano para fechamento 28/30/31", () => {
+    const ref28 = getInitialCycleReferenceDate(new Date(2026, 1, 28, 8, 0, 0), 28);
+    const ref30 = getInitialCycleReferenceDate(new Date(2026, 3, 30, 8, 0, 0), 30);
+    const ref31 = getInitialCycleReferenceDate(new Date(2026, 11, 31, 8, 0, 0), 31);
+
+    expect(ref28.toISOString()).toBe(new Date(2026, 2, 28, 0, 0, 0).toISOString());
+    expect(ref30.toISOString()).toBe(new Date(2026, 4, 30, 0, 0, 0).toISOString());
+    expect(ref31.toISOString()).toBe(new Date(2027, 0, 31, 0, 0, 0).toISOString());
+  });
+
   it("só marca atraso após o fim do dia limite", () => {
     const resultSameDay = getCycleDates({
       referenceDate: new Date(2026, 5, 1),
