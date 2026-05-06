@@ -840,9 +840,21 @@ export default function Expenses() {
           await applyManualSplitSelection(editingId, parsedAmount, effectiveParticipantIds, actualPayerId);
         }
       } else {
-        const cardClosingDay = paymentMethod === 'credit_card' && finalCreditCardId
-          ? cards.find(c => c.id === finalCreditCardId)?.closing_day
-          : null;
+        let cardClosingDay: number | null = null;
+        if (paymentMethod === "credit_card" && finalCreditCardId && finalCreditCardId !== "none") {
+          cardClosingDay = cards.find((c) => c.id === finalCreditCardId)?.closing_day ?? null;
+          if (cardClosingDay == null) {
+            const { data: cardRow, error: cardError } = await supabase
+              .from("credit_cards")
+              .select("closing_day")
+              .eq("id", finalCreditCardId)
+              .single();
+            if (cardError || !cardRow) {
+              throw new Error("Não foi possível carregar o fechamento do cartão selecionado.");
+            }
+            cardClosingDay = cardRow.closing_day;
+          }
+        }
 
         const competenceKey = getCompetenceKeyFromDate(
           new Date(`${dateValue}T12:00:00`),
