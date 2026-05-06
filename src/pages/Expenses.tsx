@@ -298,9 +298,11 @@ export default function Expenses() {
   const allExpenses = useMemo(() => {
     const map = new Map<string, ExpenseRow>();
     cycleExpenses.forEach((e) => map.set(e.id, e));
-    installmentParentExpenses.forEach((e) => map.set(e.id, e));
+    installmentParentExpenses
+      .filter((e) => !e.competence_key || e.competence_key <= currentCompetenceKey)
+      .forEach((e) => map.set(e.id, e));
     return Array.from(map.values());
-  }, [cycleExpenses, installmentParentExpenses]);
+  }, [cycleExpenses, installmentParentExpenses, currentCompetenceKey]);
 
   const installmentByExpenseId = useMemo(() => {
     const map = new Map<string, InstallmentRow>();
@@ -755,14 +757,16 @@ export default function Expenses() {
         const parsedAmount = parseFloat(amount);
         const parsedInstallments = parseInt(installments) || 1;
 
-        const compKey = editCompetence?.trim()
-          ? editCompetence
-          : getCompetenceKeyFromDate(
-              new Date(`${dateValue}T12:00:00`),
-              finalCreditCardId && finalCreditCardId !== "none"
-                ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
-                : closingDay,
-            );
+        const selectedCardClosingDay =
+          finalCreditCardId && finalCreditCardId !== "none"
+            ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
+            : closingDay;
+
+        const compKey = paymentMethod === "credit_card"
+          ? getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay)
+          : (editCompetence?.trim()
+              ? editCompetence
+              : getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay));
 
         const { error } = await supabase
           .from("expenses")
@@ -811,12 +815,8 @@ export default function Expenses() {
         if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
           const card = cards.find((c) => c.id === finalCreditCardId);
           if (card) {
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-              billBase.setMonth(billBase.getMonth() + 1);
-            }
+            const [compYear, compMonth] = compKey.split("-").map(Number);
+            const billBase = new Date(compYear, compMonth - 1, 1, 12, 0, 0);
 
             const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
             const installmentRows = [];
@@ -888,12 +888,8 @@ export default function Expenses() {
             if (card) {
               const parsedAmount = parseFloat(amount);
               const parsedInstallments = parseInt(installments) || 1;
-              const closingDay = card.closing_day;
-              const purchaseDate = new Date(`${dateValue}T12:00:00`);
-              const billBase = new Date(purchaseDate);
-              if (purchaseDate.getDate() >= closingDay) {
-                billBase.setMonth(billBase.getMonth() + 1);
-              }
+              const [compYear, compMonth] = competenceKey.split("-").map(Number);
+              const billBase = new Date(compYear, compMonth - 1, 1, 12, 0, 0);
 
               const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
               const installmentRows = [];
@@ -918,6 +914,7 @@ export default function Expenses() {
             .update({
               paid_to_provider: providerPaid,
               due_date: paymentDate || null,
+              competence_key: competenceKey,
             })
             .eq("id", newExpenseId);
 
