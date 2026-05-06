@@ -1744,7 +1744,7 @@ export default function Expenses() {
                                         step="0.01"
                                         className="ml-auto w-36"
                                         placeholder={`R$ ${perPersonQuota.toFixed(2)}`}
-                                        value={paidParticipantAmounts[participant.id] ?? perPersonQuota.toFixed(2)}
+                                        value={paidParticipantAmounts[participant.id] ?? ""}
                                         onChange={(e) =>
                                           setPaidParticipantAmounts((prev) => ({
                                             ...prev,
