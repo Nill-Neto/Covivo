@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownLeft, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { P2PBalanceDetailsDialog } from "./P2PBalanceDetailsDialog";
 import type { MyP2PBalance } from "@/types/dashboard";
+import { cn } from "@/lib/utils";
 
 interface P2PBalancesProps {
   balances: MyP2PBalance[];
@@ -13,6 +14,9 @@ interface P2PBalancesProps {
 export function P2PBalances({ balances }: P2PBalancesProps) {
   const { user } = useAuth();
   const [viewingDetailsFor, setViewingDetailsFor] = useState<MyP2PBalance | null>(null);
+
+  const debts = balances.filter(b => b.net_balance < 0).sort((a, b) => a.net_balance - b.net_balance);
+  const credits = balances.filter(b => b.net_balance > 0).sort((a, b) => b.net_balance - a.net_balance);
 
   if (!balances || balances.length === 0) {
     return (
@@ -32,52 +36,34 @@ export function P2PBalances({ balances }: P2PBalancesProps) {
     );
   }
 
-  const debts = balances.filter(b => b.net_balance < 0).sort((a, b) => a.net_balance - b.net_balance);
-  const credits = balances.filter(b => b.net_balance > 0).sort((a, b) => b.net_balance - a.net_balance);
-
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            Balanço P2P
-          </CardTitle>
-          <CardDescription>Resumo de quem deve para quem no seu grupo.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6 md:grid-cols-2">
-          <div>
-            <h3 className="text-sm font-medium text-destructive flex items-center gap-2 mb-3">
-              <ArrowUpRight className="h-4 w-4" />
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <ArrowUpRight className="h-5 w-5" />
               Você deve para
-            </h3>
-            <div className="space-y-3 h-48 overflow-y-auto">
-              {debts.length > 0 ? (
-                debts.map(debt => (
-                  <BalanceItem key={debt.other_user_id} user={debt} type="debt" onClick={() => setViewingDetailsFor(debt)} />
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">Ninguém para quem você deva.</p>
-              )}
-            </div>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-success flex items-center gap-2 mb-3">
-              <ArrowDownLeft className="h-4 w-4" />
+            </CardTitle>
+            <CardDescription>Pessoas para quem você deve dinheiro.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BalanceList items={debts} type="debt" onSelect={setViewingDetailsFor} emptyMessage="Ninguém para quem você deva." />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-success">
+              <ArrowDownLeft className="h-5 w-5" />
               Quem te deve
-            </h3>
-            <div className="space-y-3 h-48 overflow-y-auto">
-              {credits.length > 0 ? (
-                credits.map(credit => (
-                  <BalanceItem key={credit.other_user_id} user={credit} type="credit" onClick={() => setViewingDetailsFor(credit)} />
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">Ninguém te deve.</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardTitle>
+            <CardDescription>Pessoas que devem dinheiro para você.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BalanceList items={credits} type="credit" onSelect={setViewingDetailsFor} emptyMessage="Ninguém te deve." />
+          </CardContent>
+        </Card>
+      </div>
       <P2PBalanceDetailsDialog
         open={!!viewingDetailsFor}
         onOpenChange={(isOpen) => !isOpen && setViewingDetailsFor(null)}
@@ -88,22 +74,43 @@ export function P2PBalances({ balances }: P2PBalancesProps) {
   );
 }
 
+interface BalanceListProps {
+  items: MyP2PBalance[];
+  type: 'debt' | 'credit';
+  onSelect: (item: MyP2PBalance) => void;
+  emptyMessage: string;
+}
+
+function BalanceList({ items, type, onSelect, emptyMessage }: BalanceListProps) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-10">{emptyMessage}</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map(item => (
+        <BalanceItem key={item.other_user_id} user={item} type={type} onClick={() => onSelect(item)} />
+      ))}
+    </div>
+  );
+}
+
 function BalanceItem({ user, type, onClick }: { user: MyP2PBalance, type: 'debt' | 'credit', onClick: () => void }) {
   const initials = (user.other_user_full_name || "?").charAt(0);
   const amount = Math.abs(user.net_balance);
   const colorClass = type === 'debt' ? 'text-destructive' : 'text-success';
 
   return (
-    <button onClick={onClick} className="flex items-center justify-between w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors">
-      <div className="flex items-center gap-3">
-        <Avatar className="h-8 w-8">
+    <button onClick={onClick} className="flex items-center justify-between w-full text-left p-3 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <div className="flex items-center gap-4">
+        <Avatar className="h-10 w-10">
           <AvatarImage src={user.other_user_avatar_url ?? undefined} />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
-        <span className="text-sm font-medium">{user.other_user_full_name}</span>
+        <span className="font-semibold">{user.other_user_full_name}</span>
       </div>
-      <span className={`text-sm font-semibold ${colorClass}`}>
-        R$ {amount.toFixed(2)}
+      <span className={cn("font-bold text-lg", colorClass)}>
+        R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
     </button>
   );
