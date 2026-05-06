@@ -60,8 +60,8 @@ BEGIN
   )
   RETURNING id INTO _expense_between;
 
-  SELECT purchase_date, paid_to_provider
-    INTO _purchase_date, _paid_to_provider
+  SELECT purchase_date, paid_to_provider, competence_key
+    INTO _purchase_date, _paid_to_provider, _competence_key
   FROM public.expenses
   WHERE id = _expense_between;
 
@@ -71,6 +71,10 @@ BEGIN
 
   IF _paid_to_provider IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'FAILED provider flag for credit card expense: expected true, got %', _paid_to_provider;
+  END IF;
+
+  IF _competence_key <> '2026-09' THEN
+    RAISE EXCEPTION 'FAILED between-closings competence: expected 2026-09, got %', _competence_key;
   END IF;
 
   INSERT INTO public.expenses (

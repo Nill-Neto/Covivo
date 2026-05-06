@@ -845,7 +845,7 @@ export default function Expenses() {
           : null;
 
         const competenceKey = getCompetenceKeyFromDate(
-          new Date(`${dateValue}T12:00:00Z`),
+          new Date(`${dateValue}T12:00:00`),
           cardClosingDay ?? closingDay
         );
 
