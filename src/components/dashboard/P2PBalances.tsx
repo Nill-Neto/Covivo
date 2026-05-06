@@ -51,7 +51,7 @@ export function P2PBalances({ balances }: P2PBalancesProps) {
               <ArrowUpRight className="h-4 w-4" />
               Você deve para
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 h-48 overflow-y-auto">
               {debts.length > 0 ? (
                 debts.map(debt => (
                   <BalanceItem key={debt.other_user_id} user={debt} type="debt" onClick={() => setViewingDetailsFor(debt)} />
@@ -66,7 +66,7 @@ export function P2PBalances({ balances }: P2PBalancesProps) {
               <ArrowDownLeft className="h-4 w-4" />
               Quem te deve
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 h-48 overflow-y-auto">
               {credits.length > 0 ? (
                 credits.map(credit => (
                   <BalanceItem key={credit.other_user_id} user={credit} type="credit" onClick={() => setViewingDetailsFor(credit)} />
