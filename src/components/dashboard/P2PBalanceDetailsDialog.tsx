@@ -14,6 +14,7 @@ import type { User } from "@supabase/supabase-js";
 
 // Helper function to format competence key
 const formatCompetence = (key: string) => {
+  if (key === 'unknown') return 'Data não especificada';
   const [year, month] = key.split('-');
   const date = new Date(Number(year), Number(month) - 1);
   return format(date, "MMMM/yyyy", { locale: ptBR });
@@ -47,8 +48,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
         .select('id, amount, expenses(title, purchase_date, competence_key)')
         .eq('user_id', currentUser.id)
         .eq('credor_user_id', otherUser.other_user_id)
-        .eq('status', 'pending')
-        .order('purchase_date', { referencedTable: 'expenses', ascending: false });
+        .eq('status', 'pending');
       if (debtsError) throw debtsError;
 
       const { data: credits, error: creditsError } = await supabase
@@ -56,8 +56,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
         .select('id, amount, expenses(title, purchase_date, competence_key)')
         .eq('user_id', otherUser.other_user_id)
         .eq('credor_user_id', currentUser.id)
-        .eq('status', 'pending')
-        .order('purchase_date', { referencedTable: 'expenses', ascending: false });
+        .eq('status', 'pending');
       if (creditsError) throw creditsError;
 
       return { debts, credits };
@@ -100,7 +99,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
             <span>Balanço com {otherUser?.other_user_full_name}</span>
           </DialogTitle>
           <DialogDescription>
-            Saldo líquido: <span className={netBalance < 0 ? 'text-destructive' : 'text-success'}>R$ {netBalance.toFixed(2)}</span>
+            Saldo líquido pendente: <span className={netBalance < 0 ? 'text-destructive' : 'text-success'}>R$ {netBalance.toFixed(2)}</span>
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden flex flex-col p-5 gap-4">
@@ -151,7 +150,7 @@ function CompetenceGroup({ title, totalAmount, groupedItems, type }: {
             {title} (R$ {totalAmount.toFixed(2)})
           </span>
         </h3>
-        <p className="text-sm text-muted-foreground">{type === 'debt' ? 'Nenhuma dívida com esta pessoa.' : 'Nenhum crédito com esta pessoa.'}</p>
+        <p className="text-sm text-muted-foreground">{type === 'debt' ? 'Nenhuma dívida pendente com esta pessoa.' : 'Nenhum crédito pendente com esta pessoa.'}</p>
       </div>
     );
   }
@@ -172,10 +171,12 @@ function CompetenceGroup({ title, totalAmount, groupedItems, type }: {
           {sortedCompetenceKeys.map(competenceKey => (
             <div key={competenceKey}>
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 capitalize">
-                {competenceKey === 'unknown' ? 'Data não especificada' : formatCompetence(competenceKey)}
+                {formatCompetence(competenceKey)}
               </h4>
               <div className="space-y-2">
-                {groupedItems[competenceKey].map(item => <DetailItem key={item.id} item={item} />)}
+                {groupedItems[competenceKey]
+                  .sort((a, b) => new Date(b.expenses?.purchase_date ?? 0).getTime() - new Date(a.expenses?.purchase_date ?? 0).getTime())
+                  .map(item => <DetailItem key={item.id} item={item} />)}
               </div>
             </div>
           ))}
