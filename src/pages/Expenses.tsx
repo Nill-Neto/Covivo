@@ -1698,6 +1698,14 @@ export default function Expenses() {
                                       checked={paidParticipantIds.length === participantsToPay.length}
                                       onCheckedChange={(checked) => {
                                         setPaidParticipantIds(checked ? participantsToPay.map(p => p.id) : []);
+                                        setPaidParticipantAmounts(
+                                          checked
+                                            ? participantsToPay.reduce<Record<string, string>>((acc, participant) => {
+                                                acc[participant.id] = perPersonQuota.toFixed(2);
+                                                return acc;
+                                              }, {})
+                                            : {}
+                                        );
                                       }}
                                     />
                                     <Label htmlFor="paid-all" className="font-semibold">Marcar todos</Label>
@@ -1709,11 +1717,23 @@ export default function Expenses() {
                                       id={`paid-${participant.id}`}
                                       checked={paidParticipantIds.includes(participant.id)}
                                       onCheckedChange={() => {
-                                        setPaidParticipantIds(prev => 
-                                          prev.includes(participant.id) 
-                                            ? prev.filter(id => id !== participant.id) 
-                                            : [...prev, participant.id]
-                                        );
+                                        setPaidParticipantIds(prev => {
+                                          const alreadyChecked = prev.includes(participant.id);
+                                          if (alreadyChecked) {
+                                            setPaidParticipantAmounts((current) => {
+                                              const updated = { ...current };
+                                              delete updated[participant.id];
+                                              return updated;
+                                            });
+                                            return prev.filter(id => id !== participant.id);
+                                          }
+
+                                          setPaidParticipantAmounts((current) => ({
+                                            ...current,
+                                            [participant.id]: current[participant.id] ?? perPersonQuota.toFixed(2),
+                                          }));
+                                          return [...prev, participant.id];
+                                        });
                                       }}
                                     />
                                     <Label htmlFor={`paid-${participant.id}`} className="font-normal">{participant.name}</Label>
