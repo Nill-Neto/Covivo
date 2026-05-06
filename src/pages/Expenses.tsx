@@ -825,6 +825,12 @@ export default function Expenses() {
           }
         }
 
+        const { error: updateCreditorError } = await supabase
+          .from("expense_splits")
+          .update({ credor_user_id: actualPayerId })
+          .eq("expense_id", editingId);
+        if (updateCreditorError) throw updateCreditorError;
+
         await supabase.from("expense_installments").delete().eq("expense_id", editingId);
 
         if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
@@ -1100,7 +1106,10 @@ export default function Expenses() {
     setReceiptUrl(expense.receipt_url || null);
     setExistingReceipts(expense.expense_receipts || []);
     setReceiptError(null);
-    setPayerUserId(expense.created_by || "me");
+    const splitCreditorId =
+      expense.expense_splits?.find((split) => !!split.credor_user_id)?.credor_user_id || null;
+    const resolvedPayerId = splitCreditorId || expense.created_by || "me";
+    setPayerUserId(resolvedPayerId === user?.id ? "me" : resolvedPayerId);
 
     const currentSplitIds = (expense.expense_splits ?? []).map((split) => split.user_id);
     if (expense.expense_type === "collective" && currentSplitIds.length > 0) {
