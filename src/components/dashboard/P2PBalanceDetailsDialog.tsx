@@ -58,7 +58,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
 
   const totalDebt = data?.debts?.reduce((sum, item) => sum + Number(item.amount), 0) ?? 0;
   const totalCredit = data?.credits?.reduce((sum, item) => sum + Number(item.amount), 0) ?? 0;
-  const netBalanceFromDetails = totalCredit - totalDebt;
+  const netBalance = Number(otherUser?.net_balance ?? 0);
 
   const [isDebtsOpen, setIsDebtsOpen] = useState(true);
   const [isCreditsOpen, setIsCreditsOpen] = useState(true);
@@ -75,7 +75,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
             <span>Balanço com {otherUser?.other_user_full_name}</span>
           </DialogTitle>
           <DialogDescription>
-            Saldo líquido: <span className={netBalanceFromDetails < 0 ? 'text-destructive' : 'text-success'}>R$ {netBalanceFromDetails.toFixed(2)}</span>
+            Saldo líquido: <span className={netBalance < 0 ? 'text-destructive' : 'text-success'}>R$ {netBalance.toFixed(2)}</span>
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden flex flex-col p-5 gap-4">
