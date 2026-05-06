@@ -78,15 +78,15 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
             Saldo líquido: <span className={netBalanceFromDetails < 0 ? 'text-destructive' : 'text-success'}>R$ {netBalanceFromDetails.toFixed(2)}</span>
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden p-5">
+        <div className="flex-1 overflow-hidden">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
               <CustomLoader />
             </div>
           ) : error ? (
-            <p className="text-destructive text-sm">Erro ao carregar detalhes.</p>
+            <p className="text-destructive text-sm p-5">Erro ao carregar detalhes.</p>
           ) : (
-            <div className="flex flex-col h-full space-y-6">
+            <div className="flex flex-col h-full space-y-6 p-5">
               <Collapsible open={isDebtsOpen} onOpenChange={setIsDebtsOpen} className="shrink-0">
                 <CollapsibleTrigger className="w-full">
                   <h3 className="text-sm font-medium text-destructive flex items-center justify-between gap-2 mb-3">
@@ -120,7 +120,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
                   </h3>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="flex-1 min-h-0">
-                  <ScrollArea className="max-h-56">
+                  <ScrollArea className="h-full">
                     <div className="space-y-2 pr-4">
                       {data?.credits && data.credits.length > 0 ? (
                         data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
