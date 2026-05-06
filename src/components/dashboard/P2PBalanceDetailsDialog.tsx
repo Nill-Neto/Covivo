@@ -16,6 +16,7 @@ import type { User } from "@supabase/supabase-js";
 interface P2PBalanceItem {
   id: string;
   amount: number;
+  created_at: string;
   expenses: {
     title: string | null;
     purchase_date: string | null;
@@ -37,20 +38,18 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
 
       const { data: debts, error: debtsError } = await supabase
         .from('expense_splits')
-        .select('id, amount, expenses(title, purchase_date)')
+        .select('id, amount, created_at, expenses(title, purchase_date)')
         .eq('user_id', currentUser.id)
         .eq('credor_user_id', otherUser.other_user_id)
-        .eq('status', 'pending')
-        .order('purchase_date', { referencedTable: 'expenses', ascending: false });
+        .order('created_at', { ascending: false });
       if (debtsError) throw debtsError;
 
       const { data: credits, error: creditsError } = await supabase
         .from('expense_splits')
-        .select('id, amount, expenses(title, purchase_date)')
+        .select('id, amount, created_at, expenses(title, purchase_date)')
         .eq('user_id', otherUser.other_user_id)
         .eq('credor_user_id', currentUser.id)
-        .eq('status', 'pending')
-        .order('purchase_date', { referencedTable: 'expenses', ascending: false });
+        .order('created_at', { ascending: false });
       if (creditsError) throw creditsError;
 
       return { debts, credits };
@@ -143,7 +142,7 @@ function DetailItem({ item }: { item: P2PBalanceItem }) {
       <div>
         <p className="font-medium">{item.expenses?.title || "Despesa sem título"}</p>
         <p className="text-xs text-muted-foreground">
-          {item.expenses?.purchase_date ? format(new Date(item.expenses.purchase_date + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR }) : 'Data indisponível'}
+          {item.created_at ? format(new Date(item.created_at), "dd/MM/yyyy", { locale: ptBR }) : 'Data indisponível'}
         </p>
       </div>
       <span className="font-semibold">R$ {Number(item.amount).toFixed(2)}</span>
