@@ -14,8 +14,8 @@ CREATE OR REPLACE FUNCTION public.create_expense_with_splits_v2(
   _credit_card_id uuid DEFAULT NULL,
   _installments integer DEFAULT 1,
   _purchase_date date DEFAULT NULL,
-  _competence_key text DEFAULT NULL,
-  _participant_user_ids uuid[] DEFAULT NULL
+  _participant_user_ids uuid[] DEFAULT NULL,
+  _competence_key text DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -126,14 +126,9 @@ BEGIN
 
   IF _payment_method = 'credit_card' AND _credit_card_id IS NOT NULL AND _installments > 0 THEN
     SELECT closing_day INTO _closing_day FROM public.credit_cards WHERE id = _credit_card_id;
-
-    IF _competence_key IS NOT NULL AND _competence_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$' THEN
-      _bill_base := to_date(_competence_key || '-01', 'YYYY-MM-DD');
-    ELSE
-      _bill_base := _final_purchase_date;
-      IF EXTRACT(DAY FROM _final_purchase_date) >= _closing_day THEN
-        _bill_base := _bill_base + interval '1 month';
-      END IF;
+    _bill_base := _final_purchase_date;
+    IF EXTRACT(DAY FROM _final_purchase_date) > _closing_day THEN
+      _bill_base := _bill_base + interval '1 month';
     END IF;
     _per_installment := round(_amount / _installments, 2);
     FOR i IN 1.._installments LOOP

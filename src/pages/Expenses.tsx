@@ -296,8 +296,13 @@ export default function Expenses() {
   });
 
   const allExpenses = useMemo(() => {
-    return cycleExpenses;
-  }, [cycleExpenses]);
+    const map = new Map<string, ExpenseRow>();
+    cycleExpenses.forEach((e) => map.set(e.id, e));
+    installmentParentExpenses
+      .filter((e) => !e.competence_key || e.competence_key <= currentCompetenceKey)
+      .forEach((e) => map.set(e.id, e));
+    return Array.from(map.values());
+  }, [cycleExpenses, installmentParentExpenses, currentCompetenceKey]);
 
   const installmentByExpenseId = useMemo(() => {
     const map = new Map<string, InstallmentRow>();
@@ -752,23 +757,10 @@ export default function Expenses() {
         const parsedAmount = parseFloat(amount);
         const parsedInstallments = parseInt(installments) || 1;
 
-        let resolvedCardClosingDay: number | null = null;
-        if (paymentMethod === "credit_card" && finalCreditCardId && finalCreditCardId !== "none") {
-          resolvedCardClosingDay = cards.find((c) => c.id === finalCreditCardId)?.closing_day ?? null;
-          if (resolvedCardClosingDay == null) {
-            const { data: cardRow, error: cardError } = await supabase
-              .from("credit_cards")
-              .select("closing_day")
-              .eq("id", finalCreditCardId)
-              .single();
-            if (cardError || !cardRow) {
-              throw new Error("Não foi possível carregar o fechamento do cartão selecionado.");
-            }
-            resolvedCardClosingDay = cardRow.closing_day;
-          }
-        }
-
-        const selectedCardClosingDay = resolvedCardClosingDay ?? closingDay;
+        const selectedCardClosingDay =
+          finalCreditCardId && finalCreditCardId !== "none"
+            ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
+            : closingDay;
 
         const compKey = paymentMethod === "credit_card"
           ? getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay)
