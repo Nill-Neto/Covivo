@@ -158,6 +158,7 @@ export default function Expenses() {
 
   const [isPaid, setIsPaid] = useState(false);
   const [paidParticipantIds, setPaidParticipantIds] = useState<string[]>([]);
+  const [paidParticipantAmounts, setPaidParticipantAmounts] = useState<Record<string, string>>({});
   const [statusWithProvider, setStatusWithProvider] = useState<"pending" | "paid">("pending");
   const [splitMode, setSplitMode] = useState<"all" | "manual">("all");
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
@@ -968,12 +969,37 @@ export default function Expenses() {
           await applyManualSplitSelection(newExpenseId as string, parseFloat(amount), effectiveParticipantIds, actualPayerId);
         }
 
-        if (paidParticipantIds.length > 0 && paymentMethod !== "credit_card" && newExpenseId) {
-          await supabase
+        if (paidParticipantIds.length > 0 && newExpenseId) {
+          const { data: createdSplits, error: createdSplitsError } = await supabase
             .from("expense_splits")
-            .update({ status: "paid", paid_at: new Date().toISOString() })
+            .select("id, user_id, amount")
             .eq("expense_id", newExpenseId)
             .in("user_id", paidParticipantIds);
+          if (createdSplitsError) throw createdSplitsError;
+
+          for (const split of createdSplits ?? []) {
+            const rawPaidAmount = paidParticipantAmounts[split.user_id];
+            const normalizedPaidAmount = Number.parseFloat(rawPaidAmount ?? "");
+            const paidAmount = Number.isFinite(normalizedPaidAmount) && normalizedPaidAmount > 0
+              ? normalizedPaidAmount
+              : Number(split.amount);
+            const splitAmount = Number(split.amount);
+
+            if (paidAmount >= splitAmount) {
+              const { error: markPaidError } = await supabase
+                .from("expense_splits")
+                .update({ status: "paid", paid_at: new Date().toISOString() })
+                .eq("id", split.id);
+              if (markPaidError) throw markPaidError;
+            } else {
+              const remainingAmount = Math.max(0, Math.round((splitAmount - paidAmount) * 100) / 100);
+              const { error: partialUpdateError } = await supabase
+                .from("expense_splits")
+                .update({ amount: remainingAmount, status: "pending", paid_at: null })
+                .eq("id", split.id);
+              if (partialUpdateError) throw partialUpdateError;
+            }
+          }
         }
 
         if (isRecurring) {
@@ -1035,6 +1061,7 @@ export default function Expenses() {
     setIsRecurring(false);
     setRecurrenceDay("5");
     setPaidParticipantIds([]);
+    setPaidParticipantAmounts({});
     setStatusWithProvider("pending");
     setSplitMode("all");
     setPayerUserId("me");
@@ -1651,7 +1678,7 @@ export default function Expenses() {
                           </div>
                         </div>
                       )}
-                      {statusWithProvider === 'paid' && paymentMethod !== "credit_card" && !editingId && expenseType === 'collective' && payerUserId === 'me' && (
+                      {statusWithProvider === 'paid' && !editingId && expenseType === 'collective' && payerUserId === 'me' && (
                         <div className="pt-3 border-t space-y-2">
                           <div className="flex items-center gap-2">
                             <Switch checked={isPaid} onCheckedChange={setIsPaid} id="paid-switch" />
@@ -1671,6 +1698,14 @@ export default function Expenses() {
                                       checked={paidParticipantIds.length === participantsToPay.length}
                                       onCheckedChange={(checked) => {
                                         setPaidParticipantIds(checked ? participantsToPay.map(p => p.id) : []);
+                                        setPaidParticipantAmounts(
+                                          checked
+                                            ? participantsToPay.reduce<Record<string, string>>((acc, participant) => {
+                                                acc[participant.id] = perPersonQuota.toFixed(2);
+                                                return acc;
+                                              }, {})
+                                            : {}
+                                        );
                                       }}
                                     />
                                     <Label htmlFor="paid-all" className="font-semibold">Marcar todos</Label>
@@ -1682,14 +1717,42 @@ export default function Expenses() {
                                       id={`paid-${participant.id}`}
                                       checked={paidParticipantIds.includes(participant.id)}
                                       onCheckedChange={() => {
-                                        setPaidParticipantIds(prev => 
-                                          prev.includes(participant.id) 
-                                            ? prev.filter(id => id !== participant.id) 
-                                            : [...prev, participant.id]
-                                        );
+                                        setPaidParticipantIds(prev => {
+                                          const alreadyChecked = prev.includes(participant.id);
+                                          if (alreadyChecked) {
+                                            setPaidParticipantAmounts((current) => {
+                                              const updated = { ...current };
+                                              delete updated[participant.id];
+                                              return updated;
+                                            });
+                                            return prev.filter(id => id !== participant.id);
+                                          }
+
+                                          setPaidParticipantAmounts((current) => ({
+                                            ...current,
+                                            [participant.id]: current[participant.id] ?? perPersonQuota.toFixed(2),
+                                          }));
+                                          return [...prev, participant.id];
+                                        });
                                       }}
                                     />
                                     <Label htmlFor={`paid-${participant.id}`} className="font-normal">{participant.name}</Label>
+                                    {paidParticipantIds.includes(participant.id) && (
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        className="ml-auto w-36"
+                                        placeholder={`R$ ${perPersonQuota.toFixed(2)}`}
+                                        value={paidParticipantAmounts[participant.id] ?? perPersonQuota.toFixed(2)}
+                                        onChange={(e) =>
+                                          setPaidParticipantAmounts((prev) => ({
+                                            ...prev,
+                                            [participant.id]: e.target.value,
+                                          }))
+                                        }
+                                      />
+                                    )}
                                   </div>
                                 ))}
                                 {participantsToPay.length === 0 && (
