@@ -27,6 +27,7 @@ interface P2PBalanceItem {
     title: string | null;
     purchase_date: string | null;
     competence_key: string | null;
+    created_at: string | null;
   } | null;
 }
 
@@ -45,7 +46,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
 
       const { data: debts, error: debtsError } = await supabase
         .from('expense_splits')
-        .select('id, amount, expenses(title, purchase_date, competence_key)')
+        .select('id, amount, expenses(title, purchase_date, competence_key, created_at)')
         .eq('user_id', currentUser.id)
         .eq('credor_user_id', otherUser.other_user_id)
         .eq('status', 'pending');
@@ -53,7 +54,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
 
       const { data: credits, error: creditsError } = await supabase
         .from('expense_splits')
-        .select('id, amount, expenses(title, purchase_date, competence_key)')
+        .select('id, amount, expenses(title, purchase_date, competence_key, created_at)')
         .eq('user_id', otherUser.other_user_id)
         .eq('credor_user_id', currentUser.id)
         .eq('status', 'pending');
@@ -175,7 +176,7 @@ function CompetenceGroup({ title, totalAmount, groupedItems, type }: {
               </h4>
               <div className="space-y-2">
                 {groupedItems[competenceKey]
-                  .sort((a, b) => new Date(b.expenses?.purchase_date ?? 0).getTime() - new Date(a.expenses?.purchase_date ?? 0).getTime())
+                  .sort((a, b) => new Date(b.expenses?.created_at ?? 0).getTime() - new Date(a.expenses?.created_at ?? 0).getTime())
                   .map(item => <DetailItem key={item.id} item={item} />)}
               </div>
             </div>
