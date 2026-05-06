@@ -142,6 +142,7 @@ export default function Expenses() {
   const [expenseType, setExpenseType] = useState<"collective" | "individual">(isAdmin ? "collective" : "individual");
   const [dateValue, setDateValue] = useState(format(new Date(), "yyyy-MM-dd"));
   const [editCompetence, setEditCompetence] = useState(format(new Date(), "yyyy-MM"));
+  const [competenceOverrideReason, setCompetenceOverrideReason] = useState("");
   const [description, setDescription] = useState("");
   const [splitBetweenAll, setSplitBetweenAll] = useState(true);
 
@@ -170,6 +171,7 @@ export default function Expenses() {
   const [quickPayExpense, setQuickPayExpense] = useState<ExpenseRow | null>(null);
 
   const [editingOriginalAmount, setEditingOriginalAmount] = useState<number | null>(null);
+  const [editingOriginalAutoCompetence, setEditingOriginalAutoCompetence] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -760,11 +762,15 @@ export default function Expenses() {
             ? cards.find((c) => c.id === finalCreditCardId)?.closing_day || 1
             : closingDay;
 
-        const compKey = paymentMethod === "credit_card"
+        const autoCompKey = paymentMethod === "credit_card"
           ? getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay)
-          : (editCompetence?.trim()
-              ? editCompetence
-              : getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay));
+          : getCompetenceKeyFromDate(new Date(`${dateValue}T12:00:00`), selectedCardClosingDay);
+        const normalizedManualComp = editCompetence?.trim();
+        const compKey = normalizedManualComp || autoCompKey;
+        const hasManualOverride = compKey !== autoCompKey;
+        if (hasManualOverride && !competenceOverrideReason.trim()) {
+          throw new Error("Informe o motivo do ajuste manual da competência.");
+        }
 
         const { error } = await supabase
           .from("expenses")
@@ -780,7 +786,12 @@ export default function Expenses() {
             paid_to_provider: providerPaid,
             due_date: paymentDate || null,
             competence_key: compKey,
-          })
+            auto_competence_key: autoCompKey,
+            manual_competence_key: hasManualOverride ? compKey : null,
+            competence_override_reason: hasManualOverride ? competenceOverrideReason.trim() : null,
+            competence_overridden_by: hasManualOverride ? user.id : null,
+            competence_overridden_at: hasManualOverride ? new Date().toISOString() : null,
+          } as any)
           .eq("id", editingId);
         if (error) throw error;
         if (uploadedReceipts.length > 0) {
@@ -1014,6 +1025,7 @@ export default function Expenses() {
     setExpenseType(isAdmin ? "collective" : "individual");
     setDateValue(format(new Date(), "yyyy-MM-dd"));
     setEditCompetence(format(new Date(), "yyyy-MM"));
+    setCompetenceOverrideReason("");
     setDescription("");
     setSplitBetweenAll(true);
     setSelectedParticipantIds(activeMemberIds);
@@ -1032,6 +1044,7 @@ export default function Expenses() {
     setReceiptUrl(null);
     setExistingReceipts([]);
     setEditingOriginalAmount(null);
+    setEditingOriginalAutoCompetence(null);
   };
 
   const openEditExpense = (expense: ExpenseRow) => {
@@ -1044,6 +1057,8 @@ export default function Expenses() {
     setDescription(expense.description || "");
     setDateValue(expense.purchase_date || format(new Date(), "yyyy-MM-dd"));
     setEditCompetence(expense.competence_key || (expense.purchase_date ? expense.purchase_date.slice(0, 7) : format(new Date(), "yyyy-MM")));
+    setCompetenceOverrideReason(expense.competence_override_reason || "");
+    setEditingOriginalAutoCompetence(expense.auto_competence_key || null);
     setExpenseType(expense.expense_type as "collective" | "individual");
     setPaymentMethod(expense.payment_method || "cash");
     setCreditCardId(expense.credit_card_id || "none");
@@ -1602,6 +1617,12 @@ export default function Expenses() {
                             value={editCompetence}
                             onChange={(e) => setEditCompetence(e.target.value)}
                           />
+                          <Label className="text-xs text-muted-foreground">Motivo do ajuste manual</Label>
+                          <Input
+                            value={competenceOverrideReason}
+                            onChange={(e) => setCompetenceOverrideReason(e.target.value)}
+                            placeholder="Obrigatório quando a competência divergir da automática"
+                          />
                         </div>
                       )}
 
@@ -2050,6 +2071,7 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
 
   const isInstallment = expense._is_installment && expense.installments > 1;
   const displayAmount = isInstallment ? expense._installment_amount : expense.amount;
+  const manuallyAdjustedCompetence = Boolean(expense.manual_competence_key && expense.manual_competence_key !== expense.auto_competence_key);
 
   return (
     <Card id={`expense-${expense.id}`} className="transition-all hover:shadow-md">
@@ -2074,6 +2096,11 @@ function ExpenseCard({ expense, userId, isAdmin, cards, onEdit, onDelete, onRegi
                 <span className="flex items-center gap-1.5">
                   <CreditCard className="h-3.5 w-3.5" /> {cardLabel}
                 </span>
+              )}
+              {manuallyAdjustedCompetence && (
+                <Badge variant="secondary" className="text-[10px]">
+                  Competência ajustada manualmente
+                </Badge>
               )}
             </div>
             {paymentHistory && (
