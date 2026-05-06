@@ -40,7 +40,8 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
         .select('id, amount, expenses(title, purchase_date)')
         .eq('user_id', currentUser.id)
         .eq('credor_user_id', otherUser.other_user_id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .order('purchase_date', { referencedTable: 'expenses', ascending: false });
       if (debtsError) throw debtsError;
 
       const { data: credits, error: creditsError } = await supabase
@@ -48,7 +49,8 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
         .select('id, amount, expenses(title, purchase_date)')
         .eq('user_id', otherUser.other_user_id)
         .eq('credor_user_id', currentUser.id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .order('purchase_date', { referencedTable: 'expenses', ascending: false });
       if (creditsError) throw creditsError;
 
       return { debts, credits };
