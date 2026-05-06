@@ -97,16 +97,14 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
                     <ChevronDown className={cn("h-4 w-4 transition-transform", isDebtsOpen && "rotate-180")} />
                   </h3>
                 </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ScrollArea className="max-h-56">
-                    <div className="space-y-2 pr-4">
-                      {data?.debts && data.debts.length > 0 ? (
-                        data.debts.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
-                      )}
-                    </div>
-                  </ScrollArea>
+                <CollapsibleContent className="max-h-56 overflow-y-auto">
+                  <div className="space-y-2 pr-4">
+                    {data?.debts && data.debts.length > 0 ? (
+                      data.debts.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
+                    )}
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
               <Collapsible open={isCreditsOpen} onOpenChange={setIsCreditsOpen} className="flex-1 flex flex-col min-h-0">
@@ -119,16 +117,14 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
                     <ChevronDown className={cn("h-4 w-4 transition-transform", isCreditsOpen && "rotate-180")} />
                   </h3>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="flex-1 min-h-0">
-                  <ScrollArea className="h-full">
-                    <div className="space-y-2 pr-4">
-                      {data?.credits && data.credits.length > 0 ? (
-                        data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Nenhum crédito com esta pessoa.</p>
-                      )}
-                    </div>
-                  </ScrollArea>
+                <CollapsibleContent className="flex-1 min-h-0 overflow-y-auto">
+                  <div className="space-y-2 pr-4">
+                    {data?.credits && data.credits.length > 0 ? (
+                      data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum crédito com esta pessoa.</p>
+                    )}
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
             </div>
