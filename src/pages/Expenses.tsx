@@ -105,6 +105,11 @@ type ExpenseReceipt = {
 type ExpenseRow = Omit<Tables<"expenses">, "expense_splits"> & {
   expense_splits?: ExpenseSplit[];
   expense_receipts?: ExpenseReceipt[];
+  auto_competence_key?: string | null;
+  manual_competence_key?: string | null;
+  competence_override_reason?: string | null;
+  competence_overridden_by?: string | null;
+  competence_overridden_at?: string | null;
   _is_installment?: boolean;
   _installment_number?: number;
   _installment_amount?: number;
