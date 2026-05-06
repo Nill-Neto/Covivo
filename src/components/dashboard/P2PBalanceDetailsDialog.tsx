@@ -120,7 +120,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
                   </h3>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="flex-1 min-h-0">
-                  <ScrollArea className="max-h-56">
+                  <ScrollArea>
                     <div className="space-y-2 pr-4">
                       {data?.credits && data.credits.length > 0 ? (
                         data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
@@ -149,6 +149,10 @@ function DetailItem({ item }: { item: P2PBalanceItem }) {
         </p>
       </div>
       <span className="font-semibold">R$ {Number(item.amount).toFixed(2)}</span>
+    </div>
+  );
+}
+ount).toFixed(2)}</span>
     </div>
   );
 }
