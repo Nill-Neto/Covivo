@@ -296,13 +296,8 @@ export default function Expenses() {
   });
 
   const allExpenses = useMemo(() => {
-    const map = new Map<string, ExpenseRow>();
-    cycleExpenses.forEach((e) => map.set(e.id, e));
-    installmentParentExpenses
-      .filter((e) => !e.competence_key || e.competence_key <= currentCompetenceKey)
-      .forEach((e) => map.set(e.id, e));
-    return Array.from(map.values());
-  }, [cycleExpenses, installmentParentExpenses, currentCompetenceKey]);
+    return cycleExpenses;
+  }, [cycleExpenses]);
 
   const installmentByExpenseId = useMemo(() => {
     const map = new Map<string, InstallmentRow>();
