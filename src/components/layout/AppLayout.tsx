@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import type { Location } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,72 +9,33 @@ import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { Button } from "@/components/ui/button";
 import { MenuToggleIcon } from "@/components/ui/menu-toggle-icon";
 import { TextRoll } from "@/components/ui/animated-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  LayoutDashboard,
-  Users,
-  UserPlus,
-  ScrollText,
-  Receipt,
-  CreditCard,
-  RefreshCw,
-  Package,
-  ShoppingCart,
-  MessageSquare,
-  BookOpen,
-  Vote,
-  Shield,
-  ArrowUp
-} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { LucideIcon } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { APP_NAME } from "@/config/brand";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar, SidebarBody } from "@/components/ui/animated-sidebar";
-import { BRANDING } from "@/config/branding";
-
-const DESKTOP_SIDEBAR_STORAGE_KEY = "app-layout:desktop-sidebar-open";
-
-const sidebarCoreItems = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Painel Geral" },
-  { to: "/expenses", icon: Receipt, label: "Despesas" },
-  { to: "/payments", icon: CreditCard, label: "Pagamentos" },
-  { to: "/inventory", icon: Package, label: "Estoque" },
-  { to: "/shopping", icon: ShoppingCart, label: "Compras" },
-];
-
-const adminItems = [
-  { to: "/recurring", icon: RefreshCw, label: "Recorrências" },
-  { to: "/invites", icon: UserPlus, label: "Convites" },
-  { to: "/audit-log", icon: ScrollText, label: "Histórico" },
-];
-
-const convenienceItems = [
-  { to: "/bulletin", icon: MessageSquare, label: "Mural" },
-  { to: "/rules", icon: BookOpen, label: "Regras" },
-  { to: "/polls", icon: Vote, label: "Votações" },
-  { to: "/members", icon: Users, label: "Moradores" },
-];
+import { useSidebar } from "@/hooks/useSidebar";
+import { sidebarCoreItems, adminItems, convenienceItems, adminPageItem } from "@/config/navigation";
 
 export function AppLayout() {
   const { isAdmin, membership } = useAuth();
   const location = useLocation();
-
-  // Desktop mantém estado persistente; mobile é controlado por toggle/backdrop.
-  const [desktopMenuOpen, setDesktopMenuOpen] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(DESKTOP_SIDEBAR_STORAGE_KEY) === "true";
-  });
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const mainRef = useRef<HTMLElement>(null);
-  const previousMobileViewport = useRef<boolean | null>(null);
+
+  const {
+    desktopMenuOpen,
+    setDesktopMenuOpen,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+    isMobileViewport,
+    isSidebarExpanded,
+    isSidebarVisibleOnMobile,
+    handleMenuToggle,
+    handleNavItemClick,
+  } = useSidebar();
 
   useEffect(() => {
     const el = mainRef.current;
@@ -94,64 +55,13 @@ export function AppLayout() {
   const sidebarItems = useMemo(() => {
     const items = [...sidebarCoreItems];
     if (isAdmin) {
-      // Admin page is only for centralized mode
       if (membership?.group_modo_gestao === 'centralized') {
-        items.unshift({ to: "/admin", icon: Shield, label: "Administração" });
+        items.unshift(adminPageItem);
       }
       items.push(...adminItems);
     }
     return items;
   }, [isAdmin, membership?.group_modo_gestao]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(
-      DESKTOP_SIDEBAR_STORAGE_KEY,
-      desktopMenuOpen ? "true" : "false"
-    );
-  }, [desktopMenuOpen]);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)");
-
-    const syncViewport = () => {
-      const isMobile = mediaQuery.matches;
-      const wasMobile = previousMobileViewport.current;
-
-      setIsMobileViewport(isMobile);
-
-      // Evita reset indiscriminado: só fecha o menu móvel ao sair do mobile.
-      if (wasMobile === true && !isMobile) {
-        setMobileMenuOpen(false);
-      }
-
-      previousMobileViewport.current = isMobile;
-    };
-
-    syncViewport();
-
-    mediaQuery.addEventListener("change", syncViewport);
-    return () => mediaQuery.removeEventListener("change", syncViewport);
-  }, []);
-
-  const isDesktopExpanded = desktopMenuOpen;
-  const isSidebarExpanded = isMobileViewport ? true : isDesktopExpanded;
-  const isSidebarVisibleOnMobile = isMobileViewport && mobileMenuOpen;
-
-  const handleMenuToggle = () => {
-    if (isMobileViewport) {
-      setMobileMenuOpen((prev) => !prev);
-      return;
-    }
-
-    setDesktopMenuOpen((prev) => !prev);
-  };
-
-  const handleNavItemClick = () => {
-    if (isMobileViewport) {
-      setMobileMenuOpen(false);
-    }
-  };
 
   const Logo = () => (
     <Link to="/dashboard" onClick={handleNavItemClick} className="flex items-center">
