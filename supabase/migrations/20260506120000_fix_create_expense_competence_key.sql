@@ -14,8 +14,8 @@ CREATE OR REPLACE FUNCTION public.create_expense_with_splits_v2(
   _credit_card_id uuid DEFAULT NULL,
   _installments integer DEFAULT 1,
   _purchase_date date DEFAULT NULL,
-  _competence_key text DEFAULT NULL,
-  _participant_user_ids uuid[] DEFAULT NULL
+  _participant_user_ids uuid[] DEFAULT NULL,
+  _competence_key text DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
