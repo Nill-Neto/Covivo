@@ -152,7 +152,3 @@ function DetailItem({ item }: { item: P2PBalanceItem }) {
     </div>
   );
 }
-ount).toFixed(2)}</span>
-    </div>
-  );
-}
