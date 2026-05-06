@@ -811,12 +811,8 @@ export default function Expenses() {
         if (paymentMethod === "credit_card" && finalCreditCardId && parsedInstallments > 0) {
           const card = cards.find((c) => c.id === finalCreditCardId);
           if (card) {
-            const closingDay = card.closing_day;
-            const purchaseDate = new Date(`${dateValue}T12:00:00`);
-            const billBase = new Date(purchaseDate);
-            if (purchaseDate.getDate() >= closingDay) {
-              billBase.setMonth(billBase.getMonth() + 1);
-            }
+            const [compYear, compMonth] = compKey.split("-").map(Number);
+            const billBase = new Date(compYear, compMonth - 1, 1, 12, 0, 0);
 
             const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
             const installmentRows = [];
@@ -888,12 +884,8 @@ export default function Expenses() {
             if (card) {
               const parsedAmount = parseFloat(amount);
               const parsedInstallments = parseInt(installments) || 1;
-              const closingDay = card.closing_day;
-              const purchaseDate = new Date(`${dateValue}T12:00:00`);
-              const billBase = new Date(purchaseDate);
-              if (purchaseDate.getDate() >= closingDay) {
-                billBase.setMonth(billBase.getMonth() + 1);
-              }
+              const [compYear, compMonth] = competenceKey.split("-").map(Number);
+              const billBase = new Date(compYear, compMonth - 1, 1, 12, 0, 0);
 
               const perInstallment = Math.round((parsedAmount / parsedInstallments) * 100) / 100;
               const installmentRows = [];
@@ -918,6 +910,7 @@ export default function Expenses() {
             .update({
               paid_to_provider: providerPaid,
               due_date: paymentDate || null,
+              competence_key: competenceKey,
             })
             .eq("id", newExpenseId);
 
