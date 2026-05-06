@@ -1,3 +1,7 @@
+DROP FUNCTION IF EXISTS public.create_expense_with_splits_v2(
+  uuid, uuid, text, text, numeric, text, text, date, text, uuid, uuid, text, uuid, integer, date, text, uuid[]
+);
+
 CREATE OR REPLACE FUNCTION public.create_expense_with_splits_v2(
   _group_id uuid,
   _created_by uuid,
