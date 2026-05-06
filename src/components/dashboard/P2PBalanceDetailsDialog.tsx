@@ -3,12 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CustomLoader } from "@/components/ui/custom-loader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import type { MyP2PBalance } from "@/types/dashboard";
 import type { User } from "@supabase/supabase-js";
+
+interface P2PBalanceItem {
+  id: string;
+  amount: number;
+  expenses: {
+    title: string | null;
+    purchase_date: string | null;
+  } | null;
+}
 
 interface P2PBalanceDetailsDialogProps {
   open: boolean;
@@ -48,6 +59,9 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
   const totalCredit = data?.credits?.reduce((sum, item) => sum + Number(item.amount), 0) ?? 0;
   const netBalanceFromDetails = totalCredit - totalDebt;
 
+  const [isDebtsOpen, setIsDebtsOpen] = useState(true);
+  const [isCreditsOpen, setIsCreditsOpen] = useState(true);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md p-0 gap-0 flex flex-col max-h-[85vh]">
@@ -72,34 +86,50 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
             <p className="text-destructive text-sm">Erro ao carregar detalhes.</p>
           ) : (
             <div className="flex flex-col h-full space-y-6">
-              <div className="shrink-0">
-                <h3 className="text-sm font-medium text-destructive flex items-center gap-2 mb-3">
-                  <ArrowUpRight className="h-4 w-4" />
-                  Você deve para {otherUser?.other_user_full_name} (R$ {totalDebt.toFixed(2)})
-                </h3>
-                <div className="space-y-2">
-                  {data?.debts && data.debts.length > 0 ? (
-                    data.debts.map((item: any) => <DetailItem key={item.id} item={item} />)
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 flex flex-col min-h-0">
-                <h3 className="text-sm font-medium text-success flex items-center gap-2 mb-3 shrink-0">
-                  <ArrowDownLeft className="h-4 w-4" />
-                  {otherUser?.other_user_full_name} te deve (R$ {totalCredit.toFixed(2)})
-                </h3>
-                <ScrollArea className="flex-1">
-                  <div className="space-y-2 pr-4">
-                    {data?.credits && data.credits.length > 0 ? (
-                      data.credits.map((item: any) => <DetailItem key={item.id} item={item} />)
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Nenhum crédito com esta pessoa.</p>
-                    )}
+              <Collapsible open={isDebtsOpen} onOpenChange={setIsDebtsOpen} className="shrink-0">
+                <CollapsibleTrigger className="w-full">
+                  <h3 className="text-sm font-medium text-destructive flex items-center justify-between gap-2 mb-3">
+                    <span className="flex items-center gap-2">
+                      <ArrowUpRight className="h-4 w-4" />
+                      Você deve para {otherUser?.other_user_full_name} (R$ {totalDebt.toFixed(2)})
+                    </span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isDebtsOpen && "rotate-180")} />
+                  </h3>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="h-56 overflow-y-auto pr-1">
+                    <div className="space-y-2 pr-3">
+                      {data?.debts && data.debts.length > 0 ? (
+                        data.debts.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
+                      )}
+                    </div>
                   </div>
-                </ScrollArea>
-              </div>
+                </CollapsibleContent>
+              </Collapsible>
+              <Collapsible open={isCreditsOpen} onOpenChange={setIsCreditsOpen} className="flex-1 flex flex-col min-h-0">
+                <CollapsibleTrigger className="w-full shrink-0">
+                  <h3 className="text-sm font-medium text-success flex items-center justify-between gap-2 mb-3">
+                    <span className="flex items-center gap-2">
+                      <ArrowDownLeft className="h-4 w-4" />
+                      {otherUser?.other_user_full_name} te deve (R$ {totalCredit.toFixed(2)})
+                    </span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isCreditsOpen && "rotate-180")} />
+                  </h3>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="flex-1 min-h-0">
+                  <div className="h-56 overflow-y-auto pr-1">
+                    <div className="space-y-2 pr-3">
+                      {data?.credits && data.credits.length > 0 ? (
+                        data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhum crédito com esta pessoa.</p>
+                      )}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
         </div>
@@ -108,7 +138,7 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
   );
 }
 
-function DetailItem({ item }: { item: { amount: number, expenses: { title: string | null, purchase_date: string | null } | null } }) {
+function DetailItem({ item }: { item: P2PBalanceItem }) {
   return (
     <div className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
       <div>
