@@ -78,62 +78,58 @@ export function P2PBalanceDetailsDialog({ open, onOpenChange, currentUser, other
             Saldo líquido: <span className={netBalanceFromDetails < 0 ? 'text-destructive' : 'text-success'}>R$ {netBalanceFromDetails.toFixed(2)}</span>
           </DialogDescription>
         </DialogHeader>
-        
-        <ScrollArea className="flex-1">
-          <div className="p-5 space-y-6">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-full">
-                <CustomLoader />
-              </div>
-            ) : error ? (
-              <p className="text-destructive text-sm">Erro ao carregar detalhes.</p>
-            ) : (
-              <>
-                <Collapsible open={isDebtsOpen} onOpenChange={setIsDebtsOpen}>
-                  <CollapsibleTrigger className="w-full">
-                    <h3 className="text-sm font-medium text-destructive flex items-center justify-between gap-2 mb-3">
-                      <span className="flex items-center gap-2">
-                        <ArrowUpRight className="h-4 w-4" />
-                        Você deve para {otherUser?.other_user_full_name} (R$ {totalDebt.toFixed(2)})
-                      </span>
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", isDebtsOpen && "rotate-180")} />
-                    </h3>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="space-y-2 pr-4 border-l-2 border-destructive/20 ml-1 pl-3">
-                        {data?.debts && data.debts.length > 0 ? (
-                          data.debts.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
-                        )}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                <Collapsible open={isCreditsOpen} onOpenChange={setIsCreditsOpen}>
-                  <CollapsibleTrigger className="w-full">
-                    <h3 className="text-sm font-medium text-success flex items-center justify-between gap-2 mb-3">
-                      <span className="flex items-center gap-2">
-                        <ArrowDownLeft className="h-4 w-4" />
-                        {otherUser?.other_user_full_name} te deve (R$ {totalCredit.toFixed(2)})
-                      </span>
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", isCreditsOpen && "rotate-180")} />
-                    </h3>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                     <div className="space-y-2 pr-4 border-l-2 border-success/20 ml-1 pl-3">
-                        {data?.credits && data.credits.length > 0 ? (
-                          data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Nenhum crédito com esta pessoa.</p>
-                        )}
-                      </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </>
-            )}
-          </div>
-        </ScrollArea>
+        <div className="flex-1 overflow-hidden flex flex-col p-5 gap-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <CustomLoader />
+            </div>
+          ) : error ? (
+            <p className="text-destructive text-sm">Erro ao carregar detalhes.</p>
+          ) : (
+            <>
+              <Collapsible open={isDebtsOpen} onOpenChange={setIsDebtsOpen}>
+                <CollapsibleTrigger className="w-full">
+                  <h3 className="text-sm font-medium text-destructive flex items-center justify-between gap-2 mb-3">
+                    <span className="flex items-center gap-2">
+                      <ArrowUpRight className="h-4 w-4" />
+                      Você deve para {otherUser?.other_user_full_name} (R$ {totalDebt.toFixed(2)})
+                    </span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isDebtsOpen && "rotate-180")} />
+                  </h3>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="max-h-48 overflow-y-auto">
+                  <div className="space-y-2 pr-4">
+                    {data?.debts && data.debts.length > 0 ? (
+                      data.debts.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhuma dívida com esta pessoa.</p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+              <Collapsible open={isCreditsOpen} onOpenChange={setIsCreditsOpen} className="flex-1 flex flex-col min-h-0">
+                <CollapsibleTrigger className="w-full shrink-0">
+                  <h3 className="text-sm font-medium text-success flex items-center justify-between gap-2 mb-3">
+                    <span className="flex items-center gap-2">
+                      <ArrowDownLeft className="h-4 w-4" />
+                      {otherUser?.other_user_full_name} te deve (R$ {totalCredit.toFixed(2)})
+                    </span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isCreditsOpen && "rotate-180")} />
+                  </h3>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="flex-1 min-h-0 overflow-y-auto">
+                  <div className="space-y-2 pr-4">
+                    {data?.credits && data.credits.length > 0 ? (
+                      data.credits.map((item) => <DetailItem key={item.id} item={item as P2PBalanceItem} />)
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum crédito com esta pessoa.</p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
