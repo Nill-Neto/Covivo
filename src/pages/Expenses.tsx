@@ -781,7 +781,6 @@ export default function Expenses() {
         const { error } = await supabase
           .from("expenses")
           .update({
-            created_by: actualPayerId,
             title: title.trim(),
             description: description.trim() || null,
             amount: parsedAmount,
@@ -825,12 +824,6 @@ export default function Expenses() {
             }
           }
         }
-
-        const { error: updateCreditorError } = await supabase
-          .from("expense_splits")
-          .update({ credor_user_id: actualPayerId })
-          .eq("expense_id", editingId);
-        if (updateCreditorError) throw updateCreditorError;
 
         await supabase.from("expense_installments").delete().eq("expense_id", editingId);
 
