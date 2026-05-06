@@ -918,6 +918,7 @@ export default function Expenses() {
             .update({
               paid_to_provider: providerPaid,
               due_date: paymentDate || null,
+              competence_key: competenceKey,
             })
             .eq("id", newExpenseId);
 
