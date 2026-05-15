@@ -45,3 +45,11 @@
 *   Add descriptive `console.log` statements for debugging but remove them before "production" (unless requested).
 *   Ensure all new pages are added to the routing in `src/App.tsx`.
 *   Maintain clean and readable code, prioritizing simplicity over over-engineering.
+
+
+### 7. Multi-Agent Shared Memory Protocol
+*   All AI agents must read `AI_CONTEXT.md` before planning significant changes.
+*   If a durable decision is created or changed, update `AI_CONTEXT.md` in the same branch.
+*   Append a JSON line event to `ai/changelog.ndjson` for every material change, including: `date`, `agent`, `type`, `scope`, `summary`, `files`, `commit`.
+*   Never store secrets, tokens, credentials, or personal data in AI memory files.
+*   If memory conflicts with code/tests/docs, follow source-of-truth priority defined in `AI_CONTEXT.md` and record a correction event.
