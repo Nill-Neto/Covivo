@@ -73,6 +73,24 @@
 
 ---
 
+
+## 3.4 Modo pré-lançamento (sem Stripe, sem SAC formal, sem jurídico contratado)
+- **Status permitido agora:** operação em `manual_billing_mode=true` por grupo, restrita a grupos do próprio fundador e testes internos.
+- **Proibição explícita:** não cobrar assinatura real de terceiros até Stripe (ou PSP equivalente) + termos/políticas revisados por jurídico.
+- **Fallback de assinatura enquanto isso:**
+  1. Todos os grupos ficam efetivamente em `active` por **whitelist controlada** do fundador.
+  2. `past_due` e `downgraded_free` podem ser simulados apenas em ambiente de teste/homologação para validar fluxos.
+  3. Nenhum downgrade automático em produção por ausência de gateway; somente ação manual e auditada do fundador.
+- **Disputa/SAC enquanto pré-lançamento:**
+  - sem equipe SAC dedicada, usar fila interna de exceções operada pelo fundador;
+  - manter a mesma trilha auditável e os mesmos estados de disputa para não gerar dívida técnica de processo.
+- **Obrigatório antes de abrir para público pagante:**
+  - integrar Stripe webhooks idempotentes (`charge_failed`, `invoice_paid`, `subscription_updated`);
+  - publicar termos/políticas finais validados por advogado;
+  - definir responsável de atendimento e SLA mínimo operacional;
+  - executar checklist de go-live com teste de ponta a ponta (cobrança, dunning, downgrade, reativação, disputa).
+- **Princípio operacional:** pré-lançamento não é desculpa para fluxo quebrado; é regime de operação controlada com cobrança real desativada e regras técnicas já prontas para ativar.
+
 ## 4) P0 fechado: Disputa e SAC (P0.3)
 
 ## 4.1 Estados da disputa
@@ -182,6 +200,67 @@
 
 ## 11) Futuro (para não esquecer) — backlog estruturado
 
+
+## 11.0) Convites e crescimento (Friend-first + Grupo opcional)
+
+## 11.0.1 Problema do modelo atual
+- Convite acopla entrada na plataforma e entrada no grupo ativo como morador.
+- Esse acoplamento reduz crescimento orgânico e aumenta risco de convite indevido para contexto de moradia.
+
+## 11.0.2 Decisão de produto (fases)
+- Adotar modelo **friend-first**: convite principal é de amizade/plataforma.
+- Convite para grupo passa a ser **etapa opcional e explícita**, nunca implícita.
+- Qualquer usuário pode convidar amigo para a plataforma.
+- Só admins podem convidar para grupos nos quais possuem governança.
+
+## 11.0.3 Fluxo obrigatório de convite (2 etapas)
+1. **Verificação de identidade/alvo**
+   - validar se contato já possui conta;
+   - se possui, validar status de amizade (`none`, `pending`, `accepted`, `blocked`);
+   - evitar convite duplicado para mesma relação pendente.
+2. **Etapa opcional de grupo**
+   - exibida apenas se convidante for admin de >=1 grupo;
+   - permitir selecionar zero ou um/múltiplos grupos elegíveis (definir no backend por feature flag);
+   - gerar convite com escopo explícito: `friend_only` ou `friend_plus_group`.
+
+## 11.0.4 Regras de permissão e segurança
+- `friend_only`: qualquer usuário autenticado pode emitir.
+- `friend_plus_group`: requer papel admin no grupo alvo no momento da emissão e no momento da aceitação.
+- Se papel admin for perdido antes da aceitação, convite de grupo expira automaticamente, mantendo apenas amizade (se aceita).
+- Convites devem ter expiração e token de uso único.
+
+## 11.0.5 UX mínima (P1 imediato)
+- Página Convites com barra de busca/verificação e resultado assistido (cadastro + status da relação).
+- CTA primária: `Convidar amigo`.
+- Bloco opcional: `Convidar também para grupo` (somente quando elegível).
+- Notificação in-app para usuários já cadastrados.
+
+## 11.0.6 Onboarding de grupo
+- Em criação de grupo, exibir seção colapsada `Convidar amigos para o grupo`.
+- Listar amigos elegíveis com seleção rápida.
+- Se lista vazia, instruir convite de novos amigos e convite posterior no módulo de Convites.
+
+## 11.0.7 Expansão de escopo financeiro sem quebrar foco
+- Manter foco primário em moradia, mas habilitar trilha secundária de uso social controlado.
+- Classificação de despesa planejada:
+  - `individual` (controle pessoal),
+  - `coletiva_moradia` (escopo governável por admin do grupo),
+  - `rateio_amigos` (fora da governança de moradia; responsabilidade pessoal dos participantes).
+- Guardrail: admins de moradia não arbitram despesas `individual` e `rateio_amigos` fora de seus grupos.
+
+## 11.0.8 Estratégia de rollout (anti-risco)
+- **Fase A (agora):** friend-first + convite opcional de grupo, sem alterar motor de despesas.
+- **Fase B:** adicionar tipo `rateio_amigos` atrás de feature flag para beta whitelist.
+- **Fase C:** expandir gradualmente após métricas mínimas de confiança (falha de convite, abuso, confusão de contexto, churn de onboarding).
+
+## 11.0.9 Critérios de pronto (Definition of Ready)
+- Sem convite duplicado pendente por par de usuários.
+- Convite de grupo nunca é aceito sem verificação de elegibilidade admin vigente.
+- Audit trail completo de emissão/aceite/expiração/revogação.
+- UX deixa claro quando ação cria amizade vs entrada em grupo.
+
+
+
 ## 11.1 Pós-P0 imediato (quando P0 estiver estável)
 1. **Exit & Debt Policy Spec (P0 próximo):**
    - saída voluntária com pendências,
@@ -278,9 +357,10 @@ Conta como pendência quando existir qualquer um:
 - obrigação já gerada no ciclo vigente,
 - responsabilidade crítica (admin/sponsor) sem sucessor válido.
 
-## 12.4 Data efetiva de saída
-- Regra padrão: fim do ciclo financeiro atual.
-- Exceção: saída imediata apenas sem pendência, sem disputa e sem papel crítico bloqueante.
+## 12.4 Data efetiva de saída (modelo híbrido)
+- Regra preferencial: saída imediata quando pendências elegíveis estiverem resolvidas.
+- Regra de segurança: se não houver resolução elegível no prazo/estado do caso, aplica-se saída no fim do ciclo financeiro atual com snapshot e notificação.
+- Trava antiabuso: ninguém pode ficar indefinidamente preso por inércia de terceiros.
 
 ## 12.5 Saída voluntária
 - Sem pendência: pode efetivar.
@@ -294,6 +374,12 @@ Conta como pendência quando existir qualquer um:
 ## 12.7 Exclusão de conta
 - Sem pendência crítica: fluxo padrão.
 - Com pendência crítica: pseudonimização com retenção mínima técnica para auditoria/cobrança.
+
+### 12.7.1 Pseudonimização (escopo mínimo)
+- Remover/ocultar PII de exibição: nome completo, avatar e contatos em superfícies de usuário.
+- Preservar vínculo técnico interno: IDs, referências financeiras históricas e trilhas de decisão/auditoria.
+- Limitar acesso ao vínculo técnico ao ambiente ops, com RBAC e log de acesso.
+- Aplicar retenção técnica conforme política vigente (base atual: 5 anos, sujeita à validação jurídica final).
 
 ## 12.8 Disputa em andamento
 - Saída permitida com escalonamento automático para SAC.
