@@ -1,0 +1,2 @@
+{"date":"2026-05-15","agent":"codex","type":"governance","scope":"prelaunch","summary":"Added pre-launch manual billing mode guardrails and go-live prerequisites to roadmap","files":["docs/governance-billing-support-roadmap.md"],"commit":"d9cddfe"}
+{"date":"2026-05-15","agent":"codex","type":"process","scope":"ai-collaboration","summary":"Added shared AI context and structured memory log protocol for multi-agent continuity","files":["AI_CONTEXT.md","ai/changelog.ndjson","AI_RULES.md"],"commit":"af039cd"}
