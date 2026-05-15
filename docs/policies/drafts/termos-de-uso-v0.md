@@ -1,67 +1,53 @@
-# Termos de Uso — versão editorial v1 (Covivo)
+# Termos de Uso — Minuta v0 (Covivo)
 
 > Minuta para revisão jurídica. Não publicar sem validação profissional.
 
-## 1) Aceite
-Ao criar uma conta ou usar o Covivo, você confirma que leu e aceitou estes Termos, a Política de Privacidade e as demais políticas aplicáveis.
+## 1. Aceite
+Ao criar conta e utilizar o Covivo, o usuário declara que leu e aceita estes Termos, a Política de Privacidade e as demais políticas aplicáveis.
 
-## 2) O que é o Covivo
-O Covivo é uma plataforma para organização financeira pessoal e em grupo.
-Com ele, você pode registrar despesas, dividir valores, enviar comprovantes e gerenciar planos de assinatura por grupo.
+## 2. Objeto do serviço
+O Covivo é uma plataforma digital para organização financeira pessoal e de grupos, incluindo registro de despesas, divisão de valores, envio e validação de comprovantes, além de gestão de planos de assinatura por grupo.
 
-## 3) Quem pode usar
-Nesta versão, o Covivo é destinado a pessoas com 18 anos ou mais e capacidade legal para contratar.
+## 3. Elegibilidade
+Nesta versão, o serviço é destinado a maiores de 18 anos com capacidade civil para contratar.
 
-## 4) Segurança da conta
-Você é responsável por manter sua conta segura, incluindo senha e acesso ao seu dispositivo.
-Toda ação feita com sua conta é considerada de sua responsabilidade, salvo falha comprovada de segurança da plataforma.
+## 4. Conta e segurança
+O usuário é responsável por manter a segurança de sua conta e por todas as atividades realizadas com suas credenciais.
 
-## 5) Papéis dentro do grupo
-No Covivo, papéis diferentes têm responsabilidades diferentes:
+## 5. Papéis e responsabilidades
+- **Admin**: governança do grupo (configurações, gestão de membros, regras de operação).
+- **Sponsor**: responsável pelo pagamento da assinatura do grupo.
+- Pagamento da assinatura não concede poderes administrativos adicionais.
 
-- **Admin**: cuida da governança do grupo (configurações e gestão de membros).
-- **Sponsor**: é quem responde pelo pagamento da assinatura do grupo.
+## 6. Regras financeiras da plataforma
+- O histórico financeiro não é apagado por saída de membro.
+- Obrigações históricas não são extintas automaticamente por desligamento.
+- A plataforma pode gerar snapshot financeiro em casos de saída com pendência.
 
-Importante: pagar a assinatura **não** concede automaticamente poderes de admin.
+## 7. Planos, cobrança e downgrade
+- O Covivo pode oferecer planos Free e Pro (Solo/Duo/Max).
+- Em caso de falha de cobrança, poderá haver período de grace e, se não regularizado, downgrade para Free.
+- O downgrade não implica exclusão automática de histórico financeiro essencial.
 
-## 6) Regras financeiras da plataforma
-- A saída de um membro não apaga automaticamente histórico financeiro anterior.
-- Obrigações já consolidadas não desaparecem automaticamente por desligamento.
-- A saída segue modelo híbrido: resolução elegível priorizada e, na impossibilidade, efetivação no fim do ciclo com snapshot e notificação.
-- Em saídas com pendência, o Covivo pode gerar snapshot financeiro para preservar rastreabilidade e integridade dos registros.
+## 8. Disputas e evidências
+- Disputas podem seguir fluxo de contestação, contraprova e escalonamento ao SAC.
+- Decisões do SAC seguem regras internas com trilha auditável.
 
-## 7) Planos, cobrança e downgrade
-- O Covivo pode oferecer plano Free e planos Pro (ex.: Solo, Duo e Max).
-- Em caso de falha de cobrança, pode haver período de regularização (grace).
-- Se não houver regularização no prazo, o grupo pode sofrer downgrade para o plano gratuito.
-- O downgrade não implica exclusão automática do histórico financeiro essencial.
+## 9. Condutas vedadas
+É vedado:
+- uso de comprovantes falsos,
+- fraude de cobrança/benefícios,
+- manipulação indevida de dados,
+- qualquer uso ilícito da plataforma.
 
-## 8) Disputas e evidências
-Quando houver divergência sobre pagamento:
-- pode haver contestação e contraprova;
-- sem acordo no prazo, o caso pode ser escalonado ao suporte (SAC);
-- decisões do SAC seguem regras internas com trilha auditável.
+## 10. Suspensão e encerramento
+O Covivo pode suspender funcionalidades ou encerrar acesso em caso de violação destes Termos, fraude, risco de segurança ou exigência legal.
 
-## 9) Condutas proibidas
-É proibido:
-- usar comprovante falso;
-- fraudar cobrança, benefícios ou regras de plano;
-- manipular dados de forma indevida;
-- praticar atos ilegais usando a plataforma.
+## 11. Limitação de responsabilidade
+O Covivo fornece ferramentas de organização e gestão. A responsabilidade por transações financeiras externas entre usuários permanece com as partes envolvidas.
 
-## 10) Suspensão e encerramento de acesso
-O Covivo pode limitar ou encerrar acesso em caso de:
-- violação destes Termos;
-- fraude ou risco de segurança;
-- obrigação legal ou regulatória.
+## 12. Alterações dos termos
+Alterações materiais serão comunicadas e poderão exigir novo aceite.
 
-## 11) Limitação de responsabilidade
-O Covivo fornece ferramentas de organização e gestão.
-Transações financeiras feitas fora da plataforma entre usuários continuam sendo de responsabilidade das partes envolvidas.
-
-## 12) Alterações dos Termos
-Podemos atualizar estes Termos periodicamente.
-Quando houver mudança material, você será comunicado e poderá ser solicitado novo aceite.
-
-## 13) Lei aplicável e foro
-Estes Termos seguem a legislação brasileira, incluindo regras de proteção ao consumidor quando aplicáveis.
+## 13. Lei aplicável e foro
+Aplicam-se as leis brasileiras, sem prejuízo de regras de proteção do consumidor aplicáveis.

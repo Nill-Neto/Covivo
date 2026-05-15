@@ -278,10 +278,9 @@ Conta como pendência quando existir qualquer um:
 - obrigação já gerada no ciclo vigente,
 - responsabilidade crítica (admin/sponsor) sem sucessor válido.
 
-## 12.4 Data efetiva de saída (modelo híbrido)
-- Regra preferencial: saída imediata quando pendências elegíveis estiverem resolvidas.
-- Regra de segurança: se não houver resolução elegível no prazo/estado do caso, aplica-se saída no fim do ciclo financeiro atual com snapshot e notificação.
-- Trava antiabuso: ninguém pode ficar indefinidamente preso por inércia de terceiros.
+## 12.4 Data efetiva de saída
+- Regra padrão: fim do ciclo financeiro atual.
+- Exceção: saída imediata apenas sem pendência, sem disputa e sem papel crítico bloqueante.
 
 ## 12.5 Saída voluntária
 - Sem pendência: pode efetivar.
@@ -295,12 +294,6 @@ Conta como pendência quando existir qualquer um:
 ## 12.7 Exclusão de conta
 - Sem pendência crítica: fluxo padrão.
 - Com pendência crítica: pseudonimização com retenção mínima técnica para auditoria/cobrança.
-
-### 12.7.1 Pseudonimização (escopo mínimo)
-- Remover/ocultar PII de exibição: nome completo, avatar e contatos em superfícies de usuário.
-- Preservar vínculo técnico interno: IDs, referências financeiras históricas e trilhas de decisão/auditoria.
-- Limitar acesso ao vínculo técnico ao ambiente ops, com RBAC e log de acesso.
-- Aplicar retenção técnica conforme política vigente (base atual: 5 anos, sujeita à validação jurídica final).
 
 ## 12.8 Disputa em andamento
 - Saída permitida com escalonamento automático para SAC.
